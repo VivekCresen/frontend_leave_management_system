@@ -1,0 +1,85 @@
+<div class="login-page">
+  <section class="login-shell" aria-label="Login">
+    <div class="login-card">
+      <div class="form-head">
+        <img src="assets/logo-6.png" alt="Cresen Solutions Logo" class="brand-logo">
+        <h4 class="form-title">Welcome back</h4>
+        <p class="form-subtitle">
+          Sign in to manage leave requests, approvals, calendars, and team balances in one place.
+        </p>
+
+      
+      </div>
+
+      <form class="login-form" #loginForm="ngForm" novalidate (ngSubmit)="onSubmit(loginForm)">
+        <div *ngIf="errorMessage" class="error-msg">{{ errorMessage }}</div>
+
+        <div class="field-stack">
+          <div class="input-group">
+            <label for="username">Email</label>
+            <div class="input-wrapper">
+              <i class="fas fa-user"></i>
+              <input
+                type="text"
+                id="username"
+                placeholder="Enter your email"
+                [(ngModel)]="username"
+                name="username"
+                #usernameModel="ngModel"
+                class="login-input"
+                [class.input-invalid]="getUsernameError(usernameModel)"
+                required
+                [maxlength]="usernameMaxLength">
+            </div>
+            <div *ngIf="getUsernameError(usernameModel) as usernameError" class="field-error">{{ usernameError }}</div>
+          </div>
+
+          <div class="input-group">
+            <label for="password">Password</label>
+            <div class="input-wrapper">
+              <i class="fas fa-lock"></i>
+              <input
+                [type]="showPassword ? 'text' : 'password'"
+                id="password"
+                placeholder="Enter your password"
+                [(ngModel)]="password"
+                name="password"
+                #passwordModel="ngModel"
+                class="login-input"
+                [class.input-invalid]="getPasswordError(passwordModel)"
+                required
+                [maxlength]="passwordMaxLength">
+              <button
+                type="button"
+                class="toggle-password"
+                (click)="togglePasswordVisibility()"
+                title="Toggle password visibility"
+                [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+                <i *ngIf="!showPassword" class="fas fa-eye"></i>
+                <i *ngIf="showPassword" class="fas fa-eye-slash"></i>
+              </button>
+            </div>
+            <div *ngIf="getPasswordError(passwordModel) as passwordError" class="field-error">{{ passwordError }}</div>
+          </div>
+        </div>
+
+        <div class="action-row">
+          <a
+            routerLink="/forgot-password"
+            class="forgot-password"
+            (click)="navigateToForgotPassword($event)">
+            Forgot password?
+          </a>
+
+          <button type="submit" class="login-button" [disabled]="isSubmitting">
+            <span>{{ isSubmitting ? 'Signing In...' : 'Sign In' }}</span>
+            <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>

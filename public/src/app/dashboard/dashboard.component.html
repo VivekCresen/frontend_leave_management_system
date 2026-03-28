@@ -1,0 +1,47 @@
+<div class="dashboard-shell" *ngIf="currentUser as user">
+  <aside class="sidebar">
+    <div class="brand-block">
+      <p class="brand-label">Cresen LMS</p>
+      <h1>{{ user.role | titlecase }} Panel</h1>
+      <p class="brand-user">{{ user.username }}</p>
+      <p class="brand-email">{{ user.email }}</p>
+    </div>
+
+    <div class="status-panel">
+      <div class="status-line">
+        <span>Role</span>
+        <strong>{{ user.role }}</strong>
+      </div>
+      <div class="status-line">
+        <span>Status</span>
+        <strong [class.inactive]="!user.active">{{ user.active ? 'Active' : 'Inactive' }}</strong>
+      </div>
+    </div>
+
+    <nav class="menu-list" aria-label="Sidebar menu">
+      <a
+        *ngFor="let item of menuItems"
+        class="menu-item"
+        [routerLink]="['/dashboard', item.path]"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }">
+        <span class="menu-icon">
+          <i class="fas" [class]="item.icon"></i>
+        </span>
+        <span class="menu-copy">
+          <strong>{{ item.label }}</strong>
+          <small>{{ item.caption }}</small>
+        </span>
+      </a>
+    </nav>
+
+    <div class="sidebar-actions">
+      <a routerLink="/change-password" class="secondary-action">Change Password</a>
+      <button type="button" class="primary-action" (click)="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <main class="dashboard-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>
