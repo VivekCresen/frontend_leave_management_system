@@ -1,0 +1,11 @@
+<section class="stats-grid" aria-label="Dashboard summary">
+  <article
+    *ngFor="let card of cards"
+    class="stat-card"
+    [class.tone-orange]="card.tone === 'orange'"
+    [class.tone-slate]="card.tone === 'slate'">
+    <p>{{ card.label }}</p>
+    <strong>{{ card.value }}</strong>
+    <span>{{ card.note }}</span>
+  </article>
+</section>

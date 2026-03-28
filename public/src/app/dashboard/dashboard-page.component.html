@@ -1,81 +1,61 @@
 <section class="workspace">
   <header class="workspace-header">
     <div class="workspace-copy">
-      <p class="workspace-eyebrow">{{ view.eyebrow }}</p>
-      <h2>{{ view.title }}</h2>
-      <p class="workspace-description">{{ view.description }}</p>
+      <p class="workspace-eyebrow">{{ normalizedRole | titlecase }} dashboard</p>
+      <h2>{{ pageHeading }}</h2>
+      <p class="workspace-description">{{ pageDescription }}</p>
     </div>
 
-    <div class="workspace-badges">
-      <span class="badge badge-role">{{ user.role }}</span>
+    <div class="workspace-actions">
+      <span class="badge badge-role">{{ normalizedRole }}</span>
       <span class="badge" [class.inactive]="!user.active">{{ user.active ? 'Active Account' : 'Inactive Account' }}</span>
+      <button type="button" class="refresh-button" (click)="refresh()" [disabled]="isLoading || isSaving">
+        {{ isLoading ? 'Refreshing...' : 'Refresh' }}
+      </button>
     </div>
   </header>
 
-  <section class="metrics-strip" aria-label="Dashboard summary">
-    <div class="metric-block" *ngFor="let metric of view.metrics">
-      <span>{{ metric.label }}</span>
-      <strong>{{ metric.value }}</strong>
-      <small>{{ metric.note }}</small>
-    </div>
+  <section *ngIf="errorMessage" class="feedback-panel error-panel">
+    <h3>Dashboard unavailable</h3>
+    <p>{{ errorMessage }}</p>
   </section>
 
-  <section class="workspace-grid">
-    <section class="surface">
-      <div class="section-heading">
-        <p>Focus Area</p>
-        <h3>{{ view.focusTitle }}</h3>
-      </div>
-      <ul class="focus-list">
-        <li *ngFor="let item of view.focusItems">{{ item }}</li>
-      </ul>
-    </section>
-
-    <section class="surface">
-      <div class="section-heading">
-        <p>Work Queue</p>
-        <h3>{{ view.workTitle }}</h3>
-      </div>
-
-      <div class="work-table">
-        <div class="work-row work-row-header">
-          <span>Item</span>
-          <span>Details</span>
-          <span>Status</span>
-        </div>
-
-        <div class="work-row" *ngFor="let row of view.workItems">
-          <strong>{{ row.label }}</strong>
-          <span>{{ row.detail }}</span>
-          <em>{{ row.status }}</em>
-        </div>
-      </div>
-    </section>
+  <section *ngIf="isLoading" class="feedback-panel">
+    <h3>Loading dashboard</h3>
+    <p>Fetching the latest role-based data for this workspace.</p>
   </section>
 
-  <section class="account-strip surface">
-    <div class="section-heading">
-      <p>Account Snapshot</p>
-      <h3>Current session details</h3>
-    </div>
+  <ng-container *ngIf="!isLoading && !errorMessage">
+    <app-admin-dashboard
+      *ngIf="normalizedRole === 'ADMIN'"
+      [dashboard]="dashboard"
+      [editingUser]="editingUser"
+      [fieldErrors]="fieldErrors"
+      [isSaving]="isSaving"
+      [pageId]="pageId"
+      [user]="user"
+      (cancelEditRequested)="cancelEdit()"
+      (deleteRequested)="handleDelete($event)"
+      (editRequested)="startEdit($event)"
+      (saveRequested)="handleSave($event)"></app-admin-dashboard>
 
-    <div class="account-grid">
-      <div class="account-cell">
-        <span>Username</span>
-        <strong>{{ user.username }}</strong>
-      </div>
-      <div class="account-cell">
-        <span>Email</span>
-        <strong>{{ user.email }}</strong>
-      </div>
-      <div class="account-cell">
-        <span>Selected section</span>
-        <strong>{{ view.title }}</strong>
-      </div>
-      <div class="account-cell">
-        <span>Security</span>
-        <strong>Change password anytime</strong>
-      </div>
-    </div>
-  </section>
+    <app-manager-dashboard
+      *ngIf="normalizedRole === 'MANAGER'"
+      [dashboard]="dashboard"
+      [editingUser]="editingUser"
+      [fieldErrors]="fieldErrors"
+      [isSaving]="isSaving"
+      [pageId]="pageId"
+      [user]="user"
+      (cancelEditRequested)="cancelEdit()"
+      (deleteRequested)="handleDelete($event)"
+      (editRequested)="startEdit($event)"
+      (saveRequested)="handleSave($event)"></app-manager-dashboard>
+
+    <app-employee-dashboard
+      *ngIf="normalizedRole === 'EMPLOYEE'"
+      [dashboard]="dashboard"
+      [pageId]="pageId"
+      [user]="user"></app-employee-dashboard>
+  </ng-container>
 </section>

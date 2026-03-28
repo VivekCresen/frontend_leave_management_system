@@ -1,0 +1,180 @@
+.role-dashboard {
+  display: grid;
+  gap: 20px;
+}
+
+.hero-card,
+.surface {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 22px 60px -36px rgba(15, 23, 42, 0.46);
+}
+
+.hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
+  gap: 18px;
+  padding: 24px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #0f8b8d;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hero-card h2,
+.hero-card p,
+.surface h3,
+.surface p {
+  margin: 0;
+}
+
+.hero-card h2 {
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: clamp(1.6rem, 2.3vw, 2.15rem);
+  line-height: 1.15;
+}
+
+.hero-copy,
+.body-copy {
+  margin-top: 10px;
+  color: #52627a;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.hero-summary {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15, 139, 141, 0.12), rgba(249, 115, 22, 0.08));
+}
+
+.hero-summary span,
+.hero-summary em {
+  color: #52627a;
+  font-size: 0.86rem;
+}
+
+.hero-summary strong {
+  color: #0f172a;
+  font-size: 1.3rem;
+}
+
+.hero-summary small {
+  color: #0f766e;
+  font-size: 0.92rem;
+}
+
+.panel-grid,
+.management-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.panel-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel-grid app-dashboard-user-table {
+  grid-column: 1 / -1;
+}
+
+.management-grid {
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.3fr);
+  align-items: start;
+}
+
+.surface {
+  padding: 20px;
+}
+
+.surface h3 {
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 1.15rem;
+}
+
+.action-list,
+.detail-list,
+.role-pills {
+  margin-top: 14px;
+}
+
+.action-list {
+  display: grid;
+  gap: 12px;
+}
+
+.action-link {
+  display: block;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 139, 141, 0.06);
+  text-decoration: none;
+}
+
+.action-link strong,
+.action-link span {
+  display: block;
+}
+
+.action-link strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.action-link span {
+  margin-top: 4px;
+  color: #52627a;
+  line-height: 1.45;
+  font-size: 0.88rem;
+}
+
+.detail-list {
+  padding-left: 18px;
+  color: #334155;
+  line-height: 1.6;
+  font-size: 0.92rem;
+}
+
+.role-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.role-pills span {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(15, 139, 141, 0.08);
+  color: #0f766e;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+@media (max-width: 1180px) {
+  .hero-card,
+  .management-grid,
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero-card,
+  .surface {
+    padding: 18px;
+  }
+}

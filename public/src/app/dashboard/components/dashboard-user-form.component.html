@@ -1,0 +1,135 @@
+<section class="form-card">
+  <div class="form-heading">
+    <div>
+      <p class="eyebrow">{{ isEditMode ? 'Edit Account' : 'Create Account' }}</p>
+      <h3>{{ formTitle }}</h3>
+      <p>{{ formDescription }}</p>
+    </div>
+    <button *ngIf="isEditMode" type="button" class="ghost-button" (click)="cancelEdit()">Cancel</button>
+  </div>
+
+  <form #userForm="ngForm" class="user-form" (ngSubmit)="submit(userForm)">
+    <label class="field">
+      <span>Company ID</span>
+      <input
+        #companyId="ngModel"
+        [(ngModel)]="model.companyId"
+        [class.input-invalid]="isFieldInvalid(companyId, 'companyId', 'Company ID is required')"
+        (blur)="normalizeField('companyId')"
+        maxlength="100"
+        name="companyId"
+        required
+        type="text" />
+      <small *ngIf="getControlError(companyId, 'companyId', 'Company ID is required') as error">{{ error }}</small>
+    </label>
+
+    <label class="field">
+      <span>Full name</span>
+      <input
+        #fullName="ngModel"
+        [(ngModel)]="model.fullName"
+        [class.input-invalid]="isFieldInvalid(fullName, 'fullName', 'Full name is required')"
+        (blur)="normalizeField('fullName')"
+        maxlength="255"
+        name="fullName"
+        required
+        type="text" />
+      <small *ngIf="getControlError(fullName, 'fullName', 'Full name is required') as error">{{ error }}</small>
+    </label>
+
+    <label class="field">
+      <span>Username</span>
+      <input
+        #username="ngModel"
+        [(ngModel)]="model.username"
+        [class.input-invalid]="isFieldInvalid(username, 'username', 'Username is required')"
+        (blur)="normalizeField('username')"
+        maxlength="100"
+        minlength="3"
+        name="username"
+        pattern="^[A-Za-z0-9._-]{3,100}$"
+        required
+        type="text" />
+      <small *ngIf="getControlError(username, 'username', 'Username is required') as error">{{ error }}</small>
+    </label>
+
+    <label class="field">
+      <span>Email</span>
+      <input
+        #email="ngModel"
+        [(ngModel)]="model.email"
+        [class.input-invalid]="isFieldInvalid(email, 'email', 'Email is required')"
+        (blur)="normalizeField('email')"
+        maxlength="200"
+        name="email"
+        required
+        type="email" />
+      <small *ngIf="getControlError(email, 'email', 'Email is required') as error">{{ error }}</small>
+    </label>
+
+    <label class="field">
+      <span>Password {{ isEditMode ? '(optional)' : '' }}</span>
+      <div class="password-input-wrapper">
+        <input
+          #password="ngModel"
+          [(ngModel)]="model.password"
+          [class.input-invalid]="getPasswordError() !== null"
+          [maxlength]="passwordMaxLength"
+          [required]="!isEditMode"
+          [type]="showPassword ? 'text' : 'password'"
+          name="password" />
+        <button
+          type="button"
+          class="toggle-password"
+          (click)="togglePasswordVisibility()"
+          [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          [title]="showPassword ? 'Hide password' : 'Show password'">
+          <i *ngIf="!showPassword" class="fas fa-eye"></i>
+          <i *ngIf="showPassword" class="fas fa-eye-slash"></i>
+        </button>
+      </div>
+      <small *ngIf="getPasswordError() as error">{{ error }}</small>
+    </label>
+
+    <label class="field">
+      <span>Role</span>
+      <select #role="ngModel" [(ngModel)]="model.role" name="role" required>
+        <option *ngFor="let roleName of assignableRoles" [ngValue]="roleName">
+          {{ roleLabel(roleName) }}
+        </option>
+      </select>
+      <small *ngIf="getControlError(role, 'role', 'Role is required') as error">{{ error }}</small>
+    </label>
+
+    <label class="field">
+      <span>Gender</span>
+      <select #gender="ngModel" [(ngModel)]="model.gender" name="gender" required>
+        <option *ngFor="let option of genderOptions" [ngValue]="option">{{ option }}</option>
+      </select>
+      <small *ngIf="getControlError(gender, 'gender', 'Gender is required') as error">{{ error }}</small>
+    </label>
+
+    <label class="field">
+      <span>Status</span>
+      <select #active="ngModel" [(ngModel)]="model.active" name="active" required>
+        <option [ngValue]="true">Active</option>
+        <option [ngValue]="false">Inactive</option>
+      </select>
+      <small *ngIf="getControlError(active, 'active', 'Status is required') as error">{{ error }}</small>
+    </label>
+
+    <div class="rules-box">
+      <p>Password rule</p>
+      <span>{{ passwordRuleText }}</span>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="primary-button" [disabled]="isSaving">
+        {{ isSaving ? 'Saving...' : isEditMode ? 'Update user' : 'Create user' }}
+      </button>
+      <button *ngIf="isEditMode" type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="isSaving">
+        Clear selection
+      </button>
+    </div>
+  </form>
+</section>

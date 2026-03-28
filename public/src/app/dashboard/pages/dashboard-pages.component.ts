@@ -3,8 +3,6 @@ import { Router } from '@angular/router';
 import { DashboardPageComponent } from '../dashboard-page.component';
 import {
   DashboardPageId,
-  DashboardView,
-  getDashboardView,
   getDefaultDashboardPage,
   isDashboardPageAllowed
 } from '../dashboard.config';
@@ -54,8 +52,8 @@ abstract class DashboardPageBase {
     );
   }
 
-  get view(): DashboardView {
-    return getDashboardView(this.user, this.currentPageId);
+  get pageId(): DashboardPageId {
+    return this.currentPageId;
   }
 }
 
@@ -63,7 +61,7 @@ abstract class DashboardPageBase {
   selector: 'app-dashboard-overview-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardOverviewPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -75,7 +73,7 @@ export class DashboardOverviewPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-users-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardUsersPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -87,7 +85,7 @@ export class DashboardUsersPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-roles-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardRolesPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -99,7 +97,7 @@ export class DashboardRolesPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-leaves-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardLeavesPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -111,7 +109,7 @@ export class DashboardLeavesPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-reports-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardReportsPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -123,7 +121,7 @@ export class DashboardReportsPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-settings-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardSettingsPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -135,7 +133,7 @@ export class DashboardSettingsPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-team-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardTeamPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -147,7 +145,7 @@ export class DashboardTeamPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-approvals-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardApprovalsPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -159,7 +157,7 @@ export class DashboardApprovalsPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-calendar-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardCalendarPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -171,7 +169,7 @@ export class DashboardCalendarPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-profile-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardProfilePageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -183,7 +181,7 @@ export class DashboardProfilePageComponent extends DashboardPageBase {
   selector: 'app-dashboard-requests-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardRequestsPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {
@@ -195,7 +193,7 @@ export class DashboardRequestsPageComponent extends DashboardPageBase {
   selector: 'app-dashboard-history-page',
   standalone: true,
   imports: [DashboardPageComponent],
-  template: '<app-dashboard-page [user]="user" [view]="view"></app-dashboard-page>'
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardHistoryPageComponent extends DashboardPageBase {
   constructor(router: Router, toastService: ToastService) {

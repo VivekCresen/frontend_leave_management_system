@@ -1,31 +1,25 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { ChangePasswordComponent } from './change-password/change-password.component';
-import { AuthApiService } from './services/auth-api.service';
-import { AUTH_SERVICE } from './services/auth.service';
 
 export const routes: Routes = [
   {
     path: 'login',
-    component: LoginComponent,
-    providers: [{ provide: AUTH_SERVICE, useExisting: AuthApiService }]
+    component: LoginComponent
   },
   {
     path: 'forgot-password',
-    providers: [{ provide: AUTH_SERVICE, useExisting: AuthApiService }],
     loadComponent: () =>
       import('./forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent)
   },
   {
     path: 'change-password',
-    component: ChangePasswordComponent,
-    providers: [{ provide: AUTH_SERVICE, useExisting: AuthApiService }]
+    component: ChangePasswordComponent
   },
   {
     path: 'dashboard',
     loadComponent: () =>
       import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),
-    providers: [{ provide: AUTH_SERVICE, useExisting: AuthApiService }],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'overview' },
       {

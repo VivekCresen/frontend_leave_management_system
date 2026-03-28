@@ -1,0 +1,54 @@
+<section class="table-card">
+  <div class="table-heading">
+    <div>
+      <p class="eyebrow">Directory</p>
+      <h3>{{ title }}</h3>
+      <p>{{ description }}</p>
+    </div>
+    <span class="count-pill">{{ users.length }} records</span>
+  </div>
+
+  <div *ngIf="users.length === 0" class="empty-state">
+    <h4>{{ emptyTitle }}</h4>
+    <p>{{ emptyMessage }}</p>
+  </div>
+
+  <div *ngIf="users.length > 0" class="table-shell">
+    <div class="table-row table-head" [class.without-actions]="!showActions">
+      <span>User</span>
+      <span>Role</span>
+      <span>Status</span>
+      <span>Created by</span>
+      <span>Last login</span>
+      <span *ngIf="showActions">Actions</span>
+    </div>
+
+    <div *ngFor="let user of users; trackBy: trackByUserId" class="table-row" [class.without-actions]="!showActions">
+      <div class="user-cell">
+        <strong>{{ user.fullName }}</strong>
+        <span>{{ user.username }}</span>
+        <small>{{ user.email }}</small>
+        <em>{{ user.companyId }}</em>
+      </div>
+      <span class="meta-text">{{ user.role | titlecase }}</span>
+      <span class="status-pill" [class.inactive]="!user.active">{{ user.active ? 'Active' : 'Inactive' }}</span>
+      <span class="meta-text">{{ user.createdBy || 'System' }}</span>
+      <span class="meta-text">{{ user.lastLogin ? (user.lastLogin | date: 'dd MMM yyyy, h:mm a') : 'Never' }}</span>
+      <div *ngIf="showActions" class="action-cell">
+        <button *ngIf="user.canEdit" type="button" class="edit-button" (click)="editRequested.emit(user)">Edit</button>
+        <button *ngIf="user.canDelete" type="button" class="delete-button" (click)="deleteRequested.emit(user)">Delete</button>
+        <span *ngIf="!user.canEdit && !user.canDelete" class="read-only">View only</span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="readMoreLink" class="table-footer">
+    <a [href]="readMoreLink" class="read-more-button">{{ readMoreLabel || 'Read more' }}</a>
+  </div>
+
+  <div *ngIf="canToggleExpanded" class="table-footer">
+    <button type="button" class="read-more-button" (click)="expandedToggled.emit()">
+      {{ isExpanded ? collapseLabel : (readMoreLabel || 'Read more') }}
+    </button>
+  </div>
+</section>

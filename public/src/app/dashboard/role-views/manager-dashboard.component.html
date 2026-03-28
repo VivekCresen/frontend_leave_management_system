@@ -1,0 +1,106 @@
+<section class="role-dashboard">
+  <ng-container *ngIf="pageId === 'overview'">
+    <section class="hero-card">
+      <div>
+        <p class="eyebrow">Manager workspace</p>
+        <h2>Team administration</h2>
+        <p class="hero-copy">Manage employee accounts within your assigned scope.</p>
+      </div>
+
+      <div class="hero-summary">
+        <span>Manager</span>
+        <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
+        <small>{{ user.email }}</small>
+        <em>{{ (dashboard?.employeeCount ?? 0) + ' employees in your scope' }}</em>
+      </div>
+    </section>
+
+    <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
+  </ng-container>
+
+  <ng-container [ngSwitch]="pageId">
+    <section *ngSwitchCase="'overview'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Actions</p>
+        <h3>Quick access</h3>
+        <div class="action-list">
+          <a routerLink="/dashboard/team" class="action-link">
+            <strong>Create employee</strong>
+            <span>Add a new team member.</span>
+          </a>
+          <a routerLink="/dashboard/team" class="action-link">
+            <strong>Manage team</strong>
+            <span>Update employee records.</span>
+          </a>
+          <a routerLink="/dashboard/reports" class="action-link">
+            <strong>Review summary</strong>
+            <span>Check team counts and status.</span>
+          </a>
+        </div>
+      </article>
+
+      <article class="surface">
+        <p class="eyebrow">Summary</p>
+        <h3>Access rules</h3>
+        <ul class="detail-list">
+          <li>Create employee accounts only.</li>
+          <li>Manage employees in your own scope.</li>
+          <li>Employee access remains read-only.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'team'" class="management-grid">
+      <app-dashboard-user-form
+        [assignableRoles]="dashboard?.assignableRoles ?? []"
+        [editingUser]="editingUser"
+        [fieldErrors]="fieldErrors"
+        [isSaving]="isSaving"
+        (saveRequested)="saveRequested.emit($event)"
+        (cancelRequested)="cancelEditRequested.emit()"></app-dashboard-user-form>
+
+      <app-dashboard-user-table
+        [users]="dashboard?.users ?? []"
+        title="My employees"
+        description="Employees within your scope."
+        emptyTitle="No employees yet"
+        emptyMessage="Create your first employee from the form."
+        (editRequested)="editRequested.emit($event)"
+        (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
+    </section>
+
+    <section *ngSwitchCase="'approvals'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Approvals</p>
+        <h3>Module status</h3>
+        <p class="body-copy">Approval workflow will be connected here.</p>
+      </article>
+
+      <article class="surface">
+        <p class="eyebrow">Team status</p>
+        <h3>{{ dashboard?.activeUsers ?? 0 }} active employees</h3>
+        <p class="body-copy">Current active team count.</p>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'calendar'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Team calendar</p>
+        <h3>Module status</h3>
+        <p class="body-copy">Calendar will be connected here.</p>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'reports'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Reports</p>
+        <h3>Team summary</h3>
+        <ul class="detail-list">
+          <li>{{ dashboard?.employeeCount ?? 0 }} total employees</li>
+          <li>{{ dashboard?.activeUsers ?? 0 }} active employees</li>
+          <li>{{ dashboard?.inactiveUsers ?? 0 }} inactive employees</li>
+        </ul>
+      </article>
+    </section>
+  </ng-container>
+</section>

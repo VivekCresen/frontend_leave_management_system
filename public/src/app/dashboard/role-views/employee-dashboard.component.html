@@ -1,0 +1,101 @@
+<section class="role-dashboard">
+  <ng-container *ngIf="pageId === 'overview'">
+    <section class="hero-card">
+      <div>
+        <p class="eyebrow">Employee workspace</p>
+        <h2>Personal workspace</h2>
+        <p class="hero-copy">View your account details and personal status.</p>
+      </div>
+
+      <div class="hero-summary">
+        <span>Employee</span>
+        <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
+        <small>{{ user.email }}</small>
+        <em>{{ user.active ? 'Account is active' : 'Account is inactive' }}</em>
+      </div>
+    </section>
+
+    <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
+  </ng-container>
+
+  <ng-container [ngSwitch]="pageId">
+    <section *ngSwitchCase="'overview'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Overview</p>
+        <h3>Account summary</h3>
+        <ul class="detail-list">
+          <li>Review profile details.</li>
+          <li>Change password when needed.</li>
+          <li>Access request and history pages.</li>
+        </ul>
+      </article>
+
+      <article class="surface">
+        <p class="eyebrow">Actions</p>
+        <h3>Quick access</h3>
+        <div class="action-list">
+          <a routerLink="/dashboard/profile" class="action-link">Profile</a>
+          <a routerLink="/dashboard/requests" class="action-link">Requests</a>
+          <a routerLink="/dashboard/history" class="action-link">History</a>
+        </div>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'profile'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Profile</p>
+        <h3>Account details</h3>
+        <div class="profile-grid">
+          <div>
+            <span>Full name</span>
+            <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
+          </div>
+          <div>
+            <span>Username</span>
+            <strong>{{ user.username }}</strong>
+          </div>
+          <div>
+            <span>Email</span>
+            <strong>{{ user.email }}</strong>
+          </div>
+          <div>
+            <span>Company ID</span>
+            <strong>{{ dashboard?.actor?.companyId || 'Not assigned' }}</strong>
+          </div>
+          <div>
+            <span>Gender</span>
+            <strong>{{ dashboard?.actor?.gender || 'Not provided' }}</strong>
+          </div>
+          <div>
+            <span>Created by</span>
+            <strong>{{ dashboard?.actor?.createdBy || 'System' }}</strong>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'requests'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Leave requests</p>
+        <h3>Module status</h3>
+        <p class="body-copy">Request workflow will be connected here.</p>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'history'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">History</p>
+        <h3>Module status</h3>
+        <p class="body-copy">Request history will be connected here.</p>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'calendar'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Calendar</p>
+        <h3>Module status</h3>
+        <p class="body-copy">Calendar will be connected here.</p>
+      </article>
+    </section>
+  </ng-container>
+</section>
