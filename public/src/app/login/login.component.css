@@ -227,6 +227,12 @@
   color: var(--app-danger);
 }
 
+.field-hint {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--app-muted);
+}
+
 .error-msg {
   padding: 13px 14px;
   border-radius: 16px;

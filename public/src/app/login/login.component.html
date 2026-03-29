@@ -16,13 +16,13 @@
 
         <div class="field-stack">
           <div class="input-group">
-            <label for="username">Email</label>
+            <label for="username">Username or Email</label>
             <div class="input-wrapper">
               <i class="fas fa-user"></i>
               <input
                 type="text"
                 id="username"
-                placeholder="Enter your email"
+                placeholder="Enter your username or email"
                 [(ngModel)]="username"
                 name="username"
                 #usernameModel="ngModel"
@@ -31,6 +31,7 @@
                 required
                 [maxlength]="usernameMaxLength">
             </div>
+           
             <div *ngIf="getUsernameError(usernameModel) as usernameError" class="field-error">{{ usernameError }}</div>
           </div>
 

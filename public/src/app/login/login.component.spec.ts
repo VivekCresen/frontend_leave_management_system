@@ -81,4 +81,22 @@ describe('LoginComponent', () => {
     expect(authService.setCurrentUser).toHaveBeenCalled();
     expect(toastService.success).toHaveBeenCalledWith('Login successful');
   });
+
+  it('should submit email login values too', () => {
+    authService.login.and.returnValue(of({
+      username: 'admin',
+      email: 'admin@cresen.com',
+      role: 'ADMIN',
+      active: true,
+      token: 'jwt-token',
+      message: 'Login successful'
+    }));
+
+    component.username = ' admin@cresen.com ';
+    component.password = 'admin123';
+
+    component.onSubmit({ invalid: false } as NgForm);
+
+    expect(authService.login).toHaveBeenCalledWith({ username: 'admin@cresen.com', password: 'admin123' });
+  });
 });

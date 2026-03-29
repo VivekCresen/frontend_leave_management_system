@@ -47,6 +47,14 @@ export class LoginComponent {
     this.isSubmitting = true;
     this.authService.login({ username: this.username, password: this.password }).subscribe({
       next: (response) => {
+        if (!response.active) {
+          this.isSubmitting = false;
+          this.authService.clearCurrentUser();
+          this.errorMessage = 'Your account is inactive. Please contact an administrator.';
+          this.toastService.error(this.errorMessage);
+          return;
+        }
+
         this.isSubmitting = false;
         this.authService.setCurrentUser(response);
         this.toastService.success('Login successful');
