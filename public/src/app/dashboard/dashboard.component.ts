@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { LoginResponse, injectAuthService } from '../services/auth.service';
@@ -16,6 +16,11 @@ import { getDashboardMenuItems, getDefaultDashboardPage, isDashboardPageAllowed 
 })
 export class DashboardComponent {
   private readonly authService = injectAuthService();
+  private readonly mobileBreakpoint = 860;
+
+  isSidebarCollapsed = false;
+  isMobileViewport = false;
+  isMobileSidebarOpen = false;
 
   constructor(
     private readonly router: Router,
@@ -36,6 +41,7 @@ export class DashboardComponent {
       return;
     }
 
+    this.syncViewportState();
     this.ensureValidRoute();
     this.router.events
       .pipe(
@@ -51,6 +57,38 @@ export class DashboardComponent {
 
   get menuItems() {
     return getDashboardMenuItems(this.currentUser?.role);
+  }
+
+  get sidebarToggleLabel(): string {
+    if (this.isMobileViewport) {
+      return this.isMobileSidebarOpen ? 'Close sidebar menu' : 'Open sidebar menu';
+    }
+
+    return this.isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.syncViewportState();
+  }
+
+  toggleSidebar(): void {
+    if (this.isMobileViewport) {
+      this.isMobileSidebarOpen = !this.isMobileSidebarOpen;
+      return;
+    }
+
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+  }
+
+  closeMobileSidebar(): void {
+    this.isMobileSidebarOpen = false;
+  }
+
+  handleMenuNavigation(): void {
+    if (this.isMobileViewport) {
+      this.closeMobileSidebar();
+    }
   }
 
   logout(): void {
@@ -70,6 +108,19 @@ export class DashboardComponent {
 
     if (!currentPage || !isDashboardPageAllowed(user.role, currentPage)) {
       this.router.navigate(['/dashboard', fallbackPage]);
+    }
+  }
+
+  private syncViewportState(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const isMobileViewport = window.innerWidth <= this.mobileBreakpoint;
+    this.isMobileViewport = isMobileViewport;
+
+    if (!isMobileViewport) {
+      this.isMobileSidebarOpen = false;
     }
   }
 }

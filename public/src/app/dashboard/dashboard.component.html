@@ -1,10 +1,43 @@
-<div class="dashboard-shell" *ngIf="currentUser as user">
-  <aside class="sidebar">
-    <div class="brand-block">
-      <p class="brand-label">Cresen LMS</p>
-      <h1>{{ user.role | titlecase }} Panel</h1>
-      <p class="brand-user">{{ user.username }}</p>
-      <p class="brand-email">{{ user.email }}</p>
+<div
+  class="dashboard-shell"
+  *ngIf="currentUser as user"
+  [class.sidebar-collapsed]="isSidebarCollapsed && !isMobileViewport"
+  [class.sidebar-open]="isMobileSidebarOpen">
+  <div
+    class="sidebar-backdrop"
+    [class.visible]="isMobileSidebarOpen"
+    (click)="closeMobileSidebar()"
+    aria-hidden="true"></div>
+
+  <aside class="sidebar" id="dashboard-sidebar">
+    <div class="sidebar-header">
+      <div class="brand-block">
+        <div class="brand-mark">
+          <i class="fas fa-layer-group"></i>
+        </div>
+
+        <div class="brand-copy">
+          <p class="brand-label">Cresen LMS</p>
+          <h1>{{ user.role | titlecase }} Panel</h1>
+          <p class="brand-user">{{ user.username }}</p>
+          <p class="brand-email">{{ user.email }}</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="sidebar-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="sidebarToggleLabel"
+        [attr.aria-expanded]="isMobileViewport ? isMobileSidebarOpen : !isSidebarCollapsed"
+        aria-controls="dashboard-sidebar">
+        <i
+          class="fas"
+          [class.fa-bars]="isMobileViewport && !isMobileSidebarOpen"
+          [class.fa-xmark]="isMobileViewport && isMobileSidebarOpen"
+          [class.fa-angles-left]="!isMobileViewport && !isSidebarCollapsed"
+          [class.fa-angles-right]="!isMobileViewport && isSidebarCollapsed"></i>
+      </button>
     </div>
 
     <div class="status-panel">
@@ -24,7 +57,10 @@
         class="menu-item"
         [routerLink]="['/dashboard', item.path]"
         routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }">
+        [routerLinkActiveOptions]="{ exact: true }"
+        [attr.aria-label]="item.label"
+        [attr.title]="item.label"
+        (click)="handleMenuNavigation()">
         <span class="menu-icon">
           <i class="fas" [class]="item.icon"></i>
         </span>
@@ -36,12 +72,36 @@
     </nav>
 
     <div class="sidebar-actions">
-      <a routerLink="/change-password" class="secondary-action">Change Password</a>
-      <button type="button" class="primary-action" (click)="logout()">Logout</button>
+      <a routerLink="/change-password" class="secondary-action" aria-label="Change Password" title="Change Password">
+        <i class="fas fa-key"></i>
+        <span>Change Password</span>
+      </a>
+      <button type="button" class="primary-action" (click)="logout()" aria-label="Logout" title="Logout">
+        <i class="fas fa-right-from-bracket"></i>
+        <span>Logout</span>
+      </button>
     </div>
   </aside>
 
   <main class="dashboard-content">
+    <div class="dashboard-mobile-bar">
+      <button
+        type="button"
+        class="mobile-sidebar-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-label]="sidebarToggleLabel"
+        [attr.aria-expanded]="isMobileSidebarOpen"
+        aria-controls="dashboard-sidebar">
+        <i class="fas" [class.fa-bars]="!isMobileSidebarOpen" [class.fa-xmark]="isMobileSidebarOpen"></i>
+        <span>{{ isMobileSidebarOpen ? 'Close menu' : 'Open menu' }}</span>
+      </button>
+
+      <div class="mobile-user-pill">
+        <strong>{{ user.role | titlecase }}</strong>
+        <span>{{ user.username }}</span>
+      </div>
+    </div>
+
     <router-outlet></router-outlet>
   </main>
 </div>
