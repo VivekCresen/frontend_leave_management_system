@@ -38,6 +38,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
 
   dashboard: UserDashboardResponse | null = null;
   editingUser: ManagedUser | null = null;
+  isUserFormOpen = false;
   fieldErrors: Record<string, string> = {};
   errorMessage = '';
   isLoading = false;
@@ -101,14 +102,22 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     this.loadDashboard();
   }
 
+  openCreateForm(): void {
+    this.fieldErrors = {};
+    this.editingUser = null;
+    this.isUserFormOpen = true;
+  }
+
   startEdit(user: ManagedUser): void {
     this.fieldErrors = {};
     this.editingUser = user;
+    this.isUserFormOpen = true;
   }
 
   cancelEdit(): void {
     this.fieldErrors = {};
     this.editingUser = null;
+    this.isUserFormOpen = false;
   }
 
   handleSave(event: DashboardUserSubmitEvent): void {
@@ -123,6 +132,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       next: () => {
         this.isSaving = false;
         this.editingUser = null;
+        this.isUserFormOpen = false;
         this.toastService.success(event.userId ? 'User updated successfully' : 'User created successfully');
         this.loadDashboard();
       },

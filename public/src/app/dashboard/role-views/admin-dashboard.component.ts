@@ -29,9 +29,11 @@ export class AdminDashboardComponent {
   @Input() dashboard: UserDashboardResponse | null = null;
   @Input() editingUser: ManagedUser | null = null;
   @Input() isSaving = false;
+  @Input() isUserFormOpen = false;
   @Input() fieldErrors: Record<string, string> = {};
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
+  @Output() createRequested = new EventEmitter<void>();
   @Output() editRequested = new EventEmitter<ManagedUser>();
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
   @Output() cancelEditRequested = new EventEmitter<void>();

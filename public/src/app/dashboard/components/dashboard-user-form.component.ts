@@ -34,13 +34,19 @@ export interface DashboardUserSubmitEvent {
   styleUrls: ['./dashboard-user-form.component.css']
 })
 export class DashboardUserFormComponent implements OnChanges {
-  readonly usernamePattern = '^[A-Za-z0-9._-]{3,100}$';
+  private readonly companyIdPrefix = 'CRESEN';
+  private readonly minimumNextCompanyId = 4;
+  private readonly usernameRegex = /^[A-Za-z0-9._-]+$/;
+
+  readonly usernameMinLength = 3;
+  readonly usernameMaxLength = 100;
   readonly passwordMaxLength = PASSWORD_MAX_LENGTH;
   readonly passwordRuleText = STRICT_PASSWORD_MESSAGE;
   readonly genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
   readonly trimValidatedFields: TrimmedField[] = ['companyId', 'fullName', 'username', 'email'];
 
   @Input({ required: true }) assignableRoles: string[] = [];
+  @Input() users: ManagedUser[] = [];
   @Input() editingUser: ManagedUser | null = null;
   @Input() isSaving = false;
   @Input() fieldErrors: Record<string, string> = {};
@@ -58,6 +64,10 @@ export class DashboardUserFormComponent implements OnChanges {
     if (changes['editingUser']) {
       this.syncModelFromInputs();
       return;
+    }
+
+    if (changes['users'] && !this.isEditMode) {
+      this.syncGeneratedCompanyId();
     }
 
     if (changes['assignableRoles']) {
@@ -79,11 +89,17 @@ export class DashboardUserFormComponent implements OnChanges {
       : 'Create a new account with the correct role, status, and company details.';
   }
 
+  get companyIdHint(): string {
+    return this.isEditMode
+      ? 'Company ID is locked and cannot be changed.'
+      : 'Company ID is assigned automatically and cannot be changed.';
+  }
+
   submit(form: NgForm): void {
     this.submitted = true;
     this.normalizeTrimmedFields();
 
-    if (form.invalid || this.hasWhitespaceOnlyErrors() || !!this.getPasswordError()) {
+    if (form.invalid || this.hasWhitespaceOnlyErrors() || !!this.getPasswordError() || !!this.getUsernameValidationMessage()) {
       return;
     }
 
@@ -119,6 +135,13 @@ export class DashboardUserFormComponent implements OnChanges {
 
     if (this.requiresTrimmedValue(field) && this.shouldShowTrimmedRequired(field, control)) {
       return fallback;
+    }
+
+    if (field === 'username' && this.shouldShowFieldFeedback(control)) {
+      const usernameError = this.getUsernameValidationMessage();
+      if (usernameError) {
+        return usernameError;
+      }
     }
 
     if (!control || !this.shouldShowControlError(control)) {
@@ -208,7 +231,7 @@ export class DashboardUserFormComponent implements OnChanges {
 
   private createDefaultModel(): UserFormModel {
     return {
-      companyId: '',
+      companyId: this.generateNextCompanyId(),
       fullName: '',
       username: '',
       email: '',
@@ -220,7 +243,13 @@ export class DashboardUserFormComponent implements OnChanges {
   }
 
   private shouldShowControlError(control: NgModel): boolean {
-    return control.invalid === true && (control.touched === true || control.dirty === true || this.submitted);
+    return control.invalid === true && this.shouldShowFieldFeedback(control);
+  }
+
+  private shouldShowFieldFeedback(control: NgModel | null): boolean {
+    return control
+      ? control.touched === true || control.dirty === true || this.submitted
+      : this.submitted;
   }
 
   private shouldShowTrimmedRequired(field: TrimmedField, control: NgModel | null): boolean {
@@ -243,7 +272,63 @@ export class DashboardUserFormComponent implements OnChanges {
     return this.trimValidatedFields.some((field) => this.isWhitespaceOnly(field));
   }
 
+  private getUsernameValidationMessage(): string | null {
+    const username = this.model.username.trim();
+
+    if (!username) {
+      return null;
+    }
+
+    if (username.length < this.usernameMinLength || username.length > this.usernameMaxLength) {
+      return `Username must be ${this.usernameMinLength} to ${this.usernameMaxLength} characters`;
+    }
+
+    if (!this.usernameRegex.test(username)) {
+      return 'Username must use letters, numbers, dot, underscore, or hyphen only';
+    }
+
+    return null;
+  }
+
   private normalizeTrimmedFields(): void {
     this.trimValidatedFields.forEach((field) => this.normalizeField(field));
+  }
+
+  private syncGeneratedCompanyId(): void {
+    this.model.companyId = this.generateNextCompanyId();
+  }
+
+  private generateNextCompanyId(): string {
+    const companyIds = this.users
+      .map((user) => user.companyId?.trim() ?? '')
+      .filter((companyId) => companyId.length > 0);
+
+    const highestCompanyIdNumber = companyIds.reduce((highest, companyId) => {
+      const nextValue = this.extractCompanyIdNumber(companyId);
+      return nextValue > highest ? nextValue : highest;
+    }, this.minimumNextCompanyId - 1);
+
+    let nextValue = Math.max(this.minimumNextCompanyId, this.users.length + 1, highestCompanyIdNumber + 1);
+    let candidate = this.formatCompanyId(nextValue);
+
+    while (companyIds.some((companyId) => companyId.toUpperCase() === candidate)) {
+      nextValue += 1;
+      candidate = this.formatCompanyId(nextValue);
+    }
+
+    return candidate;
+  }
+
+  private extractCompanyIdNumber(companyId: string): number {
+    if (!companyId.toUpperCase().startsWith(this.companyIdPrefix)) {
+      return -1;
+    }
+
+    const suffix = companyId.slice(this.companyIdPrefix.length);
+    return /^\d+$/.test(suffix) ? Number.parseInt(suffix, 10) : -1;
+  }
+
+  private formatCompanyId(value: number): string {
+    return `${this.companyIdPrefix}${value.toString().padStart(3, '0')}`;
   }
 }

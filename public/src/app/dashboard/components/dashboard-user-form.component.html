@@ -14,13 +14,11 @@
       <input
         #companyId="ngModel"
         [(ngModel)]="model.companyId"
-        [class.input-invalid]="isFieldInvalid(companyId, 'companyId', 'Company ID is required')"
-        (blur)="normalizeField('companyId')"
         maxlength="100"
         name="companyId"
-        required
+        readonly
         type="text" />
-      <small *ngIf="getControlError(companyId, 'companyId', 'Company ID is required') as error">{{ error }}</small>
+      <small class="field-hint">{{ companyIdHint }}</small>
     </label>
 
     <label class="field">
@@ -34,7 +32,11 @@
         name="fullName"
         required
         type="text" />
-      <small *ngIf="getControlError(fullName, 'fullName', 'Full name is required') as error">{{ error }}</small>
+      <small
+        [class.field-message-empty]="!getControlError(fullName, 'fullName', 'Full name is required')"
+        aria-live="polite">
+        {{ getControlError(fullName, 'fullName', 'Full name is required') || ' ' }}
+      </small>
     </label>
 
     <label class="field">
@@ -44,13 +46,15 @@
         [(ngModel)]="model.username"
         [class.input-invalid]="isFieldInvalid(username, 'username', 'Username is required')"
         (blur)="normalizeField('username')"
-        maxlength="100"
-        minlength="3"
+        [maxlength]="usernameMaxLength"
         name="username"
-        pattern="^[A-Za-z0-9._-]{3,100}$"
         required
         type="text" />
-      <small *ngIf="getControlError(username, 'username', 'Username is required') as error">{{ error }}</small>
+      <small
+        [class.field-message-empty]="!getControlError(username, 'username', 'Username is required')"
+        aria-live="polite">
+        {{ getControlError(username, 'username', 'Username is required') || ' ' }}
+      </small>
     </label>
 
     <label class="field">
@@ -64,7 +68,11 @@
         name="email"
         required
         type="email" />
-      <small *ngIf="getControlError(email, 'email', 'Email is required') as error">{{ error }}</small>
+      <small
+        [class.field-message-empty]="!getControlError(email, 'email', 'Email is required')"
+        aria-live="polite">
+        {{ getControlError(email, 'email', 'Email is required') || ' ' }}
+      </small>
     </label>
 
     <label class="field">
@@ -88,7 +96,9 @@
           <i *ngIf="showPassword" class="fas fa-eye-slash"></i>
         </button>
       </div>
-      <small *ngIf="getPasswordError() as error">{{ error }}</small>
+      <small [class.field-message-empty]="!getPasswordError()" aria-live="polite">
+        {{ getPasswordError() || ' ' }}
+      </small>
     </label>
 
     <label class="field">
@@ -98,7 +108,11 @@
           {{ roleLabel(roleName) }}
         </option>
       </select>
-      <small *ngIf="getControlError(role, 'role', 'Role is required') as error">{{ error }}</small>
+      <small
+        [class.field-message-empty]="!getControlError(role, 'role', 'Role is required')"
+        aria-live="polite">
+        {{ getControlError(role, 'role', 'Role is required') || ' ' }}
+      </small>
     </label>
 
     <label class="field">
@@ -106,7 +120,11 @@
       <select #gender="ngModel" [(ngModel)]="model.gender" name="gender" required>
         <option *ngFor="let option of genderOptions" [ngValue]="option">{{ option }}</option>
       </select>
-      <small *ngIf="getControlError(gender, 'gender', 'Gender is required') as error">{{ error }}</small>
+      <small
+        [class.field-message-empty]="!getControlError(gender, 'gender', 'Gender is required')"
+        aria-live="polite">
+        {{ getControlError(gender, 'gender', 'Gender is required') || ' ' }}
+      </small>
     </label>
 
     <label class="field">
@@ -115,7 +133,11 @@
         <option [ngValue]="true">Active</option>
         <option [ngValue]="false">Inactive</option>
       </select>
-      <small *ngIf="getControlError(active, 'active', 'Status is required') as error">{{ error }}</small>
+      <small
+        [class.field-message-empty]="!getControlError(active, 'active', 'Status is required')"
+        aria-live="polite">
+        {{ getControlError(active, 'active', 'Status is required') || ' ' }}
+      </small>
     </label>
 
     <div class="rules-box">

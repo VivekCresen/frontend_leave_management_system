@@ -51,13 +51,18 @@
     </section>
 
     <section *ngSwitchCase="'team'" class="management-grid">
-      <app-dashboard-user-form
-        [assignableRoles]="dashboard?.assignableRoles ?? []"
-        [editingUser]="editingUser"
-        [fieldErrors]="fieldErrors"
-        [isSaving]="isSaving"
-        (saveRequested)="saveRequested.emit($event)"
-        (cancelRequested)="cancelEditRequested.emit()"></app-dashboard-user-form>
+      <div class="management-toolbar">
+        <div>
+          <p class="eyebrow">Team actions</p>
+          <h3>Employee management</h3>
+          <p class="body-copy">Create and update employee accounts from a single popup workflow.</p>
+        </div>
+
+        <button type="button" class="primary-toolbar-button" (click)="createRequested.emit()">
+          <i class="fas fa-user-plus"></i>
+          <span>Create user</span>
+        </button>
+      </div>
 
       <app-dashboard-user-table
         [users]="dashboard?.users ?? []"
@@ -65,8 +70,22 @@
         description="Employees within your scope."
         emptyTitle="No employees yet"
         emptyMessage="Create your first employee from the form."
+        [showTableTools]="true"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
+
+      <div *ngIf="isUserFormOpen" class="form-modal-backdrop" (click)="cancelEditRequested.emit()">
+        <div class="form-modal-card" (click)="$event.stopPropagation()">
+          <app-dashboard-user-form
+            [assignableRoles]="dashboard?.assignableRoles ?? []"
+            [editingUser]="editingUser"
+            [fieldErrors]="fieldErrors"
+            [isSaving]="isSaving"
+            [users]="dashboard?.users ?? []"
+            (saveRequested)="saveRequested.emit($event)"
+            (cancelRequested)="cancelEditRequested.emit()"></app-dashboard-user-form>
+        </div>
+      </div>
     </section>
 
     <section *ngSwitchCase="'approvals'" class="panel-grid">

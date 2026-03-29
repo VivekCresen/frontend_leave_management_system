@@ -5,15 +5,41 @@
       <h3>{{ title }}</h3>
       <p>{{ description }}</p>
     </div>
-    <span class="count-pill">{{ users.length }} records</span>
+    <span class="count-pill">{{ visibleCountLabel }}</span>
   </div>
 
-  <div *ngIf="users.length === 0" class="empty-state">
-    <h4>{{ emptyTitle }}</h4>
-    <p>{{ emptyMessage }}</p>
+  <div *ngIf="showTableTools" class="table-tools">
+    <label class="tool-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input [(ngModel)]="searchTerm" type="text" placeholder="Search by name, email, company ID, or creator" />
+    </label>
+
+    <label class="tool-select">
+      <span>Role</span>
+      <select [(ngModel)]="selectedRole">
+        <option value="ALL">All roles</option>
+        <option *ngFor="let role of roleOptions" [ngValue]="role">{{ role | titlecase }}</option>
+      </select>
+    </label>
+
+    <label class="tool-select">
+      <span>Status</span>
+      <select [(ngModel)]="selectedStatus">
+        <option value="ALL">All status</option>
+        <option value="ACTIVE">Active</option>
+        <option value="INACTIVE">Inactive</option>
+      </select>
+    </label>
+
+    <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">Reset</button>
   </div>
 
-  <div *ngIf="users.length > 0" class="table-shell">
+  <div *ngIf="displayedUsers.length === 0" class="empty-state">
+    <h4>{{ resolvedEmptyTitle }}</h4>
+    <p>{{ resolvedEmptyMessage }}</p>
+  </div>
+
+  <div *ngIf="displayedUsers.length > 0" class="table-shell">
     <div class="table-row table-head" [class.without-actions]="!showActions">
       <span>User</span>
       <span>Role</span>
@@ -23,7 +49,7 @@
       <span *ngIf="showActions">Actions</span>
     </div>
 
-    <div *ngFor="let user of users; trackBy: trackByUserId" class="table-row" [class.without-actions]="!showActions">
+    <div *ngFor="let user of displayedUsers; trackBy: trackByUserId" class="table-row" [class.without-actions]="!showActions">
       <div class="user-cell">
         <strong>{{ user.fullName }}</strong>
         <span>{{ user.username }}</span>

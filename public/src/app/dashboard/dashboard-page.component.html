@@ -32,9 +32,11 @@
       [editingUser]="editingUser"
       [fieldErrors]="fieldErrors"
       [isSaving]="isSaving"
+      [isUserFormOpen]="isUserFormOpen"
       [pageId]="pageId"
       [user]="user"
       (cancelEditRequested)="cancelEdit()"
+      (createRequested)="openCreateForm()"
       (deleteRequested)="handleDelete($event)"
       (editRequested)="startEdit($event)"
       (saveRequested)="handleSave($event)"></app-admin-dashboard>
@@ -45,9 +47,11 @@
       [editingUser]="editingUser"
       [fieldErrors]="fieldErrors"
       [isSaving]="isSaving"
+      [isUserFormOpen]="isUserFormOpen"
       [pageId]="pageId"
       [user]="user"
       (cancelEditRequested)="cancelEdit()"
+      (createRequested)="openCreateForm()"
       (deleteRequested)="handleDelete($event)"
       (editRequested)="startEdit($event)"
       (saveRequested)="handleSave($event)"></app-manager-dashboard>
