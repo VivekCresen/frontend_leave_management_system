@@ -20,7 +20,6 @@ export type DashboardMenuItem = {
   path: DashboardPageId;
   label: string;
   icon: string;
-  caption: string;
 };
 
 export type DashboardMetric = {
@@ -48,26 +47,26 @@ export type DashboardView = {
 
 const DASHBOARD_MENUS: Record<DashboardRole, DashboardMenuItem[]> = {
   ADMIN: [
-    { path: 'overview', label: 'Overview', icon: 'fa-house', caption: 'Main dashboard summary' },
-    { path: 'users', label: 'User Management', icon: 'fa-users-gear', caption: 'Manage employee access' },
-    { path: 'roles', label: 'Roles & Access', icon: 'fa-shield-halved', caption: 'Permission structure and ownership' },
-    { path: 'leaves', label: 'Leave Operations', icon: 'fa-calendar-check', caption: 'Track leave movement across teams' },
-    { path: 'reports', label: 'Reports', icon: 'fa-chart-column', caption: 'Audit trends and activity' },
-    { path: 'settings', label: 'Settings', icon: 'fa-sliders', caption: 'System and policy controls' }
+    { path: 'overview', label: 'Overview', icon: 'fa-house' },
+    { path: 'users', label: 'User Management', icon: 'fa-users-gear' },
+    { path: 'roles', label: 'Roles & Access', icon: 'fa-shield-halved' },
+    { path: 'leaves', label: 'Leave Operations', icon: 'fa-calendar-check' },
+    { path: 'reports', label: 'Reports', icon: 'fa-chart-column' },
+    { path: 'settings', label: 'Settings', icon: 'fa-sliders' }
   ],
   MANAGER: [
-    { path: 'overview', label: 'Overview', icon: 'fa-house', caption: 'Manager home workspace' },
-    { path: 'team', label: 'Team Members', icon: 'fa-user-group', caption: 'Track team availability' },
-    { path: 'approvals', label: 'Approvals', icon: 'fa-circle-check', caption: 'Review and approve requests' },
-    { path: 'calendar', label: 'Team Calendar', icon: 'fa-calendar-days', caption: 'Plan upcoming coverage' },
-    { path: 'reports', label: 'Reports', icon: 'fa-chart-line', caption: 'Monitor delivery and leave patterns' }
+    { path: 'overview', label: 'Overview', icon: 'fa-house' },
+    { path: 'team', label: 'Team Members', icon: 'fa-user-group' },
+    { path: 'approvals', label: 'Approvals', icon: 'fa-circle-check' },
+    { path: 'calendar', label: 'Team Calendar', icon: 'fa-calendar-days' },
+    { path: 'reports', label: 'Reports', icon: 'fa-chart-line' }
   ],
   EMPLOYEE: [
-    { path: 'overview', label: 'Overview', icon: 'fa-house', caption: 'Personal dashboard home' },
-    { path: 'profile', label: 'My Profile', icon: 'fa-id-card', caption: 'View and confirm account details' },
-    { path: 'requests', label: 'Leave Requests', icon: 'fa-paper-plane', caption: 'Submit and track applications' },
-    { path: 'history', label: 'History', icon: 'fa-clock-rotate-left', caption: 'Review earlier submissions' },
-    { path: 'calendar', label: 'Calendar', icon: 'fa-calendar', caption: 'Check your leave plan' }
+    { path: 'overview', label: 'Overview', icon: 'fa-house' },
+    { path: 'profile', label: 'My Profile', icon: 'fa-id-card' },
+    { path: 'requests', label: 'Leave Requests', icon: 'fa-paper-plane'},
+    { path: 'history', label: 'History', icon: 'fa-clock-rotate-left' },
+    { path: 'calendar', label: 'Calendar', icon: 'fa-calendar' }
   ]
 };
 

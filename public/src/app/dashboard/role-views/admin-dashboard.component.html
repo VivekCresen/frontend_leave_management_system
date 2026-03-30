@@ -1,58 +1,19 @@
 <section class="role-dashboard">
   <ng-container *ngIf="pageId === 'overview'">
-    <section class="hero-card">
-      <div>
-        <p class="eyebrow">Admin workspace</p>
-        <h2>Account administration</h2>
-        <p class="hero-copy">Manage managers, employees, and access status from one workspace.</p>
-      </div>
 
-      <div class="hero-summary">
-        <span>Signed in as</span>
-        <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
-        <small>{{ user.email }}</small>
-        <em>{{ (dashboard?.activeUsers ?? 0) + ' active accounts' }}</em>
-      </div>
-    </section>
 
     <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
     <section *ngSwitchCase="'overview'" class="panel-grid">
-      <article class="surface">
-        <p class="eyebrow">Actions</p>
-        <h3>Quick access</h3>
-        <div class="action-list">
-          <a routerLink="/dashboard/users" class="action-link">
-            <strong>Create manager</strong>
-            <span>Add a manager account.</span>
-          </a>
-          <a routerLink="/dashboard/users" class="action-link">
-            <strong>Create employee</strong>
-            <span>Add an employee account.</span>
-          </a>
-          <a routerLink="/dashboard/roles" class="action-link">
-            <strong>Review roles</strong>
-            <span>Check access distribution.</span>
-          </a>
-        </div>
-      </article>
 
-      <article class="surface">
-        <p class="eyebrow">Summary</p>
-        <h3>Access rules</h3>
-        <ul class="detail-list">
-          <li>Admin can manage managers and employees.</li>
-          <li>Managers can manage employees only.</li>
-          <li>Inactive accounts remain visible for review.</li>
-        </ul>
-      </article>
+
 
       <app-dashboard-user-table
         [users]="recentUsers"
         title="Recent accounts"
-        description="Latest records in the directory."
+      
         emptyTitle="No users available"
         emptyMessage="Create a manager or employee to begin."
         [showActions]="false"
@@ -69,7 +30,6 @@
     <section *ngSwitchCase="'users'" class="management-grid">
       <div class="management-toolbar">
         <div>
-          <p class="eyebrow">User actions</p>
           <h3>User management</h3>
           <p class="body-copy">Create, update, or remove accounts from one directory view.</p>
         </div>
@@ -78,6 +38,7 @@
           <i class="fas fa-user-plus"></i>
           <span>Create user</span>
         </button>
+       
       </div>
 
       <app-dashboard-user-table
@@ -106,7 +67,6 @@
 
     <section *ngSwitchCase="'roles'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Distribution</p>
         <h3>Role counts</h3>
         <div class="role-pills">
           <span>Admins: {{ dashboard?.adminCount ?? 0 }}</span>
@@ -116,7 +76,6 @@
       </article>
 
       <article class="surface">
-        <p class="eyebrow">Permissions</p>
         <h3>Role policy</h3>
         <ul class="detail-list">
           <li>Admin manages manager and employee accounts.</li>
@@ -128,12 +87,10 @@
 
     <section *ngSwitchCase="'leaves'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Leave operations</p>
         <h3>Module status</h3>
         <p class="body-copy">Leave operations will be connected here.</p>
       </article>
       <article class="surface">
-        <p class="eyebrow">Coverage</p>
         <h3>{{ dashboard?.employeeCount ?? 0 }} employees available</h3>
         <p class="body-copy">Employee records are ready for leave mapping.</p>
       </article>
@@ -141,7 +98,6 @@
 
     <section *ngSwitchCase="'reports'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Reporting</p>
         <h3>Account summary</h3>
         <ul class="detail-list">
           <li>{{ dashboard?.activeUsers ?? 0 }} active accounts</li>
@@ -150,7 +106,6 @@
         </ul>
       </article>
       <article class="surface">
-        <p class="eyebrow">Status</p>
         <h3>Reporting layout ready</h3>
         <p class="body-copy">Counts and user status are available for reporting.</p>
       </article>
@@ -158,7 +113,6 @@
 
     <section *ngSwitchCase="'settings'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Settings</p>
         <h3>Account controls</h3>
         <ul class="detail-list">
           <li>Password policy is enforced.</li>

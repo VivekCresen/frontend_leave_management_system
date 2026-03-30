@@ -1,67 +1,25 @@
 <section class="role-dashboard">
   <ng-container *ngIf="pageId === 'overview'">
-    <section class="hero-card">
-      <div>
-        <p class="eyebrow">Manager workspace</p>
-        <h2>Team administration</h2>
-        <p class="hero-copy">Manage employee accounts within your assigned scope.</p>
-      </div>
-
-      <div class="hero-summary">
-        <span>Manager</span>
-        <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
-        <small>{{ user.email }}</small>
-        <em>{{ (dashboard?.employeeCount ?? 0) + ' employees in your scope' }}</em>
-      </div>
-    </section>
+    
 
     <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
-    <section *ngSwitchCase="'overview'" class="panel-grid">
-      <article class="surface">
-        <p class="eyebrow">Actions</p>
-        <h3>Quick access</h3>
-        <div class="action-list">
-          <a routerLink="/dashboard/team" class="action-link">
-            <strong>Create employee</strong>
-            <span>Add a new team member.</span>
-          </a>
-          <a routerLink="/dashboard/team" class="action-link">
-            <strong>Manage team</strong>
-            <span>Update employee records.</span>
-          </a>
-          <a routerLink="/dashboard/reports" class="action-link">
-            <strong>Review summary</strong>
-            <span>Check team counts and status.</span>
-          </a>
-        </div>
-      </article>
+   
 
-      <article class="surface">
-        <p class="eyebrow">Summary</p>
-        <h3>Access rules</h3>
-        <ul class="detail-list">
-          <li>Create employee accounts only.</li>
-          <li>Manage employees in your own scope.</li>
-          <li>Employee access remains read-only.</li>
-        </ul>
-      </article>
-    </section>
 
     <section *ngSwitchCase="'team'" class="management-grid">
       <div class="management-toolbar">
         <div>
-          <p class="eyebrow">Team actions</p>
           <h3>Employee management</h3>
-          <p class="body-copy">Create and update employee accounts from a single popup workflow.</p>
         </div>
 
         <button type="button" class="primary-toolbar-button" (click)="createRequested.emit()">
           <i class="fas fa-user-plus"></i>
           <span>Create user</span>
         </button>
+       
       </div>
 
       <app-dashboard-user-table
@@ -90,13 +48,11 @@
 
     <section *ngSwitchCase="'approvals'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Approvals</p>
         <h3>Module status</h3>
         <p class="body-copy">Approval workflow will be connected here.</p>
       </article>
 
       <article class="surface">
-        <p class="eyebrow">Team status</p>
         <h3>{{ dashboard?.activeUsers ?? 0 }} active employees</h3>
         <p class="body-copy">Current active team count.</p>
       </article>
@@ -104,7 +60,6 @@
 
     <section *ngSwitchCase="'calendar'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Team calendar</p>
         <h3>Module status</h3>
         <p class="body-copy">Calendar will be connected here.</p>
       </article>
@@ -112,7 +67,6 @@
 
     <section *ngSwitchCase="'reports'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Reports</p>
         <h3>Team summary</h3>
         <ul class="detail-list">
           <li>{{ dashboard?.employeeCount ?? 0 }} total employees</li>

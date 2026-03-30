@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
 import {
@@ -15,7 +14,6 @@ import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../service
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
     DashboardStatCardsComponent,
     DashboardUserFormComponent,
     DashboardUserTableComponent

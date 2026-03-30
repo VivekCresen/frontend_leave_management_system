@@ -40,6 +40,7 @@
 }
 
 .ghost-button,
+.close-button,
 .primary-button,
 .secondary-button {
   min-height: 44px;
@@ -54,16 +55,31 @@
   color: #0f766e;
 }
 
+.close-button {
+  min-width: 44px;
+  padding: 0;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 252, 0.92);
+  color: #475569;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-button:hover {
+  background: rgba(226, 232, 240, 0.9);
+  color: #0f172a;
+}
+
 .user-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 16px;
-  margin-top: 18px;
+  gap: 10px 16px;
+  margin-top: 14px;
 }
 
 .field {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   align-content: start;
 }
 
@@ -84,6 +100,43 @@
   color: #0f172a;
   font-size: 0.96rem;
   outline: none;
+}
+
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 0 46px 0 14px;
+  background-color: #f8fbfc;
+  background-image:
+    linear-gradient(135deg, rgba(15, 139, 141, 0.08), rgba(21, 94, 117, 0.12)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='M3 5.25L7 9.25L11 5.25' stroke='%23155E75' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0, right 14px center;
+  background-size: auto, 14px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.field select:hover {
+  background-color: #f2f8fa;
+}
+
+.field select option {
+  color: #0f172a;
+  background: #ffffff;
+  font-weight: 500;
+}
+
+.field select.placeholder-selected {
+  color: #7c8ba1;
+  font-weight: 500;
 }
 
 .field input.input-invalid,
@@ -132,10 +185,10 @@
 
 .field small {
   display: block;
-  min-height: 1.3em;
+  min-height: 1.05em;
   color: #b42318;
-  font-size: 0.82rem;
-  line-height: 1.4;
+  font-size: 0.79rem;
+  line-height: 1.25;
 }
 
 .field .field-message-empty {
@@ -177,7 +230,9 @@
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
+  margin-top: 8px;
 }
 
 .primary-button {
@@ -208,7 +263,7 @@
   }
 
   .form-heading {
-    flex-direction: column;
+    align-items: flex-start;
   }
 
   .user-form {

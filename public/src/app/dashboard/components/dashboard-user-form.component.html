@@ -1,11 +1,17 @@
 <section class="form-card">
   <div class="form-heading">
     <div>
-      <p class="eyebrow">{{ isEditMode ? 'Edit Account' : 'Create Account' }}</p>
       <h3>{{ formTitle }}</h3>
       <p>{{ formDescription }}</p>
     </div>
-    <button *ngIf="isEditMode" type="button" class="ghost-button" (click)="cancelEdit()">Cancel</button>
+    <button
+      type="button"
+      class="close-button"
+      (click)="cancelEdit()"
+      aria-label="Close form"
+      title="Close form">
+      X
+    </button>
   </div>
 
   <form #userForm="ngForm" class="user-form" (ngSubmit)="submit(userForm)">
@@ -16,9 +22,10 @@
         [(ngModel)]="model.companyId"
         maxlength="100"
         name="companyId"
+        placeholder="Generated automatically"
         readonly
         type="text" />
-      <small class="field-hint">{{ companyIdHint }}</small>
+     
     </label>
 
     <label class="field">
@@ -30,6 +37,7 @@
         (blur)="normalizeField('fullName')"
         maxlength="255"
         name="fullName"
+        placeholder="Enter full name"
         required
         type="text" />
       <small
@@ -48,6 +56,7 @@
         (blur)="normalizeField('username')"
         [maxlength]="usernameMaxLength"
         name="username"
+        placeholder="Choose a username"
         required
         type="text" />
       <small
@@ -66,6 +75,7 @@
         (blur)="normalizeField('email')"
         maxlength="200"
         name="email"
+        placeholder="Enter email address"
         required
         type="email" />
       <small
@@ -83,6 +93,7 @@
           [(ngModel)]="model.password"
           [class.input-invalid]="getPasswordError() !== null"
           [maxlength]="passwordMaxLength"
+          [placeholder]="isEditMode ? 'Leave blank to keep current password' : 'Enter a strong password'"
           [required]="!isEditMode"
           [type]="showPassword ? 'text' : 'password'"
           name="password" />
@@ -103,7 +114,14 @@
 
     <label class="field">
       <span>Role</span>
-      <select #role="ngModel" [(ngModel)]="model.role" name="role" required>
+      <select
+        #role="ngModel"
+        [(ngModel)]="model.role"
+        [class.input-invalid]="isFieldInvalid(role, 'role', 'Role is required')"
+        [class.placeholder-selected]="!model.role"
+        name="role"
+        required>
+        <option [ngValue]="''" disabled>Select a role</option>
         <option *ngFor="let roleName of assignableRoles" [ngValue]="roleName">
           {{ roleLabel(roleName) }}
         </option>
@@ -117,7 +135,14 @@
 
     <label class="field">
       <span>Gender</span>
-      <select #gender="ngModel" [(ngModel)]="model.gender" name="gender" required>
+      <select
+        #gender="ngModel"
+        [(ngModel)]="model.gender"
+        [class.input-invalid]="isFieldInvalid(gender, 'gender', 'Gender is required')"
+        [class.placeholder-selected]="!model.gender"
+        name="gender"
+        required>
+        <option [ngValue]="''" disabled>Select gender</option>
         <option *ngFor="let option of genderOptions" [ngValue]="option">{{ option }}</option>
       </select>
       <small
@@ -129,7 +154,14 @@
 
     <label class="field">
       <span>Status</span>
-      <select #active="ngModel" [(ngModel)]="model.active" name="active" required>
+      <select
+        #active="ngModel"
+        [(ngModel)]="model.active"
+        [class.input-invalid]="isFieldInvalid(active, 'active', 'Status is required')"
+        [class.placeholder-selected]="model.active === null"
+        name="active"
+        required>
+        <option [ngValue]="null" disabled>Select status</option>
         <option [ngValue]="true">Active</option>
         <option [ngValue]="false">Inactive</option>
       </select>
@@ -140,17 +172,12 @@
       </small>
     </label>
 
-    <div class="rules-box">
-      <p>Password rule</p>
-      <span>{{ passwordRuleText }}</span>
-    </div>
-
     <div class="form-actions">
+      <button type="button" class="secondary-button" (click)="resetForm()" [disabled]="isSaving">
+        Reset
+      </button>
       <button type="submit" class="primary-button" [disabled]="isSaving">
         {{ isSaving ? 'Saving...' : isEditMode ? 'Update user' : 'Create user' }}
-      </button>
-      <button *ngIf="isEditMode" type="button" class="secondary-button" (click)="cancelEdit()" [disabled]="isSaving">
-        Clear selection
       </button>
     </div>
   </form>

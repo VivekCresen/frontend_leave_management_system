@@ -15,7 +15,7 @@ type UserFormModel = {
   email: string;
   password: string;
   role: string;
-  active: boolean;
+  active: boolean | null;
   gender: string;
 };
 
@@ -58,6 +58,7 @@ export class DashboardUserFormComponent implements OnChanges {
 
   submitted = false;
   showPassword = false;
+  showServerErrors = true;
   model: UserFormModel = this.createDefaultModel();
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -72,6 +73,10 @@ export class DashboardUserFormComponent implements OnChanges {
 
     if (changes['assignableRoles']) {
       this.ensureValidRoleSelection();
+    }
+
+    if (changes['fieldErrors']) {
+      this.showServerErrors = Object.keys(this.fieldErrors).length > 0;
     }
   }
 
@@ -97,6 +102,7 @@ export class DashboardUserFormComponent implements OnChanges {
 
   submit(form: NgForm): void {
     this.submitted = true;
+    this.showServerErrors = true;
     this.normalizeTrimmedFields();
 
     if (form.invalid || this.hasWhitespaceOnlyErrors() || !!this.getPasswordError() || !!this.getUsernameValidationMessage()) {
@@ -112,7 +118,7 @@ export class DashboardUserFormComponent implements OnChanges {
         email: this.model.email.trim().toLowerCase(),
         password: this.model.password,
         role: this.model.role,
-        active: this.model.active,
+        active: this.model.active ?? true,
         gender: this.model.gender
       }
     });
@@ -124,7 +130,16 @@ export class DashboardUserFormComponent implements OnChanges {
     this.showPassword = false;
   }
 
+  resetForm(): void {
+    this.syncModelFromInputs();
+    this.showServerErrors = false;
+  }
+
   getFieldError(field: keyof UserFormModel): string | null {
+    if (!this.showServerErrors) {
+      return null;
+    }
+
     return this.fieldErrors[field] ?? null;
   }
 
@@ -207,9 +222,9 @@ export class DashboardUserFormComponent implements OnChanges {
           username: this.editingUser.username ?? '',
           email: this.editingUser.email ?? '',
           password: '',
-          role: this.editingUser.role ?? this.assignableRoles[0] ?? '',
-          active: this.editingUser.active,
-          gender: this.editingUser.gender ?? 'Prefer not to say'
+          role: this.editingUser.role ?? '',
+          active: this.editingUser.active ?? null,
+          gender: this.editingUser.gender ?? ''
         }
       : this.createDefaultModel();
 
@@ -225,7 +240,7 @@ export class DashboardUserFormComponent implements OnChanges {
     }
 
     if (!this.assignableRoles.includes(this.model.role)) {
-      this.model.role = this.assignableRoles[0];
+      this.model.role = '';
     }
   }
 
@@ -236,9 +251,9 @@ export class DashboardUserFormComponent implements OnChanges {
       username: '',
       email: '',
       password: '',
-      role: this.assignableRoles[0] ?? '',
-      active: true,
-      gender: 'Prefer not to say'
+      role: '',
+      active: null,
+      gender: ''
     };
   }
 

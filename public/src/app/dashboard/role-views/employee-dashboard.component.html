@@ -2,7 +2,6 @@
   <ng-container *ngIf="pageId === 'overview'">
     <section class="hero-card">
       <div>
-        <p class="eyebrow">Employee workspace</p>
         <h2>Personal workspace</h2>
         <p class="hero-copy">View your account details and personal status.</p>
       </div>
@@ -21,7 +20,6 @@
   <ng-container [ngSwitch]="pageId">
     <section *ngSwitchCase="'overview'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Overview</p>
         <h3>Account summary</h3>
         <ul class="detail-list">
           <li>Review profile details.</li>
@@ -31,7 +29,6 @@
       </article>
 
       <article class="surface">
-        <p class="eyebrow">Actions</p>
         <h3>Quick access</h3>
         <div class="action-list">
           <a routerLink="/dashboard/profile" class="action-link">Profile</a>
@@ -43,7 +40,6 @@
 
     <section *ngSwitchCase="'profile'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Profile</p>
         <h3>Account details</h3>
         <div class="profile-grid">
           <div>
@@ -76,7 +72,6 @@
 
     <section *ngSwitchCase="'requests'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Leave requests</p>
         <h3>Module status</h3>
         <p class="body-copy">Request workflow will be connected here.</p>
       </article>
@@ -84,7 +79,6 @@
 
     <section *ngSwitchCase="'history'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">History</p>
         <h3>Module status</h3>
         <p class="body-copy">Request history will be connected here.</p>
       </article>
@@ -92,7 +86,6 @@
 
     <section *ngSwitchCase="'calendar'" class="panel-grid">
       <article class="surface">
-        <p class="eyebrow">Calendar</p>
         <h3>Module status</h3>
         <p class="body-copy">Calendar will be connected here.</p>
       </article>
