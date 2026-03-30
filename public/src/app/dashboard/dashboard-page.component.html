@@ -1,19 +1,157 @@
 <section class="workspace">
   <header class="workspace-header">
     <div class="workspace-copy">
-      <p class="workspace-eyebrow">{{ normalizedRole | titlecase }} dashboard</p>
       <h2>{{ pageHeading }}</h2>
       <p class="workspace-description">{{ pageDescription }}</p>
     </div>
 
     <div class="workspace-actions">
-      <span class="badge badge-role">{{ normalizedRole }}</span>
-      <span class="badge" [class.inactive]="!user.active">{{ user.active ? 'Active Account' : 'Inactive Account' }}</span>
-      <button type="button" class="refresh-button" (click)="refresh()" [disabled]="isLoading || isSaving">
-        {{ isLoading ? 'Refreshing...' : 'Refresh' }}
-      </button>
+      <div class="profile-menu-shell" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          class="profile-trigger"
+          (click)="toggleProfileMenu($event)"
+          [attr.aria-expanded]="isProfileMenuOpen"
+          aria-haspopup="menu"
+          aria-label="Open profile menu">
+          <span class="profile-avatar">{{ profileInitials }}</span>
+          <span class="profile-trigger-copy">
+            <strong>{{ profileDisplayName }}</strong>
+            <small>{{ profileDisplayEmail }}</small>
+          </span>
+          <i class="fas" [class.fa-chevron-down]="!isProfileMenuOpen" [class.fa-chevron-up]="isProfileMenuOpen"></i>
+        </button>
+
+        <div *ngIf="isProfileMenuOpen" class="profile-menu" role="menu">
+          <div class="profile-menu-summary">
+            <span class="badge badge-role">{{ profileRoleLabel | titlecase }}</span>
+            <strong>{{ profileDisplayName }}</strong>
+            <small>{{ profileDisplayEmail }}</small>
+          </div>
+
+          <button type="button" class="profile-menu-item" (click)="openProfileEditor()">
+            <i class="fas fa-user-pen"></i>
+            <span>Edit profile</span>
+          </button>
+          <button type="button" class="profile-menu-item" (click)="openChangePassword()">
+            <i class="fas fa-key"></i>
+            <span>Change password</span>
+          </button>
+          <button type="button" class="profile-menu-item" (click)="openForgotPassword()">
+            <i class="fas fa-unlock-keyhole"></i>
+            <span>Forgot password</span>
+          </button>
+          <button type="button" class="profile-menu-item danger" (click)="logout()">
+            <i class="fas fa-right-from-bracket"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
+
+  <div *ngIf="isProfileModalOpen" class="profile-modal-backdrop" (click)="closeProfileEditor()">
+    <section class="profile-modal-card" (click)="$event.stopPropagation()">
+      <div class="profile-modal-header">
+        <div>
+          <h3>Edit your details</h3>
+          <p>Update your personal account information from the top-right menu.</p>
+        </div>
+        <button
+          type="button"
+          class="profile-modal-close"
+          (click)="closeProfileEditor()"
+          [disabled]="isProfileSaving"
+          aria-label="Close profile form">
+          X
+        </button>
+      </div>
+
+      <form #profileForm="ngForm" class="profile-form" (ngSubmit)="saveProfile(profileForm)">
+        <label class="profile-field profile-field-wide">
+          <span>Company ID</span>
+          <input [value]="dashboard?.actor?.companyId || 'Not assigned'" readonly type="text" />
+        </label>
+
+        <label class="profile-field">
+          <span>Full name</span>
+          <input
+            #profileFullName="ngModel"
+            [(ngModel)]="profileModel.fullName"
+            [class.input-invalid]="!!getProfileControlError(profileFullName, 'fullName', 'Full name is required')"
+            maxlength="255"
+            name="profileFullName"
+            placeholder="Enter full name"
+            required
+            type="text" />
+          <small>{{ getProfileControlError(profileFullName, 'fullName', 'Full name is required') || ' ' }}</small>
+        </label>
+
+        <label class="profile-field">
+          <span>Username</span>
+          <input
+            #profileUsername="ngModel"
+            [(ngModel)]="profileModel.username"
+            [class.input-invalid]="!!getProfileControlError(profileUsername, 'username', 'Username is required')"
+            [maxlength]="usernameMaxLength"
+            name="profileUsername"
+            placeholder="Choose a username"
+            required
+            type="text" />
+          <small>{{ getProfileControlError(profileUsername, 'username', 'Username is required') || ' ' }}</small>
+        </label>
+
+        <label class="profile-field">
+          <span>Email</span>
+          <input
+            #profileEmail="ngModel"
+            [(ngModel)]="profileModel.email"
+            [class.input-invalid]="!!getProfileControlError(profileEmail, 'email', 'Email is required')"
+            maxlength="200"
+            name="profileEmail"
+            placeholder="Enter email address"
+            required
+            type="email" />
+          <small>{{ getProfileControlError(profileEmail, 'email', 'Email is required') || ' ' }}</small>
+        </label>
+
+        <label class="profile-field">
+          <span>Gender</span>
+          <select
+            #profileGender="ngModel"
+            [(ngModel)]="profileModel.gender"
+            [class.input-invalid]="!!getProfileControlError(profileGender, 'gender', 'Gender is required')"
+            [class.placeholder-selected]="!profileModel.gender"
+            name="profileGender"
+            required>
+            <option [ngValue]="''" disabled>Select gender</option>
+            <option *ngFor="let option of genderOptions" [ngValue]="option">{{ option }}</option>
+          </select>
+          <small>{{ getProfileControlError(profileGender, 'gender', 'Gender is required') || ' ' }}</small>
+        </label>
+
+        <div class="profile-meta">
+          <div>
+            <span>Role</span>
+            <strong>{{ dashboard?.actor?.role || user.role }}</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong>{{ dashboard?.actor?.active !== false ? 'Active' : 'Inactive' }}</strong>
+          </div>
+        </div>
+
+        <div class="profile-form-actions">
+          <button type="button" class="secondary-button" (click)="resetProfileForm()" [disabled]="isProfileSaving">
+            Reset
+          </button>
+          <button type="submit" class="primary-button" [disabled]="isProfileSaving">
+            {{ isProfileSaving ? 'Saving...' : 'Save profile' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
 
   <section *ngIf="errorMessage" class="feedback-panel error-panel">
     <h3>Dashboard unavailable</h3>
