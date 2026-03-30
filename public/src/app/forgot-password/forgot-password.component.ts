@@ -3,7 +3,8 @@ import { Component } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
-import { ApiErrorResponse, injectAuthService } from '../services/auth.service';
+import { AuthApiService } from '../services/auth-api.service';
+import { ApiErrorResponse } from '../services/auth.service';
 import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -28,7 +29,7 @@ export class ForgotPasswordComponent {
   readonly passwordMinLength = PASSWORD_MIN_LENGTH;
   readonly passwordMaxLength = PASSWORD_MAX_LENGTH;
   readonly strictPasswordPattern = STRICT_PASSWORD_PATTERN;
-  private readonly authService = injectAuthService();
+  private readonly authService: AuthApiService;
 
   currentStep = 1;
   email = '';
@@ -47,9 +48,12 @@ export class ForgotPasswordComponent {
   showConfirmPassword = false;
 
   constructor(
+    authService: AuthApiService,
     private readonly router: Router,
     private readonly toastService: ToastService
-  ) {}
+  ) {
+    this.authService = authService;
+  }
 
   requestOtp(form: NgForm): void {
     this.stepOneSubmitted = true;

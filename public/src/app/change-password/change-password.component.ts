@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ApiErrorResponse, injectAuthService } from '../services/auth.service';
+import { AuthApiService } from '../services/auth-api.service';
+import { ApiErrorResponse } from '../services/auth.service';
 import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -25,7 +26,7 @@ export class ChangePasswordComponent {
   readonly passwordMinLength = PASSWORD_MIN_LENGTH;
   readonly passwordMaxLength = PASSWORD_MAX_LENGTH;
   readonly strictPasswordPattern = STRICT_PASSWORD_REGEX;
-  private readonly authService = injectAuthService();
+  private readonly authService: AuthApiService;
 
   currentStep = 1;
   otp = '';
@@ -42,9 +43,11 @@ export class ChangePasswordComponent {
   showConfirmPassword = false;
 
   constructor(
+    authService: AuthApiService,
     private readonly router: Router,
     private readonly toastService: ToastService
   ) {
+    this.authService = authService;
     const user = this.authService.currentUser();
     if (!user) {
       this.router.navigate(['/login']);

@@ -1,23 +1,26 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { DashboardPageComponent } from '../dashboard-page.component';
+import { AuthApiService } from '../../services/auth-api.service';
 import {
   DashboardPageId,
   getDefaultDashboardPage,
   isDashboardPageAllowed
 } from '../dashboard.config';
-import { LoginResponse, injectAuthService } from '../../services/auth.service';
+import { LoginResponse } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 
 abstract class DashboardPageBase {
-  private readonly authService = injectAuthService();
+  private readonly authService: AuthApiService;
   private readonly currentPageId: DashboardPageId;
 
   constructor(
+    authService: AuthApiService,
     private readonly router: Router,
     private readonly toastService: ToastService,
     pageId: DashboardPageId
   ) {
+    this.authService = authService;
     this.currentPageId = pageId;
     const user = this.authService.currentUser();
 
@@ -64,8 +67,8 @@ abstract class DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardOverviewPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'overview');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'overview');
   }
 }
 
@@ -76,8 +79,8 @@ export class DashboardOverviewPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardUsersPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'users');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'users');
   }
 }
 
@@ -88,8 +91,8 @@ export class DashboardUsersPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardRolesPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'roles');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'roles');
   }
 }
 
@@ -100,8 +103,8 @@ export class DashboardRolesPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardLeavesPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'leaves');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'leaves');
   }
 }
 
@@ -112,8 +115,8 @@ export class DashboardLeavesPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardReportsPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'reports');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'reports');
   }
 }
 
@@ -124,8 +127,8 @@ export class DashboardReportsPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardSettingsPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'settings');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'settings');
   }
 }
 
@@ -136,8 +139,8 @@ export class DashboardSettingsPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardTeamPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'team');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'team');
   }
 }
 
@@ -148,8 +151,8 @@ export class DashboardTeamPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardApprovalsPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'approvals');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'approvals');
   }
 }
 
@@ -160,8 +163,8 @@ export class DashboardApprovalsPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardCalendarPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'calendar');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'calendar');
   }
 }
 
@@ -172,8 +175,8 @@ export class DashboardCalendarPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardProfilePageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'profile');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'profile');
   }
 }
 
@@ -184,8 +187,8 @@ export class DashboardProfilePageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardRequestsPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'requests');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'requests');
   }
 }
 
@@ -196,7 +199,7 @@ export class DashboardRequestsPageComponent extends DashboardPageBase {
   template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
 })
 export class DashboardHistoryPageComponent extends DashboardPageBase {
-  constructor(router: Router, toastService: ToastService) {
-    super(router, toastService, 'history');
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'history');
   }
 }

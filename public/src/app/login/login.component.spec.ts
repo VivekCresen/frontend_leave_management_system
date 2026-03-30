@@ -2,7 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LoginComponent } from './login.component';
 import { of, throwError } from 'rxjs';
 import { provideRouter } from '@angular/router';
-import { AUTH_SERVICE, AuthService } from '../services/auth.service';
+import { AuthApiService } from '../services/auth-api.service';
+import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 import { NgForm } from '@angular/forms';
 
@@ -20,7 +21,7 @@ describe('LoginComponent', () => {
       imports: [LoginComponent],
       providers: [
         provideRouter([]),
-        { provide: AUTH_SERVICE, useValue: authService },
+        { provide: AuthApiService, useValue: authService },
         { provide: ToastService, useValue: toastService }
       ]
     })

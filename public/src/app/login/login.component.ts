@@ -3,7 +3,8 @@ import { Component } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
-import { ApiErrorResponse, injectAuthService } from '../services/auth.service';
+import { AuthApiService } from '../services/auth-api.service';
+import { ApiErrorResponse } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 
 @Component({
@@ -16,7 +17,7 @@ import { ToastService } from '../services/toast.service';
 export class LoginComponent {
   readonly usernameMaxLength = 100;
   readonly passwordMaxLength = 255;
-  private readonly authService = injectAuthService();
+  private readonly authService: AuthApiService;
 
   username = '';
   password = '';
@@ -27,9 +28,12 @@ export class LoginComponent {
   showPassword = false;
 
   constructor(
+    authService: AuthApiService,
     private readonly router: Router,
     private readonly toastService: ToastService
-  ) {}
+  ) {
+    this.authService = authService;
+  }
 
   onSubmit(form: NgForm): void {
     this.submitted = true;

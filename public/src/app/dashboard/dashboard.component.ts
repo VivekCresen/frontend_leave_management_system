@@ -3,7 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Component, HostListener } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
-import { LoginResponse, injectAuthService } from '../services/auth.service';
+import { AuthApiService } from '../services/auth-api.service';
+import { LoginResponse } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 import { getDashboardMenuItems, getDefaultDashboardPage, isDashboardPageAllowed } from './dashboard.config';
 
@@ -15,7 +16,7 @@ import { getDashboardMenuItems, getDefaultDashboardPage, isDashboardPageAllowed 
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent {
-  private readonly authService = injectAuthService();
+  private readonly authService: AuthApiService;
   private readonly mobileBreakpoint = 860;
 
   isSidebarCollapsed = false;
@@ -23,9 +24,11 @@ export class DashboardComponent {
   isMobileSidebarOpen = false;
 
   constructor(
+    authService: AuthApiService,
     private readonly router: Router,
     private readonly toastService: ToastService
   ) {
+    this.authService = authService;
     const user = this.authService.currentUser();
 
     if (!user) {
