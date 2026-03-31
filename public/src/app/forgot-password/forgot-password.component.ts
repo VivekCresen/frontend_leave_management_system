@@ -141,10 +141,12 @@ export class ForgotPasswordComponent {
     }
 
     this.isLoading = true;
-    this.authService.resetPassword(this.email, this.otp, this.newPassword).subscribe({
+    const encodedPassword = btoa(this.newPassword);
+    this.authService.resetPassword(this.email, this.otp, encodedPassword).subscribe({
       next: () => {
         this.isLoading = false;
         this.fieldErrors = {};
+        this.clearSensitiveFields();
         this.authService.clearCurrentUser();
         this.successMessage = 'Password reset successfully. Redirecting to login...';
         this.toastService.success('Password reset successfully');
@@ -196,6 +198,7 @@ export class ForgotPasswordComponent {
     this.currentStep = 1;
     this.stepTwoSubmitted = false;
     this.stepThreeSubmitted = false;
+    this.clearSensitiveFields();
     this.fieldErrors = {};
     this.errorMessage = '';
     this.successMessage = '';
@@ -205,6 +208,7 @@ export class ForgotPasswordComponent {
     this.currentStep = 2;
     this.stepTwoSubmitted = false;
     this.stepThreeSubmitted = false;
+    this.clearSensitiveFields();
     this.fieldErrors = {};
     this.errorMessage = '';
     this.successMessage = '';
@@ -325,6 +329,13 @@ export class ForgotPasswordComponent {
     this.errorMessage = '';
     this.successMessage = '';
     this.fieldErrors = {};
+  }
+
+  private clearSensitiveFields(): void {
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
   }
 
   private getPasswordRequirementsToastMessage(): string {

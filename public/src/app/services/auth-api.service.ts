@@ -15,7 +15,7 @@ import {
   providedIn: 'root'
 })
 export class AuthApiService implements AuthService {
-  private readonly apiUrl = 'http://localhost:8081/api/users';
+  private readonly apiUrl = this.resolveApiUrl();
   private readonly storageKey = 'leave-app-user';
   private readonly currentUserState = signal<LoginResponse | null>(this.readStoredUser());
 
@@ -122,6 +122,42 @@ export class AuthApiService implements AuthService {
 
   private normalizeEmail(value: string): string {
     return value.trim().toLowerCase();
+  }
+
+  private resolveApiUrl(): string {
+    const configuredApiUrl = this.readConfiguredApiUrl();
+    if (configuredApiUrl) {
+      return configuredApiUrl;
+    }
+
+    const location = globalThis.location;
+    if (!location?.hostname) {
+      return 'http://localhost:8081/api/users';
+    }
+
+    const protocol = location.protocol === 'https:' ? 'https:' : 'http:';
+    return `${protocol}//${location.hostname}:8081/api/users`;
+  }
+
+  private readConfiguredApiUrl(): string | null {
+    const windowConfig = (globalThis as typeof globalThis & { __LEAVE_APP_API_URL__?: string }).__LEAVE_APP_API_URL__;
+    if (windowConfig?.trim()) {
+      return this.normalizeApiUrl(windowConfig);
+    }
+
+    const metaTagValue = globalThis.document
+      ?.querySelector('meta[name="leave-app-api-url"]')
+      ?.getAttribute('content');
+
+    if (!metaTagValue?.trim()) {
+      return null;
+    }
+
+    return this.normalizeApiUrl(metaTagValue);
+  }
+
+  private normalizeApiUrl(value: string): string {
+    return value.trim().replace(/\/+$/, '');
   }
 
   private actorUsernameOrThrow(): string {

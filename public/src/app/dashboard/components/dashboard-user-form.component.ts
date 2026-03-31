@@ -116,12 +116,15 @@ export class DashboardUserFormComponent implements OnChanges {
         fullName: this.model.fullName.trim(),
         username: this.model.username.trim(),
         email: this.model.email.trim().toLowerCase(),
-        password: this.model.password,
+        password: this.model.password ? btoa(this.model.password) : '',
         role: this.model.role,
         active: this.model.active ?? true,
         gender: this.model.gender
       }
     });
+
+    this.model.password = '';
+    this.showPassword = false;
   }
 
   cancelEdit(): void {

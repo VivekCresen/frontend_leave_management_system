@@ -119,10 +119,12 @@ export class ChangePasswordComponent {
     }
 
     this.isLoading = true;
-    this.authService.resetPassword(this.userEmail, this.otp, this.newPassword).subscribe({
+    const encodedPassword = btoa(this.newPassword);
+    this.authService.resetPassword(this.userEmail, this.otp, encodedPassword).subscribe({
       next: () => {
         this.isLoading = false;
         this.fieldErrors = {};
+        this.clearSensitiveFields();
         this.successMessage = 'Password changed successfully. Redirecting...';
         this.toastService.success('Password changed successfully');
         setTimeout(() => this.router.navigate(['/dashboard']), 1800);
@@ -170,6 +172,7 @@ export class ChangePasswordComponent {
   goToOtpStep(): void {
     this.currentStep = 1;
     this.stepTwoSubmitted = false;
+    this.clearSensitiveFields();
     this.fieldErrors = {};
     this.errorMessage = '';
     this.successMessage = '';
@@ -269,6 +272,13 @@ export class ChangePasswordComponent {
     this.errorMessage = '';
     this.successMessage = '';
     this.fieldErrors = {};
+  }
+
+  private clearSensitiveFields(): void {
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
   }
 
   private normalizeOtp(value: string): string {

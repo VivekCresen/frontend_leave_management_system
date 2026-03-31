@@ -49,8 +49,10 @@ export class LoginComponent {
     }
 
     this.isSubmitting = true;
-    this.authService.login({ username: this.username, password: this.password }).subscribe({
+    const encodedPassword = btoa(this.password);
+    this.authService.login({ username: this.username, password: encodedPassword }).subscribe({
       next: (response) => {
+        this.clearPasswordFields();
         if (!response.active) {
           this.isSubmitting = false;
           this.authService.clearCurrentUser();
@@ -69,27 +71,9 @@ export class LoginComponent {
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || err.error?.error || this.firstFieldError() || 'Invalid username or password';
         this.toastService.error(this.errorMessage);
-        console.error('Login failed', err);
+        this.clearPasswordFields();
       }
     });
-  }
-
-  autoFill(role: string): void {
-    this.clearValidationErrors();
-
-    if (role === 'admin') {
-      this.username = 'admin';
-      this.password = 'Admin@123';
-      this.toastService.info('Admin credentials filled');
-    } else if (role === 'manager') {
-      this.username = 'manager';
-      this.password = 'Manager@123';
-      this.toastService.info('Manager credentials filled');
-    } else if (role === 'employee') {
-      this.username = 'employee';
-      this.password = 'Employee@123';
-      this.toastService.info('Employee credentials filled');
-    }
   }
 
   getUsernameError(control: NgModel): string | null {
@@ -149,6 +133,11 @@ export class LoginComponent {
   navigateToForgotPassword(event?: Event): void {
     event?.preventDefault();
     this.router.navigate(['/forgot-password']);
+  }
+
+  private clearPasswordFields(): void {
+    this.password = '';
+    this.showPassword = false;
   }
 
   private clearValidationErrors(): void {
