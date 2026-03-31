@@ -96,6 +96,7 @@
           [placeholder]="isEditMode ? 'Leave blank to keep current password' : 'Enter a strong password'"
           [required]="!isEditMode"
           [type]="showPassword ? 'text' : 'password'"
+          [attr.autocomplete]="isEditMode ? 'new-password' : 'new-password'"
           name="password" />
         <button
           type="button"

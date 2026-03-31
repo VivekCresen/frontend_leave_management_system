@@ -24,6 +24,8 @@
                 class="login-input"
                 [class.input-invalid]="getUsernameError(usernameModel)"
                 required
+                autocomplete="username"
+                spellcheck="false"
                 [maxlength]="usernameMaxLength">
             </div>
            
@@ -44,6 +46,7 @@
                 class="login-input"
                 [class.input-invalid]="getPasswordError(passwordModel)"
                 required
+                autocomplete="current-password"
                 [maxlength]="passwordMaxLength">
               <button
                 type="button"

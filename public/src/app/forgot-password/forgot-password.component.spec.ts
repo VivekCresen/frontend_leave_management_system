@@ -88,4 +88,28 @@ describe('ForgotPasswordComponent', () => {
     expect(component.errorMessage).toBe('Unable to reset password right now.');
     expect(toastService.error).toHaveBeenCalledWith('Unable to reset password right now.');
   });
+
+  it('should clear password fields after a successful password reset', () => {
+    authService.resetPassword.and.returnValue(of({
+      username: 'employee',
+      email: 'employee@cresen.com',
+      role: 'EMPLOYEE',
+      active: true,
+      token: 'jwt-token',
+      message: 'Password reset successful'
+    }));
+    component.email = 'employee@cresen.com';
+    component.otp = '123456';
+    component.newPassword = 'NewPass@123';
+    component.confirmPassword = 'NewPass@123';
+    component.showNewPassword = true;
+    component.showConfirmPassword = true;
+
+    component.resetPassword({ invalid: false } as NgForm);
+
+    expect(component.newPassword).toBe('');
+    expect(component.confirmPassword).toBe('');
+    expect(component.showNewPassword).toBeFalse();
+    expect(component.showConfirmPassword).toBeFalse();
+  });
 });
