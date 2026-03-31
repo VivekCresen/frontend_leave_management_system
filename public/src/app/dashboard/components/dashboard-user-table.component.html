@@ -1,4 +1,4 @@
-<section class="table-card">
+<section class="table-card" [class.table-card-compact]="compactCard" [class.expand-to-fill]="expandToFill">
   <div class="table-heading">
     <div>
       <h3>{{ title }}</h3>
@@ -10,12 +10,16 @@
   <div *ngIf="showTableTools" class="table-tools">
     <label class="tool-search">
       <i class="fas fa-magnifying-glass"></i>
-      <input [(ngModel)]="searchTerm" type="text" placeholder="Search by name, email, company ID, or creator" />
+      <input
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChange()"
+        type="text"
+        placeholder="Search by name, email, company ID, or creator" />
     </label>
 
     <label class="tool-select">
       <span>Role</span>
-      <select [(ngModel)]="selectedRole">
+      <select [(ngModel)]="selectedRole" (ngModelChange)="onFilterChange()">
         <option value="ALL">All roles</option>
         <option *ngFor="let role of roleOptions" [ngValue]="role">{{ role | titlecase }}</option>
       </select>
@@ -23,7 +27,7 @@
 
     <label class="tool-select">
       <span>Status</span>
-      <select [(ngModel)]="selectedStatus">
+      <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()">
         <option value="ALL">All status</option>
         <option value="ACTIVE">Active</option>
         <option value="INACTIVE">Inactive</option>
@@ -39,30 +43,72 @@
   </div>
 
   <div *ngIf="displayedUsers.length > 0" class="table-shell">
-    <div class="table-row table-head" [class.without-actions]="!showActions">
-      <span>User</span>
-      <span>Role</span>
-      <span>Status</span>
-      <span>Created by</span>
-      <span>Last login</span>
-      <span *ngIf="showActions">Actions</span>
-    </div>
-
-    <div *ngFor="let user of displayedUsers; trackBy: trackByUserId" class="table-row" [class.without-actions]="!showActions">
-      <div class="user-cell">
-        <strong>{{ user.fullName }}</strong>
-        <span>{{ user.username }}</span>
-        <small>{{ user.email }}</small>
-        <em>{{ user.companyId }}</em>
+    <div class="table-inner">
+      <div class="table-row table-head" [class.without-actions]="!showActions">
+        <span class="sortable-header" (click)="toggleSort('fullName')">
+          User
+          <i
+            class="fas"
+            [class.fa-sort]="sortKey !== 'fullName'"
+            [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'"
+            [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
+        </span>
+        <span class="sortable-header" (click)="toggleSort('role')">
+          Role
+          <i
+            class="fas"
+            [class.fa-sort]="sortKey !== 'role'"
+            [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'"
+            [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
+        </span>
+        <span class="sortable-header" (click)="toggleSort('active')">
+          Status
+          <i
+            class="fas"
+            [class.fa-sort]="sortKey !== 'active'"
+            [class.fa-sort-up]="sortKey === 'active' && sortDirection === 'asc'"
+            [class.fa-sort-down]="sortKey === 'active' && sortDirection === 'desc'"></i>
+        </span>
+        <span class="sortable-header" (click)="toggleSort('createdBy')">
+          Created by
+          <i
+            class="fas"
+            [class.fa-sort]="sortKey !== 'createdBy'"
+            [class.fa-sort-up]="sortKey === 'createdBy' && sortDirection === 'asc'"
+            [class.fa-sort-down]="sortKey === 'createdBy' && sortDirection === 'desc'"></i>
+        </span>
+        <span class="sortable-header" (click)="toggleSort('lastLogin')">
+          Last login
+          <i
+            class="fas"
+            [class.fa-sort]="sortKey !== 'lastLogin'"
+            [class.fa-sort-up]="sortKey === 'lastLogin' && sortDirection === 'asc'"
+            [class.fa-sort-down]="sortKey === 'lastLogin' && sortDirection === 'desc'"></i>
+        </span>
+        <span *ngIf="showActions">Actions</span>
       </div>
-      <span class="meta-text">{{ user.role | titlecase }}</span>
-      <span class="status-pill" [class.inactive]="!user.active">{{ user.active ? 'Active' : 'Inactive' }}</span>
-      <span class="meta-text">{{ user.createdBy || 'System' }}</span>
-      <span class="meta-text">{{ user.lastLogin ? (user.lastLogin | date: 'dd MMM yyyy, h:mm a') : 'Never' }}</span>
-      <div *ngIf="showActions" class="action-cell">
-        <button *ngIf="user.canEdit" type="button" class="edit-button" (click)="editRequested.emit(user)">Edit</button>
-        <button *ngIf="user.canDelete" type="button" class="delete-button" (click)="deleteRequested.emit(user)">Delete</button>
-        <span *ngIf="!user.canEdit && !user.canDelete" class="read-only">View only</span>
+
+      <div
+        class="table-body"
+        [class.table-body-scrollable]="enableBodyScroll"
+        [style.max-height]="enableBodyScroll && bodyMaxHeight ? bodyMaxHeight : null">
+        <div *ngFor="let user of displayedUsers; trackBy: trackByUserId" class="table-row" [class.without-actions]="!showActions">
+          <div class="user-cell">
+            <strong>{{ user.fullName }}</strong>
+            <span>{{ user.username }}</span>
+            <small>{{ user.email }}</small>
+            <em>{{ user.companyId }}</em>
+          </div>
+          <span class="meta-text">{{ user.role | titlecase }}</span>
+          <span class="status-pill" [class.inactive]="!user.active">{{ user.active ? 'Active' : 'Inactive' }}</span>
+          <span class="meta-text">{{ user.createdBy || 'System' }}</span>
+          <span class="meta-text">{{ user.lastLogin ? (user.lastLogin | date: 'dd MMM yyyy, h:mm a') : 'Never' }}</span>
+          <div *ngIf="showActions" class="action-cell">
+            <button *ngIf="user.canEdit" type="button" class="edit-button" (click)="editRequested.emit(user)">Edit</button>
+            <button *ngIf="user.canDelete" type="button" class="delete-button" (click)="deleteRequested.emit(user)">Delete</button>
+            <span *ngIf="!user.canEdit && !user.canDelete" class="read-only">View only</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -75,5 +121,39 @@
     <button type="button" class="read-more-button" (click)="expandedToggled.emit()">
       {{ isExpanded ? collapseLabel : (readMoreLabel || 'Read more') }}
     </button>
+  </div>
+
+  <div *ngIf="totalPages > 1" class="table-pagination">
+    <span class="pagination-info">
+      Page {{ currentPage }} of {{ totalPages }} &nbsp;·&nbsp; {{ filteredCount }} records
+    </span>
+
+    <div class="pagination-controls">
+      <button type="button" class="pagination-arrow" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Previous page">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+
+      <div class="pagination-pages">
+        <button
+          *ngFor="let page of [].constructor(totalPages); let i = index"
+          type="button"
+          class="pagination-page"
+          [class.active]="currentPage === i + 1"
+          (click)="goToPage(i + 1)"
+          [attr.aria-label]="'Page ' + (i + 1)"
+          [attr.aria-current]="currentPage === i + 1 ? 'page' : null">
+          {{ i + 1 }}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="pagination-arrow"
+        (click)="goToPage(currentPage + 1)"
+        [disabled]="currentPage === totalPages"
+        aria-label="Next page">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
   </div>
 </section>

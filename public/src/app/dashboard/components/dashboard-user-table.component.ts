@@ -23,6 +23,10 @@ export class DashboardUserTableComponent {
   @Input() isExpanded = false;
   @Input() collapseLabel = 'Show less';
   @Input() showTableTools = false;
+  @Input() enableBodyScroll = false;
+  @Input() bodyMaxHeight = '';
+  @Input() compactCard = false;
+  @Input() expandToFill = false;
 
   @Output() editRequested = new EventEmitter<ManagedUser>();
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
@@ -31,6 +35,12 @@ export class DashboardUserTableComponent {
   searchTerm = '';
   selectedRole = 'ALL';
   selectedStatus = 'ALL';
+
+  sortKey = 'fullName';
+  sortDirection: 'asc' | 'desc' = 'asc';
+
+  currentPage = 1;
+  pageSize = 4;
 
   get roleOptions(): string[] {
     return Array.from(new Set(this.users.map((user) => user.role).filter((role) => !!role))).sort((left, right) =>
@@ -41,7 +51,8 @@ export class DashboardUserTableComponent {
   get displayedUsers(): ManagedUser[] {
     const searchTerm = this.searchTerm.trim().toLowerCase();
 
-    return this.users.filter((user) => {
+    // 1. Filter users
+    const filtered = this.users.filter((user) => {
       const matchesSearch =
         searchTerm.length === 0 ||
         [user.fullName, user.username, user.email, user.companyId, user.createdBy]
@@ -56,6 +67,40 @@ export class DashboardUserTableComponent {
 
       return matchesSearch && matchesRole && matchesStatus;
     });
+
+    // 2. Sort filtered users
+    const sorted = [...filtered].sort((left, right) => {
+      const field = this.sortKey as keyof ManagedUser;
+      const leftVal = (left[field] ?? '').toString().toLowerCase();
+      const rightVal = (right[field] ?? '').toString().toLowerCase();
+
+      if (leftVal < rightVal) return this.sortDirection === 'asc' ? -1 : 1;
+      if (leftVal > rightVal) return this.sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    // 3. Paginate results
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    return sorted.slice(startIndex, startIndex + this.pageSize);
+  }
+
+  get filteredCount(): number {
+    const searchTerm = this.searchTerm.trim().toLowerCase();
+    return this.users.filter((user) => {
+      const matchesSearch =
+        searchTerm.length === 0 ||
+        [user.fullName, user.username, user.email, user.companyId, user.createdBy]
+          .filter((value): value is string => !!value)
+          .some((value) => value.toLowerCase().includes(searchTerm));
+
+      const matchesRole = this.selectedRole === 'ALL' || user.role === this.selectedRole;
+      const matchesStatus =
+        this.selectedStatus === 'ALL' ||
+        (this.selectedStatus === 'ACTIVE' && user.active) ||
+        (this.selectedStatus === 'INACTIVE' && !user.active);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    }).length;
   }
 
   get hasActiveFilters(): boolean {
@@ -63,7 +108,9 @@ export class DashboardUserTableComponent {
   }
 
   get visibleCountLabel(): string {
-    return this.showTableTools ? `${this.displayedUsers.length} of ${this.users.length} records` : `${this.users.length} records`;
+    return this.showTableTools
+      ? `${this.filteredCount} records found`
+      : `${this.users.length} records`;
   }
 
   get resolvedEmptyTitle(): string {
@@ -78,6 +125,30 @@ export class DashboardUserTableComponent {
     this.searchTerm = '';
     this.selectedRole = 'ALL';
     this.selectedStatus = 'ALL';
+    this.currentPage = 1;
+  }
+
+  toggleSort(key: string): void {
+    if (this.sortKey === key) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortKey = key;
+      this.sortDirection = 'asc';
+    }
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.filteredCount / this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+    }
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 1;
   }
 
   trackByUserId(_: number, user: ManagedUser): number {
