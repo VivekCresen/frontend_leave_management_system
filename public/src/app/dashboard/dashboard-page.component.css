@@ -1,9 +1,17 @@
 .workspace {
   min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 32px 38px 40px;
+  gap: 14px;
+  padding: 20px 36px 20px;
+  box-sizing: border-box;
+  background: #f8fafc;
+}
+
+.workspace.workspace-overview {
+  gap: 12px;
+  padding: 18px 28px 18px;
 }
 
 .workspace-header {
@@ -11,8 +19,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid rgba(226, 232, 240, 0.9);
+}
+
+.workspace.workspace-overview .workspace-header {
+  padding-bottom: 12px;
 }
 
 .workspace-copy h2,
@@ -30,18 +42,31 @@
 }
 
 .workspace-copy h2 {
-  margin-top: 10px;
+  margin-top: 4px;
   color: #0f172a;
-  font-size: clamp(2rem, 3vw, 3rem);
-  line-height: 1.05;
+  font-size: clamp(1.8rem, 2.6vw, 2.7rem);
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.workspace.workspace-overview .workspace-copy h2 {
+  margin-top: 4px;
+  font-size: clamp(1.6rem, 2.4vw, 2.3rem);
 }
 
 .workspace-description {
   max-width: 720px;
-  margin-top: 14px;
+  margin-top: 6px;
   color: #516175;
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.workspace.workspace-overview .workspace-description {
+  margin-top: 4px;
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .workspace-actions {
@@ -68,6 +93,12 @@
   color: #0f172a;
   box-shadow: 0 16px 40px -32px rgba(15, 23, 42, 0.5);
   cursor: pointer;
+}
+
+.workspace.workspace-overview .profile-trigger {
+  min-height: 52px;
+  gap: 10px;
+  padding: 6px 12px 6px 8px;
 }
 
 .profile-trigger-copy {

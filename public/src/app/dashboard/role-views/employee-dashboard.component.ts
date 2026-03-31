@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
 import { LoginResponse, UserDashboardResponse } from '../../services/auth.service';
@@ -8,7 +7,7 @@ import { LoginResponse, UserDashboardResponse } from '../../services/auth.servic
 @Component({
   selector: 'app-employee-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, DashboardStatCardsComponent],
+  imports: [CommonModule, DashboardStatCardsComponent],
   templateUrl: './employee-dashboard.component.html',
   styleUrls: ['./employee-dashboard.component.css']
 })

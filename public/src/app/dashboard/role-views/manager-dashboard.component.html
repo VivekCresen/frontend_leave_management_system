@@ -2,7 +2,7 @@
   <ng-container *ngIf="pageId === 'overview'">
     
 
-    <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
+    <app-dashboard-stat-cards [cards]="stats" [compact]="true"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
@@ -29,6 +29,7 @@
         emptyTitle="No employees yet"
         emptyMessage="Create your first employee from the form."
         [showTableTools]="true"
+        [compactCard]="true"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
 

@@ -26,7 +26,6 @@ import { DashboardUserSubmitEvent } from './components/dashboard-user-form.compo
   imports: [
     CommonModule,
     FormsModule,
-    TitleCasePipe,
     AdminDashboardComponent,
     ManagerDashboardComponent,
     EmployeeDashboardComponent

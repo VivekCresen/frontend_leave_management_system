@@ -94,7 +94,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  padding: 24px;
+  padding: 14px 20px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.92);
@@ -107,9 +107,9 @@
 }
 
 .management-toolbar h3 {
-  margin-top: 8px;
+  margin-top: 4px;
   color: #0f172a;
-  font-size: 1.3rem;
+  font-size: 1.15rem;
 }
 
 .primary-toolbar-button {

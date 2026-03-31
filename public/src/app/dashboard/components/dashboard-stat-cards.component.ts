@@ -6,6 +6,7 @@ export interface DashboardStatCard {
   value: string | number;
   note: string;
   tone?: 'teal' | 'orange' | 'slate';
+  icon?: string;
 }
 
 @Component({
@@ -17,4 +18,5 @@ export interface DashboardStatCard {
 })
 export class DashboardStatCardsComponent {
   @Input({ required: true }) cards: DashboardStatCard[] = [];
+  @Input() compact = false;
 }

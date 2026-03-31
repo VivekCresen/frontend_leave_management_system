@@ -36,47 +36,40 @@ export class AdminDashboardComponent {
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
   @Output() cancelEditRequested = new EventEmitter<void>();
 
-  showAllRecentAccounts = false;
-
   get stats(): DashboardStatCard[] {
     return [
       {
         label: 'Total visible users',
         value: this.dashboard?.totalUsers ?? 0,
         note: 'All accounts in the directory.',
-        tone: 'teal'
+        tone: 'teal',
+        icon: 'fa-users'
       },
       {
         label: 'Managers',
         value: this.dashboard?.managerCount ?? 0,
         note: 'Active management layer.',
-        tone: 'orange'
+        tone: 'orange',
+        icon: 'fa-user-tie'
       },
       {
         label: 'Employees',
         value: this.dashboard?.employeeCount ?? 0,
         note: 'Employee accounts.',
-        tone: 'slate'
+        tone: 'slate',
+        icon: 'fa-id-badge'
       },
       {
         label: 'Inactive accounts',
         value: this.dashboard?.inactiveUsers ?? 0,
         note: 'Require review.',
-        tone: 'orange'
+        tone: 'orange',
+        icon: 'fa-user-slash'
       }
     ];
   }
 
   get assignableRoles(): string[] {
     return (this.dashboard?.assignableRoles ?? []).filter((role) => role !== 'ADMIN');
-  }
-
-  get recentUsers(): ManagedUser[] {
-    const users = this.dashboard?.users ?? [];
-    return this.showAllRecentAccounts ? users : users.slice(0, 5);
-  }
-
-  toggleRecentAccounts(): void {
-    this.showAllRecentAccounts = !this.showAllRecentAccounts;
   }
 }

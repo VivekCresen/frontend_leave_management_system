@@ -1,4 +1,4 @@
-<section class="workspace">
+<section class="workspace" [class.workspace-overview]="pageId === 'overview'">
   <header class="workspace-header">
     <div class="workspace-copy">
       <h2>{{ pageHeading }}</h2>
@@ -24,7 +24,7 @@
 
         <div *ngIf="isProfileMenuOpen" class="profile-menu" role="menu">
           <div class="profile-menu-summary">
-            <span class="badge badge-role">{{ profileRoleLabel | titlecase }}</span>
+            <!-- <span class="badge badge-role">{{ profileRoleLabel | titlecase }}</span> -->
             <strong>{{ profileDisplayName }}</strong>
             <small>{{ profileDisplayEmail }}</small>
           </div>
@@ -40,10 +40,6 @@
           <button type="button" class="profile-menu-item" (click)="openForgotPassword()">
             <i class="fas fa-unlock-keyhole"></i>
             <span>Forgot password</span>
-          </button>
-          <button type="button" class="profile-menu-item danger" (click)="logout()">
-            <i class="fas fa-right-from-bracket"></i>
-            <span>Logout</span>
           </button>
         </div>
       </div>

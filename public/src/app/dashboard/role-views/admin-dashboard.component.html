@@ -2,27 +2,24 @@
   <ng-container *ngIf="pageId === 'overview'">
 
 
-    <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
+    <app-dashboard-stat-cards [cards]="stats" [compact]="true"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
-    <section *ngSwitchCase="'overview'" class="panel-grid">
+    <section *ngSwitchCase="'overview'" class="overview-panel">
 
 
 
       <app-dashboard-user-table
-        [users]="recentUsers"
+        [users]="dashboard?.users ?? []"
         title="Recent accounts"
-      
+        description="Search, filter, and review the newest visible accounts from this overview."
         emptyTitle="No users available"
         emptyMessage="Create a manager or employee to begin."
         [showActions]="false"
-        [showTableTools]="false"
-        [canToggleExpanded]="(dashboard?.users?.length ?? 0) > 5"
-        [isExpanded]="showAllRecentAccounts"
-        readMoreLabel="Read more"
-        collapseLabel="Show less"
-        (expandedToggled)="toggleRecentAccounts()"
+        [showTableTools]="true"
+        [compactCard]="true"
+        [expandToFill]="true"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
     </section>
@@ -48,6 +45,7 @@
         emptyTitle="No managed users"
         emptyMessage="Create the first account from the form."
         [showTableTools]="true"
+        [compactCard]="true"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
 
