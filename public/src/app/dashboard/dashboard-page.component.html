@@ -165,14 +165,23 @@
       [dashboard]="dashboard"
       [editingUser]="editingUser"
       [fieldErrors]="fieldErrors"
+      [isLeavesLoading]="isLeavesLoading"
+      [isLeaveTypeSaving]="isLeaveTypeSaving"
       [isSaving]="isSaving"
+      [isLeaveTypesLoading]="isLeaveTypesLoading"
       [isUserFormOpen]="isUserFormOpen"
+      [lastLeaveTypeCreatedAt]="lastLeaveTypeCreatedAt"
+      [leaveTypeFieldErrors]="leaveTypeFieldErrors"
+      [leaves]="leaves"
+      [leaveTypes]="leaveTypes"
       [pageId]="pageId"
       [user]="user"
       (cancelEditRequested)="cancelEdit()"
       (createRequested)="openCreateForm()"
       (deleteRequested)="handleDelete($event)"
       (editRequested)="startEdit($event)"
+      (leaveTypeDeleteRequested)="handleDeleteLeaveType($event)"
+      (leaveTypeSaveRequested)="handleSaveLeaveType($event)"
       (saveRequested)="handleSave($event)"></app-admin-dashboard>
 
     <app-manager-dashboard

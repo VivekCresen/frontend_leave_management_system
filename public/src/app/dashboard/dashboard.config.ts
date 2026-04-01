@@ -49,7 +49,6 @@ const DASHBOARD_MENUS: Record<DashboardRole, DashboardMenuItem[]> = {
   ADMIN: [
     { path: 'overview', label: 'Overview', icon: 'fa-house' },
     { path: 'users', label: 'User Management', icon: 'fa-users-gear' },
-    { path: 'roles', label: 'Roles & Access', icon: 'fa-shield-halved' },
     { path: 'leaves', label: 'Leave Operations', icon: 'fa-calendar-check' },
     { path: 'reports', label: 'Reports', icon: 'fa-chart-column' },
     { path: 'settings', label: 'Settings', icon: 'fa-sliders' }

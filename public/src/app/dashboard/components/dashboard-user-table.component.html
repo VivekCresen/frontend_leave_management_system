@@ -14,7 +14,7 @@
         [(ngModel)]="searchTerm"
         (ngModelChange)="onFilterChange()"
         type="text"
-        placeholder="Search by name, email, company ID, or creator" />
+        placeholder="Search by name, email, company ID, or manager" />
     </label>
 
     <label class="tool-select">
@@ -70,7 +70,7 @@
             [class.fa-sort-down]="sortKey === 'active' && sortDirection === 'desc'"></i>
         </span>
         <span class="sortable-header" (click)="toggleSort('createdBy')">
-          Created by
+          Manager / Owner
           <i
             class="fas"
             [class.fa-sort]="sortKey !== 'createdBy'"

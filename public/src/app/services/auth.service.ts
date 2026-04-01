@@ -53,6 +53,7 @@ export interface UserManagementPayload {
   email: string;
   password?: string;
   role: string;
+  managerUsername?: string;
   active: boolean;
   gender: string;
 }

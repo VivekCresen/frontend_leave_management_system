@@ -15,6 +15,7 @@ type UserFormModel = {
   email: string;
   password: string;
   role: string;
+  managerUsername: string;
   active: boolean | null;
   gender: string;
 };
@@ -100,12 +101,28 @@ export class DashboardUserFormComponent implements OnChanges {
       : 'Company ID is assigned automatically and cannot be changed.';
   }
 
+  get managerOptions(): ManagedUser[] {
+    return this.users
+      .filter((user) => user.role === 'MANAGER' && user.active)
+      .sort((left, right) => left.fullName.localeCompare(right.fullName));
+  }
+
+  get shouldShowManagerField(): boolean {
+    return !this.isEditMode && this.assignableRoles.includes('MANAGER') && this.model.role === 'EMPLOYEE';
+  }
+
   submit(form: NgForm): void {
     this.submitted = true;
     this.showServerErrors = true;
     this.normalizeTrimmedFields();
 
-    if (form.invalid || this.hasWhitespaceOnlyErrors() || !!this.getPasswordError() || !!this.getUsernameValidationMessage()) {
+    if (
+      form.invalid
+      || this.hasWhitespaceOnlyErrors()
+      || !!this.getPasswordError()
+      || !!this.getUsernameValidationMessage()
+      || !!this.getManagerError()
+    ) {
       return;
     }
 
@@ -118,6 +135,7 @@ export class DashboardUserFormComponent implements OnChanges {
         email: this.model.email.trim().toLowerCase(),
         password: this.model.password ? btoa(this.model.password) : '',
         role: this.model.role,
+        managerUsername: this.shouldShowManagerField ? this.model.managerUsername.trim() : undefined,
         active: this.model.active ?? true,
         gender: this.model.gender
       }
@@ -209,6 +227,18 @@ export class DashboardUserFormComponent implements OnChanges {
     return role.charAt(0) + role.slice(1).toLowerCase();
   }
 
+  getManagerError(): string | null {
+    if (!this.shouldShowManagerField) {
+      return null;
+    }
+
+    if (this.getFieldError('managerUsername')) {
+      return this.getFieldError('managerUsername');
+    }
+
+    return this.submitted && !this.model.managerUsername.trim() ? 'Manager is required' : null;
+  }
+
   normalizeField(field: TrimmedField): void {
     this.model[field] = this.model[field].trim();
   }
@@ -226,6 +256,7 @@ export class DashboardUserFormComponent implements OnChanges {
           email: this.editingUser.email ?? '',
           password: '',
           role: this.editingUser.role ?? '',
+          managerUsername: '',
           active: this.editingUser.active ?? null,
           gender: this.editingUser.gender ?? ''
         }
@@ -245,6 +276,10 @@ export class DashboardUserFormComponent implements OnChanges {
     if (!this.assignableRoles.includes(this.model.role)) {
       this.model.role = '';
     }
+
+    if (!this.shouldShowManagerField) {
+      this.model.managerUsername = '';
+    }
   }
 
   private createDefaultModel(): UserFormModel {
@@ -255,6 +290,7 @@ export class DashboardUserFormComponent implements OnChanges {
       email: '',
       password: '',
       role: '',
+      managerUsername: '',
       active: null,
       gender: ''
     };

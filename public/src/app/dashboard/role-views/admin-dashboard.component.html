@@ -83,15 +83,208 @@
       </article>
     </section>
 
-    <section *ngSwitchCase="'leaves'" class="panel-grid">
-      <article class="surface">
-        <h3>Module status</h3>
-        <p class="body-copy">Leave operations will be connected here.</p>
+    <section *ngSwitchCase="'leaves'" class="leave-operations-grid">
+      <!-- <article class="surface leave-summary-surface">
+        <div class="leave-surface-header">
+          <div>
+            <h3>Leave operations overview</h3>
+            <p class="body-copy">Monitor all manager and employee leave activity from one admin workspace.</p>
+          </div>
+          <span class="leave-count-pill">{{ leaves.length }} total requests</span>
+        </div>
+
+        <div class="leave-summary-metrics">
+          <article class="leave-summary-card">
+            <span>Managers</span>
+            <strong>{{ managerLeaveCount }}</strong>
+            <small>Manager-submitted leave records</small>
+          </article>
+          <article class="leave-summary-card">
+            <span>Employees</span>
+            <strong>{{ employeeLeaveCount }}</strong>
+            <small>Employee-submitted leave records</small>
+          </article>
+          <article class="leave-summary-card">
+            <span>Leave types</span>
+            <strong>{{ leaveTypes.length }}</strong>
+            <small>Configured categories available for requests</small>
+          </article>
+        </div>
+      </article> -->
+
+      <article class="surface leave-tab-surface">
+        <div class="leave-tab-bar" role="tablist" aria-label="Leave operations navigation">
+          <button
+            type="button"
+            class="leave-tab-button"
+            [class.active]="isRecordsTabActive"
+            [attr.aria-selected]="isRecordsTabActive"
+            (click)="selectLeaveTab('records')">
+            <i class="fas fa-calendar-days"></i>
+            <span>Leave Records</span>
+          </button>
+          <button
+            type="button"
+            class="leave-tab-button"
+            [class.active]="isTypesTabActive"
+            [attr.aria-selected]="isTypesTabActive"
+            (click)="selectLeaveTab('types')">
+            <i class="fas fa-layer-group"></i>
+            <span>Leave Types</span>
+          </button>
+        </div>
+
+        <div *ngIf="isRecordsTabActive" class="leave-tab-panel">
+          <app-dashboard-leave-table
+            [leaves]="leaves"
+            title="Manager and employee leave records"
+            description="Search, filter, and review every leave request visible to the administrator."
+            emptyTitle="No manager or employee leave records"
+            emptyMessage="Once staff submit leave requests, they will appear here."
+          ></app-dashboard-leave-table>
+        </div>
+
+        <div *ngIf="isTypesTabActive" class="leave-tab-panel">
+          <div class="leave-types-toolbar">
+            <div>
+              <h3>Configured leave types</h3>
+              <p class="body-copy">Here all leave types are managed.</p>
+            </div>
+            <div class="leave-types-toolbar-actions">
+              <span class="leave-count-pill">{{ leaveTypes.length }} configured</span>
+              <button type="button" class="primary-toolbar-button" (click)="openCreateLeaveTypeModal()">
+                <i class="fas fa-plus"></i>
+                <span>Create leave type</span>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="isLeaveTypesLoading || isLeavesLoading" class="leave-empty-state">
+            <h4>Loading leave types</h4>
+            <p>Fetching the latest admin-defined catalog.</p>
+          </div>
+
+          <div *ngIf="!isLeaveTypesLoading && !leaveTypes.length" class="leave-empty-state">
+            <h4>No leave types yet</h4>
+            <p>Create the first leave type to start building the leave catalog.</p>
+          </div>
+
+          <div *ngIf="!isLeaveTypesLoading && leaveTypes.length" class="leave-type-list leave-type-list-managed">
+            <article *ngFor="let leaveType of leaveTypes; trackBy: trackLeaveType" class="leave-type-card">
+              <div class="leave-type-card-header">
+                <div>
+                  <h4>{{ leaveType.leaveName }}</h4>
+                  <p>{{ leaveType.leaveUniqueName }}</p>
+                </div>
+                <div class="leave-type-card-actions">
+                  <span class="leave-type-days">{{ leaveType.maxDays }} days</span>
+                  <button type="button" class="edit-button" (click)="openEditLeaveTypeModal(leaveType)">Edit</button>
+                  <button type="button" class="delete-button" (click)="requestDeleteLeaveType(leaveType)">Delete</button>
+                </div>
+              </div>
+              <p class="leave-type-description">{{ leaveType.description || 'No description provided for this leave type yet.' }}</p>
+            </article>
+          </div>
+        </div>
       </article>
-      <article class="surface">
-        <h3>{{ dashboard?.employeeCount ?? 0 }} employees available</h3>
-        <p class="body-copy">Employee records are ready for leave mapping.</p>
-      </article>
+
+      <div *ngIf="isLeaveTypeModalOpen" class="form-modal-backdrop" (click)="closeLeaveTypeModal()">
+        <section class="leave-type-modal-card" (click)="$event.stopPropagation()">
+          <section class="leave-form-card">
+            <div class="leave-form-heading">
+              <div>
+                <p class="leave-form-eyebrow">Leave Setup</p>
+                <h3>{{ leaveTypeModalTitle }}</h3>
+                <p>{{ leaveTypeModalDescription }}</p>
+              </div>
+              <button type="button" class="close-button leave-type-close-button" (click)="closeLeaveTypeModal()" [disabled]="isLeaveTypeSaving" aria-label="Close leave type form">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="leave-form-layout">
+              <form #leaveTypeForm="ngForm" class="leave-type-form" (ngSubmit)="submitLeaveType(leaveTypeForm)">
+                <label class="leave-field">
+                  <span>Leave name</span>
+                  <input
+                    #leaveName="ngModel"
+                    [(ngModel)]="leaveTypeModel.leaveName"
+                    [class.input-invalid]="isLeaveTypeFieldInvalid(leaveName, 'leaveName')"
+                    (ngModelChange)="handleLeaveNameChange($event)"
+                    name="leaveName"
+                    placeholder="Annual Leave"
+                    required
+                    maxlength="100"
+                    type="text" />
+                  <small *ngIf="getLeaveTypeControlError(leaveName, 'leaveName')" aria-live="polite">
+                    {{ getLeaveTypeControlError(leaveName, 'leaveName') }}
+                  </small>
+                </label>
+
+                <label class="leave-field">
+                  <span>Unique code</span>
+                  <input
+                    #leaveUniqueName="ngModel"
+                    [(ngModel)]="leaveTypeModel.leaveUniqueName"
+                    [class.input-invalid]="isLeaveTypeFieldInvalid(leaveUniqueName, 'leaveUniqueName')"
+                    (ngModelChange)="handleLeaveUniqueNameChange($event)"
+                    name="leaveUniqueName"
+                    placeholder="ANNUAL_LEAVE"
+                    required
+                    maxlength="100"
+                    type="text" />
+                  <small *ngIf="getLeaveTypeControlError(leaveUniqueName, 'leaveUniqueName')" aria-live="polite">
+                    {{ getLeaveTypeControlError(leaveUniqueName, 'leaveUniqueName') }}
+                  </small>
+                </label>
+
+                <label class="leave-field leave-field-wide">
+                  <span>Description</span>
+                  <textarea
+                    [(ngModel)]="leaveTypeModel.description"
+                    name="description"
+                    placeholder="Describe when this leave type should be used."
+                    maxlength="255"
+                    rows="5"></textarea>
+                  <small *ngIf="leaveTypeFieldErrors['description']" aria-live="polite">
+                    {{ leaveTypeFieldErrors['description'] }}
+                  </small>
+                </label>
+
+                <label class="leave-field leave-field-half">
+                  <span>Maximum days</span>
+                  <input
+                    #maxDays="ngModel"
+                    [(ngModel)]="leaveTypeModel.maxDays"
+                    [class.input-invalid]="isLeaveTypeFieldInvalid(maxDays, 'maxDays')"
+                    name="maxDays"
+                    required
+                    min="1"
+                    max="365"
+                    type="number" />
+                  <small *ngIf="getLeaveTypeControlError(maxDays, 'maxDays')" aria-live="polite">
+                    {{ getLeaveTypeControlError(maxDays, 'maxDays') }}
+                  </small>
+                </label>
+
+                <div class="leave-form-actions">
+                  <button
+                    *ngIf="shouldShowLeaveTypeResetButton"
+                    type="button"
+                    class="secondary-toolbar-button"
+                    (click)="resetLeaveTypeForm()"
+                    [disabled]="isLeaveTypeSaving">
+                    Reset
+                  </button>
+                  <button type="submit" class="primary-toolbar-button" [disabled]="isLeaveTypeSaving">
+                    <span>{{ leaveTypeSubmitLabel }}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </section>
+      </div>
     </section>
 
     <section *ngSwitchCase="'reports'" class="panel-grid">

@@ -134,6 +134,25 @@
       </small>
     </label>
 
+    <label *ngIf="shouldShowManagerField" class="field">
+      <span>Manager</span>
+      <select
+        #managerUsername="ngModel"
+        [(ngModel)]="model.managerUsername"
+        [class.input-invalid]="getManagerError() !== null"
+        [class.placeholder-selected]="!model.managerUsername"
+        name="managerUsername"
+        required>
+        <option [ngValue]="''" disabled>Select manager</option>
+        <option *ngFor="let manager of managerOptions" [ngValue]="manager.username">
+          {{ manager.fullName }} ({{ manager.username }})
+        </option>
+      </select>
+      <small [class.field-message-empty]="!getManagerError()" aria-live="polite">
+        {{ getManagerError() || ' ' }}
+      </small>
+    </label>
+
     <label class="field">
       <span>Gender</span>
       <select

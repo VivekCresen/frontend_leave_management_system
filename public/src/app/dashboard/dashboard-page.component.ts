@@ -3,6 +3,7 @@ import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthApiService } from '../services/auth-api.service';
+import { LeaveApiService } from '../services/leave-api.service';
 import {
   ApiErrorResponse,
   LoginResponse,
@@ -10,6 +11,7 @@ import {
   UserManagementPayload,
   UserDashboardResponse
 } from '../services/auth.service';
+import { LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload } from '../services/leave.service';
 import { ToastService } from '../services/toast.service';
 import {
   DashboardPageId,
@@ -19,6 +21,7 @@ import { AdminDashboardComponent } from './role-views/admin-dashboard.component'
 import { EmployeeDashboardComponent } from './role-views/employee-dashboard.component';
 import { ManagerDashboardComponent } from './role-views/manager-dashboard.component';
 import { DashboardUserSubmitEvent } from './components/dashboard-user-form.component';
+import { AdminLeaveTableRow } from './components/dashboard-leave-table.component';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -35,6 +38,7 @@ import { DashboardUserSubmitEvent } from './components/dashboard-user-form.compo
 })
 export class DashboardPageComponent implements OnInit, OnChanges {
   private readonly authService: AuthApiService;
+  private readonly leaveService: LeaveApiService;
   private readonly usernameRegex = /^[A-Za-z0-9._-]+$/;
 
   readonly genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
@@ -54,16 +58,25 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   isProfileMenuOpen = false;
   isProfileModalOpen = false;
   isProfileSaving = false;
+  leaveTypes: LeaveType[] = [];
+  leaves: AdminLeaveTableRow[] = [];
+  isLeaveTypesLoading = false;
+  isLeavesLoading = false;
+  isLeaveTypeSaving = false;
+  leaveTypeFieldErrors: Record<string, string> = {};
+  lastLeaveTypeCreatedAt = 0;
   profileSubmitted = false;
   profileFieldErrors: Record<string, string> = {};
   profileModel = this.createProfileModel();
 
   constructor(
     authService: AuthApiService,
+    leaveService: LeaveApiService,
     private readonly router: Router,
     private readonly toastService: ToastService
   ) {
     this.authService = authService;
+    this.leaveService = leaveService;
   }
 
   ngOnInit(): void {
@@ -306,6 +319,62 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     });
   }
 
+  handleSaveLeaveType(payload: LeaveTypeSavePayload): void {
+    this.isLeaveTypeSaving = true;
+    this.leaveTypeFieldErrors = {};
+
+    const request = payload.id
+      ? this.leaveService.updateLeaveType(payload.id, payload)
+      : this.leaveService.createLeaveType(payload);
+
+    request.subscribe({
+      next: (leaveType) => {
+        this.isLeaveTypeSaving = false;
+        this.leaveTypes = this.leaveTypes
+          .filter((existingLeaveType) => existingLeaveType.id !== leaveType.id)
+          .concat(leaveType)
+          .sort((left, right) => left.id - right.id);
+        this.lastLeaveTypeCreatedAt = Date.now();
+        this.toastService.success(payload.id ? 'Leave type updated successfully' : 'Leave type created successfully');
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isLeaveTypeSaving = false;
+        this.leaveTypeFieldErrors = this.mapLeaveTypeErrors(err.error);
+        const fallbackMessage = payload.id
+          ? 'Unable to update the leave type right now.'
+          : 'Unable to save the leave type right now.';
+        const restartMessage = payload.id
+          ? 'Update endpoint not found. Restart the leave service backend and try again.'
+          : fallbackMessage;
+        this.toastService.error(this.buildLeaveTypeErrorMessage(
+          err.error,
+          err.error?.status === 404 ? restartMessage : fallbackMessage
+        ));
+      }
+    });
+  }
+
+  handleDeleteLeaveType(leaveType: LeaveType): void {
+    if (!confirm(`Delete leave type "${leaveType.leaveName}"?`)) {
+      return;
+    }
+
+    this.leaveService.deleteLeaveType(leaveType.id).subscribe({
+      next: () => {
+        this.leaveTypes = this.leaveTypes.filter((existingLeaveType) => existingLeaveType.id !== leaveType.id);
+        this.toastService.success('Leave type deleted successfully');
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.toastService.error(this.buildLeaveTypeErrorMessage(
+          err.error,
+          err.error?.status === 404
+            ? 'Delete endpoint not found. Restart the leave service backend and try again.'
+            : 'Unable to delete the leave type right now.'
+        ));
+      }
+    });
+  }
+
   getProfileControlError(
     control: NgModel | null,
     field: 'fullName' | 'username' | 'email' | 'gender',
@@ -353,12 +422,77 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         if (!this.isProfileModalOpen) {
           this.syncProfileModel();
         }
+        if (this.normalizedRole === 'ADMIN') {
+          this.loadLeaves(response);
+          this.loadLeaveTypes();
+        }
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
         this.dashboard = null;
         this.errorMessage = err.error?.message || 'Unable to load dashboard data.';
         this.toastService.error(this.errorMessage);
+      }
+    });
+  }
+
+  private loadLeaveTypes(): void {
+    this.isLeaveTypesLoading = true;
+
+    this.leaveService.getLeaveTypes().subscribe({
+      next: (leaveTypes) => {
+        this.isLeaveTypesLoading = false;
+        this.leaveTypes = leaveTypes;
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isLeaveTypesLoading = false;
+        this.leaveTypes = [];
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave types right now.'));
+      }
+    });
+  }
+
+  private loadLeaves(response: UserDashboardResponse): void {
+    this.isLeavesLoading = true;
+
+    this.leaveService.getLeaves().subscribe({
+      next: (leaves) => {
+        this.isLeavesLoading = false;
+        const roleByUserId = new Map(
+          response.users
+            .filter((user) => user.role === 'MANAGER' || user.role === 'EMPLOYEE')
+            .map((user) => [user.id, user.role] as const)
+        );
+
+        this.leaves = leaves
+          .map((leave) => {
+            const role = roleByUserId.get(leave.userId);
+            if (!role) {
+              return null;
+            }
+
+            return {
+              id: leave.id,
+              userId: leave.userId,
+              fullName: leave.fullName?.trim() || 'Unknown user',
+              emailId: leave.emailId?.trim() || 'No email',
+              role,
+              leaveType: leave.leaveType?.trim() || 'Unassigned',
+              fromDate: leave.fromDate,
+              toDate: leave.toDate,
+              reason: leave.reason?.trim() || '',
+              comments: leave.comments?.trim() || '',
+              createdAt: leave.createdAt,
+              durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate)
+            } satisfies AdminLeaveTableRow;
+          })
+          .filter((leave): leave is AdminLeaveTableRow => leave !== null)
+          .sort((left, right) => new Date(right.fromDate).getTime() - new Date(left.fromDate).getTime());
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isLeavesLoading = false;
+        this.leaves = [];
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave records right now.'));
       }
     });
   }
@@ -434,5 +568,54 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     return control
       ? control.touched === true || control.dirty === true || this.profileSubmitted
       : this.profileSubmitted;
+  }
+
+  private mapLeaveTypeErrors(error?: LeaveApiErrorResponse): Record<string, string> {
+    const fieldErrors: Record<string, string> = {};
+
+    for (const detail of error?.details ?? []) {
+      const normalizedDetail = detail.trim();
+
+      if (/leave name already exists/i.test(normalizedDetail)) {
+        fieldErrors['leaveName'] = normalizedDetail;
+        continue;
+      }
+
+      if (/leave unique name already exists/i.test(normalizedDetail)) {
+        fieldErrors['leaveUniqueName'] = normalizedDetail;
+        continue;
+      }
+
+      if (/max days/i.test(normalizedDetail) && !normalizedDetail.includes(':')) {
+        fieldErrors['maxDays'] = normalizedDetail;
+        continue;
+      }
+
+      const separatorIndex = detail.indexOf(':');
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const rawField = detail.slice(0, separatorIndex).trim();
+      const message = detail.slice(separatorIndex + 1).trim();
+      const normalizedField = rawField.split('.').pop() ?? rawField;
+      fieldErrors[normalizedField] = message;
+    }
+
+    return fieldErrors;
+  }
+
+  private buildLeaveTypeErrorMessage(
+    error?: LeaveApiErrorResponse,
+    fallback = 'Unable to save the leave type right now.'
+  ): string {
+    return error?.details?.[0] || fallback;
+  }
+
+  private calculateDurationDays(fromDate: string, toDate: string): number {
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
+    const millisecondsPerDay = 24 * 60 * 60 * 1000;
+    return Math.max(1, Math.floor((end.getTime() - start.getTime()) / millisecondsPerDay) + 1);
   }
 }

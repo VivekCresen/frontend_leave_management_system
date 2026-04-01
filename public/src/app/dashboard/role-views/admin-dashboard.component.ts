@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
 import {
@@ -7,21 +8,25 @@ import {
   DashboardUserSubmitEvent
 } from '../components/dashboard-user-form.component';
 import { DashboardUserTableComponent } from '../components/dashboard-user-table.component';
+import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
 import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../services/auth.service';
+import { LeaveType, LeaveTypeSavePayload } from '../../services/leave.service';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     DashboardStatCardsComponent,
     DashboardUserFormComponent,
-    DashboardUserTableComponent
+    DashboardUserTableComponent,
+    DashboardLeaveTableComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
-export class AdminDashboardComponent {
+export class AdminDashboardComponent implements OnChanges {
   @Input({ required: true }) pageId!: DashboardPageId;
   @Input({ required: true }) user!: LoginResponse;
   @Input() dashboard: UserDashboardResponse | null = null;
@@ -29,12 +34,28 @@ export class AdminDashboardComponent {
   @Input() isSaving = false;
   @Input() isUserFormOpen = false;
   @Input() fieldErrors: Record<string, string> = {};
+  @Input() leaveTypes: LeaveType[] = [];
+  @Input() leaves: AdminLeaveTableRow[] = [];
+  @Input() isLeaveTypesLoading = false;
+  @Input() isLeavesLoading = false;
+  @Input() isLeaveTypeSaving = false;
+  @Input() leaveTypeFieldErrors: Record<string, string> = {};
+  @Input() lastLeaveTypeCreatedAt = 0;
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
   @Output() editRequested = new EventEmitter<ManagedUser>();
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
   @Output() cancelEditRequested = new EventEmitter<void>();
+  @Output() leaveTypeSaveRequested = new EventEmitter<LeaveTypeSavePayload>();
+  @Output() leaveTypeDeleteRequested = new EventEmitter<LeaveType>();
+
+  leaveTab: 'records' | 'types' = 'records';
+  isLeaveTypeModalOpen = false;
+  editingLeaveType: LeaveType | null = null;
+  leaveTypeSubmitted = false;
+  leaveUniqueNameTouched = false;
+  leaveTypeModel = this.createLeaveTypeModel();
 
   get stats(): DashboardStatCard[] {
     return [
@@ -65,11 +86,237 @@ export class AdminDashboardComponent {
         note: 'Require review.',
         tone: 'orange',
         icon: 'fa-user-slash'
+      },
+      {
+        label: 'Manager leave records',
+        value: this.managerLeaveCount,
+        note: 'Requests created by managers.',
+        tone: 'teal',
+        icon: 'fa-user-tie'
+      },
+      {
+        label: 'Employee leave records',
+        value: this.employeeLeaveCount,
+        note: 'Requests created by employees.',
+        tone: 'slate',
+        icon: 'fa-calendar-check'
       }
     ];
   }
 
   get assignableRoles(): string[] {
     return (this.dashboard?.assignableRoles ?? []).filter((role) => role !== 'ADMIN');
+  }
+
+  get managerLeaveCount(): number {
+    return this.leaves.filter((leave) => leave.role === 'MANAGER').length;
+  }
+
+  get employeeLeaveCount(): number {
+    return this.leaves.filter((leave) => leave.role === 'EMPLOYEE').length;
+  }
+
+  get isRecordsTabActive(): boolean {
+    return this.leaveTab === 'records';
+  }
+
+  get isTypesTabActive(): boolean {
+    return this.leaveTab === 'types';
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['lastLeaveTypeCreatedAt'] && !changes['lastLeaveTypeCreatedAt'].firstChange) {
+      this.resetLeaveTypeEditor();
+      this.isLeaveTypeModalOpen = false;
+      this.leaveTab = 'types';
+    }
+  }
+
+  selectLeaveTab(tab: 'records' | 'types'): void {
+    this.leaveTab = tab;
+  }
+
+  submitLeaveType(form: NgForm): void {
+    this.leaveTypeSubmitted = true;
+    this.normalizeLeaveTypeModel();
+
+    if (form.invalid) {
+      return;
+    }
+
+    this.leaveTypeSaveRequested.emit({
+      id: this.editingLeaveType?.id,
+      leaveName: this.leaveTypeModel.leaveName,
+      leaveUniqueName: this.leaveTypeModel.leaveUniqueName,
+      description: this.leaveTypeModel.description,
+      maxDays: Number(this.leaveTypeModel.maxDays)
+    });
+  }
+
+  resetLeaveTypeForm(): void {
+    if (this.editingLeaveType) {
+      this.populateLeaveTypeForm(this.editingLeaveType);
+      return;
+    }
+
+    this.resetLeaveTypeEditor();
+  }
+
+  trackLeaveType(_: number, leaveType: LeaveType): number {
+    return leaveType.id;
+  }
+
+  handleLeaveNameChange(value: string): void {
+    this.leaveTypeModel = {
+      ...this.leaveTypeModel,
+      leaveName: value
+    };
+
+    if (!this.leaveUniqueNameTouched) {
+      this.leaveTypeModel = {
+        ...this.leaveTypeModel,
+        leaveUniqueName: this.toUniqueCode(value)
+      };
+    }
+  }
+
+  handleLeaveUniqueNameChange(value: string): void {
+    this.leaveUniqueNameTouched = true;
+    this.leaveTypeModel = {
+      ...this.leaveTypeModel,
+      leaveUniqueName: value.toUpperCase().replace(/\s+/g, '_')
+    };
+  }
+
+  openCreateLeaveTypeModal(): void {
+    this.resetLeaveTypeEditor();
+    this.isLeaveTypeModalOpen = true;
+  }
+
+  openEditLeaveTypeModal(leaveType: LeaveType): void {
+    this.populateLeaveTypeForm(leaveType);
+    this.isLeaveTypeModalOpen = true;
+  }
+
+  requestDeleteLeaveType(leaveType: LeaveType): void {
+    this.leaveTypeDeleteRequested.emit(leaveType);
+  }
+
+  closeLeaveTypeModal(): void {
+    if (this.isLeaveTypeSaving) {
+      return;
+    }
+
+    this.isLeaveTypeModalOpen = false;
+    this.resetLeaveTypeEditor();
+  }
+
+  get leaveTypeModalTitle(): string {
+    return this.editingLeaveType ? 'Update leave type' : 'Create leave type';
+  }
+
+  get leaveTypeModalDescription(): string {
+    return this.editingLeaveType
+      ? 'Refine an existing leave category without changing the overall admin workflow.'
+      : 'Define a clean leave category so managers and employees can select it consistently across the system.';
+  }
+
+  get leaveTypeSubmitLabel(): string {
+    if (this.isLeaveTypeSaving) {
+      return 'Saving...';
+    }
+
+    return 'Save';
+  }
+
+  get shouldShowLeaveTypeResetButton(): boolean {
+    return this.editingLeaveType === null;
+  }
+
+  get hasLeaveTypes(): boolean {
+    return this.leaveTypes.length > 0;
+  }
+
+  getLeaveTypeControlError(control: NgModel | null, field: 'leaveName' | 'leaveUniqueName' | 'maxDays'): string | null {
+    if (this.leaveTypeFieldErrors[field]) {
+      return this.leaveTypeFieldErrors[field];
+    }
+
+    if (!control || !this.shouldShowLeaveTypeError(control)) {
+      return null;
+    }
+
+    if (control.errors?.['required']) {
+      return (
+        {
+          leaveName: 'Leave name is required',
+          leaveUniqueName: 'Unique code is required',
+          maxDays: 'Maximum days is required'
+        } satisfies Record<'leaveName' | 'leaveUniqueName' | 'maxDays', string>
+      )[field];
+    }
+
+    if (control.errors?.['min'] || control.errors?.['max']) {
+      return 'Enter a value between 1 and 365';
+    }
+
+    return null;
+  }
+
+  isLeaveTypeFieldInvalid(control: NgModel | null, field: 'leaveName' | 'leaveUniqueName' | 'maxDays'): boolean {
+    return this.getLeaveTypeControlError(control, field) !== null;
+  }
+
+  private normalizeLeaveTypeModel(): void {
+    this.leaveTypeModel = {
+      leaveName: this.leaveTypeModel.leaveName.trim(),
+      leaveUniqueName: this.leaveTypeModel.leaveUniqueName.trim(),
+      description: this.leaveTypeModel.description.trim(),
+      maxDays: Number(this.leaveTypeModel.maxDays)
+    };
+  }
+
+  private createLeaveTypeModel() {
+    return {
+      leaveName: '',
+      leaveUniqueName: '',
+      description: '',
+      maxDays: 1
+    };
+  }
+
+  private toUniqueCode(value: string): string {
+    return value
+      .trim()
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase();
+  }
+
+  private shouldShowLeaveTypeError(control: NgModel | null): boolean {
+    return control
+      ? control.touched === true || control.dirty === true || this.leaveTypeSubmitted
+      : this.leaveTypeSubmitted;
+  }
+
+  private resetLeaveTypeEditor(): void {
+    this.leaveTypeSubmitted = false;
+    this.leaveUniqueNameTouched = false;
+    this.leaveTypeFieldErrors = {};
+    this.editingLeaveType = null;
+    this.leaveTypeModel = this.createLeaveTypeModel();
+  }
+
+  private populateLeaveTypeForm(leaveType: LeaveType): void {
+    this.editingLeaveType = leaveType;
+    this.leaveTypeSubmitted = false;
+    this.leaveUniqueNameTouched = true;
+    this.leaveTypeFieldErrors = {};
+    this.leaveTypeModel = {
+      leaveName: leaveType.leaveName ?? '',
+      leaveUniqueName: leaveType.leaveUniqueName ?? '',
+      description: leaveType.description ?? '',
+      maxDays: leaveType.maxDays ?? 1
+    };
   }
 }

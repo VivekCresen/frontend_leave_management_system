@@ -33,7 +33,7 @@ export class EmployeeDashboardComponent {
       {
         label: 'Managed by',
         value: this.dashboard?.actor?.createdBy || 'System',
-        note: 'Recorded owner.',
+        note: 'Assigned manager.',
         tone: 'slate'
       },
       {

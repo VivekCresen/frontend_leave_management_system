@@ -43,6 +43,7 @@ export class AuthApiService implements AuthService {
       email: this.normalizeEmail(payload.email),
       password: payload.password ?? '',
       role: payload.role.trim().toUpperCase(),
+      managerUsername: payload.managerUsername?.trim() || null,
       active: payload.active,
       gender: payload.gender.trim()
     });

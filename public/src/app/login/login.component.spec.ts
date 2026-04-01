@@ -78,7 +78,7 @@ describe('LoginComponent', () => {
 
     component.onSubmit({ invalid: false } as NgForm);
 
-    expect(authService.login).toHaveBeenCalledWith({ username: 'admin', password: 'admin123' });
+    expect(authService.login).toHaveBeenCalledWith({ username: 'admin', password: 'YWRtaW4xMjM=' });
     expect(authService.setCurrentUser).toHaveBeenCalled();
     expect(toastService.success).toHaveBeenCalledWith('Login successful');
   });
@@ -98,6 +98,6 @@ describe('LoginComponent', () => {
 
     component.onSubmit({ invalid: false } as NgForm);
 
-    expect(authService.login).toHaveBeenCalledWith({ username: 'admin@cresen.com', password: 'admin123' });
+    expect(authService.login).toHaveBeenCalledWith({ username: 'admin@cresen.com', password: 'YWRtaW4xMjM=' });
   });
 });

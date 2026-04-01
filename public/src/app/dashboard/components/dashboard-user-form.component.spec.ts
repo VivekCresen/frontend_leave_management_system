@@ -42,6 +42,26 @@ describe('DashboardUserFormComponent', () => {
 
   it('should emit a trimmed and normalized payload when the form is valid', () => {
     spyOn(component.saveRequested, 'emit');
+    fixture.componentRef.setInput('assignableRoles', ['MANAGER', 'EMPLOYEE']);
+    fixture.componentRef.setInput('users', [
+      {
+        id: 2,
+        companyId: 'CRESEN002',
+        username: 'manager.one',
+        fullName: 'Manager One',
+        email: 'manager.one@cresen.com',
+        role: 'MANAGER',
+        active: true,
+        gender: 'Male',
+        createdBy: 'admin',
+        updatedBy: 'admin',
+        createDate: null,
+        updateDate: null,
+        lastLogin: null,
+        canEdit: true,
+        canDelete: true
+      }
+    ]);
     component.model = {
       companyId: ' CRESEN004 ',
       fullName: ' Test Employee ',
@@ -49,6 +69,7 @@ describe('DashboardUserFormComponent', () => {
       email: ' Test.User@Cresen.com ',
       password: 'TempPass@123',
       role: 'EMPLOYEE',
+      managerUsername: ' manager.one ',
       active: true,
       gender: 'Female'
     };
@@ -62,8 +83,9 @@ describe('DashboardUserFormComponent', () => {
         fullName: 'Test Employee',
         username: 'test.user',
         email: 'test.user@cresen.com',
-        password: 'TempPass@123',
+        password: btoa('TempPass@123'),
         role: 'EMPLOYEE',
+        managerUsername: 'manager.one',
         active: true,
         gender: 'Female'
       }
@@ -79,12 +101,34 @@ describe('DashboardUserFormComponent', () => {
       email: 'test.user@cresen.com',
       password: 'TempPass@123',
       role: 'EMPLOYEE',
+      managerUsername: '',
       active: true,
       gender: 'Female'
     };
 
     component.submit({ invalid: false } as NgForm);
 
+    expect(component.saveRequested.emit).not.toHaveBeenCalled();
+  });
+
+  it('should require a manager when admin creates an employee', () => {
+    spyOn(component.saveRequested, 'emit');
+    fixture.componentRef.setInput('assignableRoles', ['MANAGER', 'EMPLOYEE']);
+    component.model = {
+      companyId: 'CRESEN004',
+      fullName: 'Test Employee',
+      username: 'test.user',
+      email: 'test.user@cresen.com',
+      password: 'TempPass@123',
+      role: 'EMPLOYEE',
+      managerUsername: '',
+      active: true,
+      gender: 'Female'
+    };
+
+    component.submit({ invalid: false } as NgForm);
+
+    expect(component.getManagerError()).toBe('Manager is required');
     expect(component.saveRequested.emit).not.toHaveBeenCalled();
   });
 });
