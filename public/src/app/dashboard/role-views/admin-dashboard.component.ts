@@ -41,6 +41,8 @@ export class AdminDashboardComponent implements OnChanges {
   @Input() isLeaveTypeSaving = false;
   @Input() leaveTypeFieldErrors: Record<string, string> = {};
   @Input() lastLeaveTypeCreatedAt = 0;
+  @Input() filterRole = '';
+  @Input() filterStatus = '';
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
@@ -49,6 +51,8 @@ export class AdminDashboardComponent implements OnChanges {
   @Output() cancelEditRequested = new EventEmitter<void>();
   @Output() leaveTypeSaveRequested = new EventEmitter<LeaveTypeSavePayload>();
   @Output() leaveTypeDeleteRequested = new EventEmitter<LeaveType>();
+  @Output() leaveApproveRequested = new EventEmitter<AdminLeaveTableRow>();
+  @Output() leaveRejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
 
   leaveTab: 'records' | 'types' = 'records';
   isLeaveTypeModalOpen = false;
@@ -64,42 +68,58 @@ export class AdminDashboardComponent implements OnChanges {
         value: this.dashboard?.totalUsers ?? 0,
         note: 'All accounts in the directory.',
         tone: 'teal',
-        icon: 'fa-users'
+        icon: 'fa-users',
+        route: ['/dashboard', 'users'],
+        actionLabel: 'Open users'
       },
       {
         label: 'Managers',
         value: this.dashboard?.managerCount ?? 0,
         note: 'Active management layer.',
         tone: 'orange',
-        icon: 'fa-user-tie'
+        icon: 'fa-user-tie',
+        route: ['/dashboard', 'roles'],
+        actionLabel: 'Open roles'
       },
       {
         label: 'Employees',
         value: this.dashboard?.employeeCount ?? 0,
         note: 'Employee accounts.',
         tone: 'slate',
-        icon: 'fa-id-badge'
+        icon: 'fa-id-badge',
+        route: ['/dashboard', 'users'],
+        queryParams: { role: 'EMPLOYEE' },
+        actionLabel: 'View employees'
       },
       {
         label: 'Inactive accounts',
         value: this.dashboard?.inactiveUsers ?? 0,
         note: 'Require review.',
         tone: 'orange',
-        icon: 'fa-user-slash'
+        icon: 'fa-user-slash',
+        route: ['/dashboard', 'users'],
+        queryParams: { status: 'INACTIVE' },
+        actionLabel: 'Review users'
       },
       {
         label: 'Manager leave records',
         value: this.managerLeaveCount,
         note: 'Requests created by managers.',
         tone: 'teal',
-        icon: 'fa-user-tie'
+        icon: 'fa-user-tie',
+        route: ['/dashboard', 'leaves'],
+        queryParams: { role: 'MANAGER' },
+        actionLabel: 'Open leaves'
       },
       {
         label: 'Employee leave records',
         value: this.employeeLeaveCount,
         note: 'Requests created by employees.',
         tone: 'slate',
-        icon: 'fa-calendar-check'
+        icon: 'fa-calendar-check',
+        route: ['/dashboard', 'leaves'],
+        queryParams: { role: 'EMPLOYEE' },
+        actionLabel: 'Open leaves'
       }
     ];
   }

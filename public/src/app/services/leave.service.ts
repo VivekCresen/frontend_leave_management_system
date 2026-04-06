@@ -24,8 +24,27 @@ export interface LeaveRecord {
   comments: string | null;
   trail: string | null;
   editable: boolean;
+  status: string | null;
+  approvedBy: string | null;
+  rejectionReason: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+export interface UpdateLeaveStatusPayload {
+  actorUsername: string;
+  status: 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
+}
+
+export interface CreateLeavePayload {
+  username: string;
+  leaveTypeId: number;
+  leaveType: string;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  comments: string;
 }
 
 export interface CreateLeaveTypePayload {
@@ -53,6 +72,8 @@ export interface LeaveApiErrorResponse {
 export interface LeaveService {
   getLeaves(): Observable<LeaveRecord[]>;
   getLeaveTypes(): Observable<LeaveType[]>;
+  createLeave(payload: CreateLeavePayload): Observable<LeaveRecord>;
+  updateLeaveStatus(leaveId: number, payload: UpdateLeaveStatusPayload): Observable<LeaveRecord>;
   createLeaveType(payload: CreateLeaveTypePayload): Observable<LeaveType>;
   updateLeaveType(leaveTypeId: number, payload: CreateLeaveTypePayload): Observable<LeaveType>;
   deleteLeaveType(leaveTypeId: number): Observable<void>;

@@ -1,0 +1,125 @@
+<section class="form-card">
+  <div class="form-heading">
+    <div>
+      <p class="eyebrow">Leave Request</p>
+      <h3>Apply for leave</h3>
+      <p>Fill in the details below and submit your leave request for approval.</p>
+    </div>
+    <button
+      type="button"
+      class="close-button"
+      (click)="cancel()"
+      aria-label="Close form"
+      title="Close form">
+      ✕
+    </button>
+  </div>
+
+  <form #leaveForm="ngForm" class="leave-form" (ngSubmit)="submit(leaveForm)" novalidate>
+
+    <!-- Leave Type -->
+    <label class="field">
+      <span>Leave type <span class="required-mark">*</span></span>
+      <select
+        #leaveTypeId="ngModel"
+        [(ngModel)]="model.leaveTypeId"
+        [class.input-invalid]="submitted && !model.leaveTypeId"
+        [class.placeholder-selected]="!model.leaveTypeId"
+        name="leaveTypeId"
+        required>
+        <option [ngValue]="null" disabled>Select leave type</option>
+        <option *ngFor="let lt of leaveTypes" [ngValue]="lt.id">
+          {{ lt.leaveName }} (max {{ lt.maxDays }} days)
+        </option>
+      </select>
+      <small [class.field-message-empty]="!(submitted && !model.leaveTypeId) && !getFieldError('leaveTypeId')" aria-live="polite">
+        {{ getFieldError('leaveTypeId') || (submitted && !model.leaveTypeId ? 'Leave type is required' : ' ') }}
+      </small>
+    </label>
+
+    <!-- Leave type description hint -->
+    <div *ngIf="selectedLeaveType?.description" class="info-box">
+      <i class="fas fa-circle-info"></i>
+      <span>{{ selectedLeaveType!.description }}</span>
+    </div>
+
+    <!-- From Date -->
+    <label class="field">
+      <span>Start date <span class="required-mark">*</span></span>
+      <input
+        #fromDate="ngModel"
+        [(ngModel)]="model.fromDate"
+        [class.input-invalid]="submitted && !model.fromDate"
+        [min]="today"
+        (ngModelChange)="onFromDateChange()"
+        name="fromDate"
+        type="date"
+        required />
+      <small [class.field-message-empty]="!(submitted && !model.fromDate) && !getFieldError('fromDate')" aria-live="polite">
+        {{ getFieldError('fromDate') || (submitted && !model.fromDate ? 'Start date is required' : ' ') }}
+      </small>
+    </label>
+
+    <!-- To Date -->
+    <label class="field">
+      <span>End date <span class="required-mark">*</span></span>
+      <input
+        #toDate="ngModel"
+        [(ngModel)]="model.toDate"
+        [class.input-invalid]="submitted && (!model.toDate || !!dateRangeError)"
+        [min]="minToDate"
+        name="toDate"
+        type="date"
+        required />
+      <small [class.field-message-empty]="!dateRangeError && !getFieldError('toDate')" aria-live="polite">
+        {{ getFieldError('toDate') || dateRangeError || ' ' }}
+      </small>
+    </label>
+
+    <!-- Duration badge -->
+    <div *ngIf="durationDays > 0" class="duration-badge">
+      <i class="fas fa-calendar-days"></i>
+      <span>{{ durationDays }} day{{ durationDays === 1 ? '' : 's' }} selected</span>
+      <span *ngIf="selectedLeaveType && durationDays > selectedLeaveType.maxDays" class="duration-warning">
+        — exceeds max {{ selectedLeaveType.maxDays }} days
+      </span>
+    </div>
+
+    <!-- Reason -->
+    <label class="field field-full">
+      <span>Reason <span class="required-mark">*</span></span>
+      <textarea
+        #reason="ngModel"
+        [(ngModel)]="model.reason"
+        [class.input-invalid]="submitted && !model.reason.trim()"
+        name="reason"
+        placeholder="Briefly describe the reason for your leave"
+        rows="3"
+        maxlength="500"
+        required></textarea>
+      <small [class.field-message-empty]="!(submitted && !model.reason.trim()) && !getFieldError('reason')" aria-live="polite">
+        {{ getFieldError('reason') || (submitted && !model.reason.trim() ? 'Reason is required' : ' ') }}
+      </small>
+    </label>
+
+    <!-- Comments (optional) -->
+    <label class="field field-full">
+      <span>Additional comments <span class="optional-mark">(optional)</span></span>
+      <textarea
+        [(ngModel)]="model.comments"
+        name="comments"
+        placeholder="Any extra notes for your manager"
+        rows="2"
+        maxlength="500"></textarea>
+    </label>
+
+    <div class="form-actions">
+      <button type="button" class="secondary-button" (click)="reset()" [disabled]="isSaving">
+        Reset
+      </button>
+      <button type="submit" class="primary-button" [disabled]="isSaving">
+        {{ isSaving ? 'Submitting...' : 'Submit request' }}
+      </button>
+    </div>
+  </form>
+</section>

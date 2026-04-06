@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateLeaveTypePayload, LeaveRecord, LeaveService, LeaveType } from './leave.service';
+import { map } from 'rxjs/operators';
+import { CreateLeavePayload, CreateLeaveTypePayload, LeaveRecord, LeaveService, LeaveType, UpdateLeaveStatusPayload } from './leave.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,11 +13,33 @@ export class LeaveApiService implements LeaveService {
   constructor(private readonly http: HttpClient) {}
 
   getLeaves(): Observable<LeaveRecord[]> {
-    return this.http.get<LeaveRecord[]>(this.apiUrl);
+    return this.http.get<{ content: LeaveRecord[] }>(this.apiUrl).pipe(
+      map((response) => response.content ?? [])
+    );
   }
 
   getLeaveTypes(): Observable<LeaveType[]> {
     return this.http.get<LeaveType[]>(`${this.apiUrl}/types`);
+  }
+
+  createLeave(payload: CreateLeavePayload): Observable<LeaveRecord> {
+    return this.http.post<LeaveRecord>(this.apiUrl, {
+      username: payload.username,
+      leaveTypeId: payload.leaveTypeId,
+      leaveType: payload.leaveType,
+      fromDate: payload.fromDate,
+      toDate: payload.toDate,
+      reason: payload.reason,
+      comments: payload.comments
+    });
+  }
+
+  updateLeaveStatus(leaveId: number, payload: UpdateLeaveStatusPayload): Observable<LeaveRecord> {
+    return this.http.put<LeaveRecord>(`${this.apiUrl}/${leaveId}/status`, {
+      actorUsername: payload.actorUsername,
+      status: payload.status,
+      rejectionReason: payload.rejectionReason ?? null
+    });
   }
 
   createLeaveType(payload: CreateLeaveTypePayload): Observable<LeaveType> {

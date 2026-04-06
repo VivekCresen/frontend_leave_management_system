@@ -231,6 +231,149 @@
   margin-top: 8px;
 }
 
+.ag-grid-shell {
+  padding: 0;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.98));
+}
+
+/* ─── AG Grid Shell ──────────────────────────────────────── */
+.ag-shell {
+  margin-top: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.user-ag-grid {
+  width: 100%;
+}
+
+/* Header */
+:host ::ng-deep .user-ag-grid .ag-header-cell-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+}
+
+/* Cells */
+:host ::ng-deep .user-ag-grid .ag-cell {
+  display: flex;
+  align-items: center;
+  color: #0f172a;
+  font-size: 0.88rem;
+}
+
+/* User cell — 3-line name/username/email */
+:host ::ng-deep .user-ag-grid .ag-user-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 0;
+  line-height: 1.4;
+}
+
+:host ::ng-deep .user-ag-grid .ag-user-cell strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+:host ::ng-deep .user-ag-grid .ag-user-cell span {
+  color: #0f8b8d;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+:host ::ng-deep .user-ag-grid .ag-user-cell small {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+/* Status badge */
+:host ::ng-deep .user-ag-grid .ag-status-badge {
+ 
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .user-ag-grid .ag-status-badge.active {
+  background: rgba(4, 120, 87, 0.09);
+  color: #047857;
+  border: 1px solid rgba(4, 120, 87, 0.2);
+}
+
+:host ::ng-deep .user-ag-grid .ag-status-badge.inactive {
+  background: rgba(180, 35, 24, 0.08);
+  color: #b42318;
+  border: 1px solid rgba(180, 35, 24, 0.18);
+}
+
+/* Action buttons */
+:host ::ng-deep .user-ag-grid .ag-action-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+:host ::ng-deep .user-ag-grid .ag-action-btn {
+  min-height: 28px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  line-height: 1;
+}
+
+:host ::ng-deep .user-ag-grid .ag-action-btn.edit {
+  border: 1px solid rgba(15, 139, 141, 0.25);
+  background: rgba(15, 139, 141, 0.07);
+  color: #0f766e;
+}
+
+:host ::ng-deep .user-ag-grid .ag-action-btn.edit:hover {
+  background: rgba(15, 139, 141, 0.15);
+  border-color: rgba(15, 139, 141, 0.45);
+}
+
+:host ::ng-deep .user-ag-grid .ag-action-btn.delete {
+  border: 1px solid rgba(180, 35, 24, 0.2);
+  background: rgba(180, 35, 24, 0.07);
+  color: #b42318;
+}
+
+:host ::ng-deep .user-ag-grid .ag-action-btn.delete:hover {
+  background: rgba(180, 35, 24, 0.14);
+  border-color: rgba(180, 35, 24, 0.4);
+}
+
+:host ::ng-deep .user-ag-grid .ag-read-only {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Pagination bar */
+:host ::ng-deep .user-ag-grid .ag-paging-panel {
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  background: rgba(248, 250, 252, 0.7);
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 0 16px;
+  min-height: 44px;
+}
+
+
+
 .table-inner {
   min-width: 100%;
   overflow-x: auto;
@@ -252,6 +395,8 @@
   padding-right: 6px;
   min-height: 0;
 }
+
+
 
 /* ─── Table Rows ─────────────────────────────────────────── */
 .table-row {

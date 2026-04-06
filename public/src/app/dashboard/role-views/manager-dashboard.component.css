@@ -230,3 +230,7 @@
     max-height: calc(100vh - 28px);
   }
 }
+
+.leave-form-wrapper {
+  width: 100%;
+}

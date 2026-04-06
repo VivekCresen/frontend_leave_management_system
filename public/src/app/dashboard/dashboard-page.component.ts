@@ -1,7 +1,7 @@
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthApiService } from '../services/auth-api.service';
 import { LeaveApiService } from '../services/leave-api.service';
 import {
@@ -11,7 +11,7 @@ import {
   UserManagementPayload,
   UserDashboardResponse
 } from '../services/auth.service';
-import { LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload } from '../services/leave.service';
+import { CreateLeavePayload, LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload, UpdateLeaveStatusPayload } from '../services/leave.service';
 import { ToastService } from '../services/toast.service';
 import {
   DashboardPageId,
@@ -22,6 +22,7 @@ import { EmployeeDashboardComponent } from './role-views/employee-dashboard.comp
 import { ManagerDashboardComponent } from './role-views/manager-dashboard.component';
 import { DashboardUserSubmitEvent } from './components/dashboard-user-form.component';
 import { AdminLeaveTableRow } from './components/dashboard-leave-table.component';
+import { LeaveFormSubmitEvent } from './components/dashboard-leave-form.component';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -68,10 +69,17 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   profileSubmitted = false;
   profileFieldErrors: Record<string, string> = {};
   profileModel = this.createProfileModel();
+  filterRole = '';
+  filterStatus = '';
+  isLeaveFormOpen = false;
+  isLeaveSaving = false;
+  leaveFieldErrors: Record<string, string> = {};
+  managerLeaves: AdminLeaveTableRow[] = [];
 
   constructor(
     authService: AuthApiService,
     leaveService: LeaveApiService,
+    private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly toastService: ToastService
   ) {
@@ -80,6 +88,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe((params) => {
+      this.filterRole = params['role'] ?? '';
+      this.filterStatus = params['status'] ?? '';
+    });
     this.loadDashboard();
   }
 
@@ -319,6 +331,77 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     });
   }
 
+  openLeaveForm(): void {
+    this.leaveFieldErrors = {};
+    this.isLeaveFormOpen = true;
+  }
+
+  cancelLeaveForm(): void {
+    this.isLeaveFormOpen = false;
+    this.isLeaveSaving = false;
+    this.leaveFieldErrors = {};
+  }
+
+  handleApproveLeave(leave: AdminLeaveTableRow): void {
+    const payload: UpdateLeaveStatusPayload = {
+      actorUsername: this.user.username,
+      status: 'APPROVED'
+    };
+
+    this.leaveService.updateLeaveStatus(leave.id, payload).subscribe({
+      next: (updated) => {
+        this.updateLeaveInList(updated);
+        this.toastService.success('Leave request approved');
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to approve leave request.'));
+      }
+    });
+  }
+
+  handleRejectLeave(event: { leave: AdminLeaveTableRow; reason: string }): void {
+    const payload: UpdateLeaveStatusPayload = {
+      actorUsername: this.user.username,
+      status: 'REJECTED',
+      rejectionReason: event.reason
+    };
+
+    this.leaveService.updateLeaveStatus(event.leave.id, payload).subscribe({
+      next: (updated) => {
+        this.updateLeaveInList(updated);
+        this.toastService.success('Leave request rejected');
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to reject leave request.'));
+      }
+    });
+  }
+
+  handleCreateLeave(event: LeaveFormSubmitEvent): void {
+    this.isLeaveSaving = true;
+    this.leaveFieldErrors = {};
+
+    const payload: CreateLeavePayload = {
+      ...event,
+      username: this.user.username
+    };
+
+    this.leaveService.createLeave(payload).subscribe({
+      next: () => {
+        this.isLeaveSaving = false;
+        this.isLeaveFormOpen = false;
+        this.toastService.success('Leave request submitted successfully');
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isLeaveSaving = false;
+        this.leaveFieldErrors = this.mapLeaveTypeErrors(err.error);
+        this.toastService.error(
+          this.buildLeaveTypeErrorMessage(err.error, 'Unable to submit leave request right now.')
+        );
+      }
+    });
+  }
+
   handleSaveLeaveType(payload: LeaveTypeSavePayload): void {
     this.isLeaveTypeSaving = true;
     this.leaveTypeFieldErrors = {};
@@ -424,8 +507,12 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         }
         if (this.normalizedRole === 'ADMIN') {
           this.loadLeaves(response);
-          this.loadLeaveTypes();
         }
+        if (this.normalizedRole === 'MANAGER') {
+          this.loadManagerLeaves(response);
+        }
+        // Load leave types for all roles (needed for create leave form)
+        this.loadLeaveTypes();
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
@@ -450,6 +537,52 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave types right now.'));
       }
     });
+  }
+
+  private loadManagerLeaves(response: UserDashboardResponse): void {
+    this.isLeavesLoading = true;
+
+    this.leaveService.getLeaves().subscribe({
+      next: (leaves) => {
+        this.isLeavesLoading = false;
+        const employeeIds = new Set(response.users.map((u) => u.id));
+
+        this.managerLeaves = leaves
+          .filter((leave) => employeeIds.has(leave.userId))
+          .map((leave) => ({
+            id: leave.id,
+            userId: leave.userId,
+            fullName: leave.fullName?.trim() || 'Unknown user',
+            emailId: leave.emailId?.trim() || 'No email',
+            role: response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE',
+            leaveType: leave.leaveType?.trim() || 'Unassigned',
+            fromDate: leave.fromDate,
+            toDate: leave.toDate,
+            reason: leave.reason?.trim() || '',
+            comments: leave.comments?.trim() || '',
+            createdAt: leave.createdAt,
+            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate),
+            status: leave.status ?? 'PENDING',
+            approvedBy: leave.approvedBy ?? null,
+            rejectionReason: leave.rejectionReason ?? null
+          } satisfies AdminLeaveTableRow))
+          .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isLeavesLoading = false;
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave records.'));
+      }
+    });
+  }
+
+  private updateLeaveInList(updated: import('../services/leave.service').LeaveRecord): void {
+    const patch = (row: AdminLeaveTableRow): AdminLeaveTableRow =>
+      row.id === updated.id
+        ? { ...row, status: updated.status ?? 'PENDING', approvedBy: updated.approvedBy ?? null, rejectionReason: updated.rejectionReason ?? null }
+        : row;
+
+    this.leaves = this.leaves.map(patch);
+    this.managerLeaves = this.managerLeaves.map(patch);
   }
 
   private loadLeaves(response: UserDashboardResponse): void {
@@ -483,7 +616,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
               reason: leave.reason?.trim() || '',
               comments: leave.comments?.trim() || '',
               createdAt: leave.createdAt,
-              durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate)
+              durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate),
+              status: leave.status ?? 'PENDING',
+              approvedBy: leave.approvedBy ?? null,
+              rejectionReason: leave.rejectionReason ?? null
             } satisfies AdminLeaveTableRow;
           })
           .filter((leave): leave is AdminLeaveTableRow => leave !== null)

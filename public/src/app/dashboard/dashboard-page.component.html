@@ -165,6 +165,8 @@
       [dashboard]="dashboard"
       [editingUser]="editingUser"
       [fieldErrors]="fieldErrors"
+      [filterRole]="filterRole"
+      [filterStatus]="filterStatus"
       [isLeavesLoading]="isLeavesLoading"
       [isLeaveTypeSaving]="isLeaveTypeSaving"
       [isSaving]="isSaving"
@@ -182,6 +184,8 @@
       (editRequested)="startEdit($event)"
       (leaveTypeDeleteRequested)="handleDeleteLeaveType($event)"
       (leaveTypeSaveRequested)="handleSaveLeaveType($event)"
+      (leaveApproveRequested)="handleApproveLeave($event)"
+      (leaveRejectRequested)="handleRejectLeave($event)"
       (saveRequested)="handleSave($event)"></app-admin-dashboard>
 
     <app-manager-dashboard
@@ -191,18 +195,35 @@
       [fieldErrors]="fieldErrors"
       [isSaving]="isSaving"
       [isUserFormOpen]="isUserFormOpen"
+      [leaveTypes]="leaveTypes"
+      [isLeaveFormOpen]="isLeaveFormOpen"
+      [isLeaveSaving]="isLeaveSaving"
+      [leaveFieldErrors]="leaveFieldErrors"
+      [managerLeaves]="managerLeaves"
       [pageId]="pageId"
       [user]="user"
       (cancelEditRequested)="cancelEdit()"
       (createRequested)="openCreateForm()"
       (deleteRequested)="handleDelete($event)"
       (editRequested)="startEdit($event)"
-      (saveRequested)="handleSave($event)"></app-manager-dashboard>
+      (saveRequested)="handleSave($event)"
+      (openLeaveFormRequested)="openLeaveForm()"
+      (leaveSubmitRequested)="handleCreateLeave($event)"
+      (cancelLeaveFormRequested)="cancelLeaveForm()"
+      (leaveApproveRequested)="handleApproveLeave($event)"
+      (leaveRejectRequested)="handleRejectLeave($event)"></app-manager-dashboard>
 
     <app-employee-dashboard
       *ngIf="normalizedRole === 'EMPLOYEE'"
       [dashboard]="dashboard"
+      [leaveTypes]="leaveTypes"
+      [isLeaveFormOpen]="isLeaveFormOpen"
+      [isSaving]="isLeaveSaving"
+      [leaveFieldErrors]="leaveFieldErrors"
       [pageId]="pageId"
-      [user]="user"></app-employee-dashboard>
+      [user]="user"
+      (openLeaveFormRequested)="openLeaveForm()"
+      (leaveSubmitRequested)="handleCreateLeave($event)"
+      (cancelLeaveFormRequested)="cancelLeaveForm()"></app-employee-dashboard>
   </ng-container>
 </section>

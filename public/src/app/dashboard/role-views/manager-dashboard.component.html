@@ -47,16 +47,42 @@
       </div>
     </section>
 
-    <section *ngSwitchCase="'approvals'" class="panel-grid">
-      <article class="surface">
-        <h3>Module status</h3>
-        <p class="body-copy">Approval workflow will be connected here.</p>
-      </article>
+    <section *ngSwitchCase="'approvals'" class="management-grid">
+      <div class="management-toolbar">
+        <div>
+          <h3>Leave requests</h3>
+          <p class="body-copy">Review and action team leave requests, or submit your own.</p>
+        </div>
+        <button
+          *ngIf="!isLeaveFormOpen"
+          type="button"
+          class="primary-toolbar-button"
+          (click)="openLeaveFormRequested.emit()">
+          <i class="fas fa-plus"></i>
+          <span>New request</span>
+        </button>
+      </div>
 
-      <article class="surface">
-        <h3>{{ dashboard?.activeUsers ?? 0 }} active employees</h3>
-        <p class="body-copy">Current active team count.</p>
-      </article>
+      <div *ngIf="isLeaveFormOpen" class="leave-form-wrapper">
+        <app-dashboard-leave-form
+          [leaveTypes]="leaveTypes"
+          [isSaving]="isLeaveSaving"
+          [fieldErrors]="leaveFieldErrors"
+          (saveRequested)="leaveSubmitRequested.emit($event)"
+          (cancelRequested)="cancelLeaveFormRequested.emit()">
+        </app-dashboard-leave-form>
+      </div>
+
+      <app-dashboard-leave-table
+        [leaves]="managerLeaves"
+        title="Team leave requests"
+        description="Approve or reject pending leave requests from your employees."
+        emptyTitle="No leave requests yet"
+        emptyMessage="Leave requests from your team will appear here."
+        [showActions]="true"
+        (approveRequested)="leaveApproveRequested.emit($event)"
+        (rejectRequested)="leaveRejectRequested.emit($event)">
+      </app-dashboard-leave-table>
     </section>
 
     <section *ngSwitchCase="'calendar'" class="panel-grid">

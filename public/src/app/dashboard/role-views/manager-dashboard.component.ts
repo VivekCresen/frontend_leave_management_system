@@ -8,6 +8,9 @@ import {
 } from '../components/dashboard-user-form.component';
 import { DashboardUserTableComponent } from '../components/dashboard-user-table.component';
 import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../services/auth.service';
+import { DashboardLeaveFormComponent, LeaveFormSubmitEvent } from '../components/dashboard-leave-form.component';
+import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
+import { CreateLeavePayload, LeaveType } from '../../services/leave.service';
 
 @Component({
   selector: 'app-manager-dashboard',
@@ -16,7 +19,9 @@ import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../service
     CommonModule,
     DashboardStatCardsComponent,
     DashboardUserFormComponent,
-    DashboardUserTableComponent
+    DashboardUserTableComponent,
+    DashboardLeaveFormComponent,
+    DashboardLeaveTableComponent
   ],
   templateUrl: './manager-dashboard.component.html',
   styleUrls: ['./manager-dashboard.component.css']
@@ -29,12 +34,22 @@ export class ManagerDashboardComponent {
   @Input() isSaving = false;
   @Input() isUserFormOpen = false;
   @Input() fieldErrors: Record<string, string> = {};
+  @Input() leaveTypes: LeaveType[] = [];
+  @Input() isLeaveFormOpen = false;
+  @Input() isLeaveSaving = false;
+  @Input() leaveFieldErrors: Record<string, string> = {};
+  @Input() managerLeaves: AdminLeaveTableRow[] = [];
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
   @Output() editRequested = new EventEmitter<ManagedUser>();
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
   @Output() cancelEditRequested = new EventEmitter<void>();
+  @Output() openLeaveFormRequested = new EventEmitter<void>();
+  @Output() leaveSubmitRequested = new EventEmitter<LeaveFormSubmitEvent>();
+  @Output() cancelLeaveFormRequested = new EventEmitter<void>();
+  @Output() leaveApproveRequested = new EventEmitter<AdminLeaveTableRow>();
+  @Output() leaveRejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
 
   get stats(): DashboardStatCard[] {
     return [
@@ -42,25 +57,33 @@ export class ManagerDashboardComponent {
         label: 'My employees',
         value: this.dashboard?.employeeCount ?? 0,
         note: 'Assigned to this manager.',
-        tone: 'teal'
+        tone: 'teal',
+        route: ['/dashboard', 'team'],
+        actionLabel: 'Open team'
       },
       {
         label: 'Active team',
         value: this.dashboard?.activeUsers ?? 0,
         note: 'Currently active.',
-        tone: 'orange'
+        tone: 'orange',
+        route: ['/dashboard', 'team'],
+        actionLabel: 'View team'
       },
       {
         label: 'Inactive team',
         value: this.dashboard?.inactiveUsers ?? 0,
         note: 'Need follow-up.',
-        tone: 'slate'
+        tone: 'slate',
+        route: ['/dashboard', 'team'],
+        actionLabel: 'Review team'
       },
       {
         label: 'My role',
         value: 'Manager',
         note: 'Employee management access.',
-        tone: 'orange'
+        tone: 'orange',
+        route: ['/dashboard', 'reports'],
+        actionLabel: 'Open reports'
       }
     ];
   }

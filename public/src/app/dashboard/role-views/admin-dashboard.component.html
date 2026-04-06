@@ -18,6 +18,7 @@
         emptyMessage="Create a manager or employee to begin."
         [showActions]="false"
         [showTableTools]="true"
+        [useAgGrid]="true"
         [compactCard]="true"
         [expandToFill]="true"
         (editRequested)="editRequested.emit($event)"
@@ -45,7 +46,10 @@
         emptyTitle="No managed users"
         emptyMessage="Create the first account from the form."
         [showTableTools]="true"
+        [useAgGrid]="true"
         [compactCard]="true"
+        [initialRole]="filterRole"
+        [initialStatus]="filterStatus"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
 
@@ -141,6 +145,10 @@
             description="Search, filter, and review every leave request visible to the administrator."
             emptyTitle="No manager or employee leave records"
             emptyMessage="Once staff submit leave requests, they will appear here."
+            [initialRole]="filterRole"
+            [showActions]="true"
+            (approveRequested)="leaveApproveRequested.emit($event)"
+            (rejectRequested)="leaveRejectRequested.emit($event)"
           ></app-dashboard-leave-table>
         </div>
 

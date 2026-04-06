@@ -1,12 +1,9 @@
 <section class="role-dashboard">
   <ng-container *ngIf="pageId === 'overview'">
-
-
     <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
- 
 
     <section *ngSwitchCase="'profile'" class="panel-grid">
       <article class="surface">
@@ -42,10 +39,37 @@
       </article>
     </section>
 
-    <section *ngSwitchCase="'requests'" class="panel-grid">
-      <article class="surface">
-        <h3>Module status</h3>
-        <p class="body-copy">Request workflow will be connected here.</p>
+    <!-- Leave Requests -->
+    <section *ngSwitchCase="'requests'" class="management-grid">
+      <div class="management-toolbar">
+        <div>
+          <h3>Leave requests</h3>
+          <p class="body-copy">Submit a new leave request or review your pending applications.</p>
+        </div>
+        <button
+          *ngIf="!isLeaveFormOpen"
+          type="button"
+          class="primary-toolbar-button"
+          (click)="openLeaveFormRequested.emit()">
+          <i class="fas fa-plus"></i>
+          <span>New request</span>
+        </button>
+      </div>
+
+      <!-- Inline leave form -->
+      <div *ngIf="isLeaveFormOpen" class="leave-form-wrapper">
+        <app-dashboard-leave-form
+          [leaveTypes]="leaveTypes"
+          [isSaving]="isSaving"
+          [fieldErrors]="leaveFieldErrors"
+          (saveRequested)="leaveSubmitRequested.emit($event)"
+          (cancelRequested)="cancelLeaveFormRequested.emit()">
+        </app-dashboard-leave-form>
+      </div>
+
+      <article *ngIf="!isLeaveFormOpen" class="surface">
+        <h3>No requests yet</h3>
+        <p class="body-copy">Click "New request" to apply for leave.</p>
       </article>
     </section>
 

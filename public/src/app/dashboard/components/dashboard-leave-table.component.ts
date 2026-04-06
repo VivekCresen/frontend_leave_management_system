@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 export type AdminLeaveTableRow = {
@@ -15,6 +15,9 @@ export type AdminLeaveTableRow = {
   comments: string;
   createdAt: string | null;
   durationDays: number;
+  status: string;
+  approvedBy: string | null;
+  rejectionReason: string | null;
 };
 
 @Component({
@@ -24,20 +27,38 @@ export type AdminLeaveTableRow = {
   templateUrl: './dashboard-leave-table.component.html',
   styleUrls: ['./dashboard-leave-table.component.css']
 })
-export class DashboardLeaveTableComponent {
+export class DashboardLeaveTableComponent implements OnInit {
   @Input({ required: true }) leaves: AdminLeaveTableRow[] = [];
   @Input() title = 'Team leave records';
   @Input() description = 'Review all leave requests created by managers and employees.';
   @Input() emptyTitle = 'No leave requests found';
   @Input() emptyMessage = 'Leave requests will appear here once managers or employees submit them.';
+  @Input() initialRole = '';
+  @Input() showActions = false;
+
+  @Output() approveRequested = new EventEmitter<AdminLeaveTableRow>();
+  @Output() rejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
 
   searchTerm = '';
   selectedRole = 'ALL';
   selectedLeaveType = 'ALL';
+  selectedStatus = 'ALL';
   sortKey: keyof AdminLeaveTableRow = 'fromDate';
   sortDirection: 'asc' | 'desc' = 'desc';
   currentPage = 1;
   pageSize = 6;
+
+  rejectingLeave: AdminLeaveTableRow | null = null;
+  rejectionReason = '';
+  rejectionSubmitted = false;
+
+  ngOnInit(): void {
+    if (this.initialRole) this.selectedRole = this.initialRole;
+  }
+
+  get statusOptions(): string[] {
+    return ['PENDING', 'APPROVED', 'REJECTED'];
+  }
 
   get roleOptions(): string[] {
     return Array.from(new Set(this.leaves.map((leave) => leave.role).filter((role) => !!role))).sort((left, right) =>
@@ -67,7 +88,7 @@ export class DashboardLeaveTableComponent {
   }
 
   get hasActiveFilters(): boolean {
-    return this.searchTerm.trim().length > 0 || this.selectedRole !== 'ALL' || this.selectedLeaveType !== 'ALL';
+    return this.searchTerm.trim().length > 0 || this.selectedRole !== 'ALL' || this.selectedLeaveType !== 'ALL' || this.selectedStatus !== 'ALL';
   }
 
   get visibleCountLabel(): string {
@@ -86,7 +107,31 @@ export class DashboardLeaveTableComponent {
     this.searchTerm = '';
     this.selectedRole = 'ALL';
     this.selectedLeaveType = 'ALL';
+    this.selectedStatus = 'ALL';
     this.currentPage = 1;
+  }
+
+  approve(leave: AdminLeaveTableRow): void {
+    this.approveRequested.emit(leave);
+  }
+
+  openRejectModal(leave: AdminLeaveTableRow): void {
+    this.rejectingLeave = leave;
+    this.rejectionReason = '';
+    this.rejectionSubmitted = false;
+  }
+
+  confirmReject(): void {
+    this.rejectionSubmitted = true;
+    if (!this.rejectionReason.trim() || !this.rejectingLeave) return;
+    this.rejectRequested.emit({ leave: this.rejectingLeave, reason: this.rejectionReason.trim() });
+    this.closeRejectModal();
+  }
+
+  closeRejectModal(): void {
+    this.rejectingLeave = null;
+    this.rejectionReason = '';
+    this.rejectionSubmitted = false;
   }
 
   onFilterChange(): void {
@@ -125,8 +170,9 @@ export class DashboardLeaveTableComponent {
 
       const matchesRole = this.selectedRole === 'ALL' || leave.role === this.selectedRole;
       const matchesLeaveType = this.selectedLeaveType === 'ALL' || leave.leaveType === this.selectedLeaveType;
+      const matchesStatus = this.selectedStatus === 'ALL' || leave.status === this.selectedStatus;
 
-      return matchesSearch && matchesRole && matchesLeaveType;
+      return matchesSearch && matchesRole && matchesLeaveType && matchesStatus;
     });
   }
 

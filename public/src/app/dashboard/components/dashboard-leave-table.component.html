@@ -33,6 +33,14 @@
       </select>
     </label>
 
+    <label class="tool-select">
+      <span>Status</span>
+      <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()">
+        <option value="ALL">All statuses</option>
+        <option *ngFor="let s of statusOptions" [ngValue]="s">{{ s | titlecase }}</option>
+      </select>
+    </label>
+
     <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">Reset</button>
   </div>
 
@@ -43,52 +51,37 @@
 
   <div *ngIf="displayedLeaves.length > 0" class="table-shell">
     <div class="table-inner">
-      <div class="table-row table-head">
+      <div class="table-row table-head" [class.has-actions]="showActions">
         <span class="sortable-header" (click)="toggleSort('fullName')">
           Employee
-          <i
-            class="fas"
-            [class.fa-sort]="sortKey !== 'fullName'"
-            [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'"
-            [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
+          <i class="fas" [class.fa-sort]="sortKey !== 'fullName'" [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
         </span>
         <span class="sortable-header" (click)="toggleSort('role')">
           Role
-          <i
-            class="fas"
-            [class.fa-sort]="sortKey !== 'role'"
-            [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'"
-            [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
+          <i class="fas" [class.fa-sort]="sortKey !== 'role'" [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
         </span>
         <span class="sortable-header" (click)="toggleSort('leaveType')">
           Leave Type
-          <i
-            class="fas"
-            [class.fa-sort]="sortKey !== 'leaveType'"
-            [class.fa-sort-up]="sortKey === 'leaveType' && sortDirection === 'asc'"
-            [class.fa-sort-down]="sortKey === 'leaveType' && sortDirection === 'desc'"></i>
+          <i class="fas" [class.fa-sort]="sortKey !== 'leaveType'" [class.fa-sort-up]="sortKey === 'leaveType' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'leaveType' && sortDirection === 'desc'"></i>
         </span>
         <span class="sortable-header" (click)="toggleSort('fromDate')">
           Date Range
-          <i
-            class="fas"
-            [class.fa-sort]="sortKey !== 'fromDate'"
-            [class.fa-sort-up]="sortKey === 'fromDate' && sortDirection === 'asc'"
-            [class.fa-sort-down]="sortKey === 'fromDate' && sortDirection === 'desc'"></i>
+          <i class="fas" [class.fa-sort]="sortKey !== 'fromDate'" [class.fa-sort-up]="sortKey === 'fromDate' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fromDate' && sortDirection === 'desc'"></i>
         </span>
         <span class="sortable-header" (click)="toggleSort('durationDays')">
           Days
-          <i
-            class="fas"
-            [class.fa-sort]="sortKey !== 'durationDays'"
-            [class.fa-sort-up]="sortKey === 'durationDays' && sortDirection === 'asc'"
-            [class.fa-sort-down]="sortKey === 'durationDays' && sortDirection === 'desc'"></i>
+          <i class="fas" [class.fa-sort]="sortKey !== 'durationDays'" [class.fa-sort-up]="sortKey === 'durationDays' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'durationDays' && sortDirection === 'desc'"></i>
         </span>
         <span>Reason / Notes</span>
+        <span class="sortable-header" (click)="toggleSort('status')">
+          Status
+          <i class="fas" [class.fa-sort]="sortKey !== 'status'" [class.fa-sort-up]="sortKey === 'status' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'status' && sortDirection === 'desc'"></i>
+        </span>
+        <span *ngIf="showActions">Actions</span>
       </div>
 
       <div class="table-body">
-        <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row">
+        <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions">
           <div class="user-cell">
             <strong>{{ leave.fullName }}</strong>
             <span>{{ leave.emailId }}</span>
@@ -107,6 +100,43 @@
           <div class="reason-cell">
             <strong>{{ leave.reason || 'No reason added' }}</strong>
             <small>{{ leave.comments || 'No comments' }}</small>
+            <small *ngIf="leave.rejectionReason" class="rejection-note">
+              <i class="fas fa-circle-xmark"></i> {{ leave.rejectionReason }}
+            </small>
+          </div>
+          <div class="status-cell">
+            <span class="status-badge"
+              [class.status-pending]="leave.status === 'PENDING'"
+              [class.status-approved]="leave.status === 'APPROVED'"
+              [class.status-rejected]="leave.status === 'REJECTED'">
+              <i class="fas"
+                [class.fa-clock]="leave.status === 'PENDING'"
+                [class.fa-circle-check]="leave.status === 'APPROVED'"
+                [class.fa-circle-xmark]="leave.status === 'REJECTED'"></i>
+              {{ leave.status | titlecase }}
+            </span>
+            <small *ngIf="leave.approvedBy" class="approved-by-note">by {{ leave.approvedBy }}</small>
+          </div>
+          <div *ngIf="showActions" class="action-cell">
+            <button
+              *ngIf="leave.status === 'PENDING'"
+              type="button"
+              class="approve-btn"
+              (click)="approve(leave)"
+              title="Approve leave">
+              <i class="fas fa-check"></i>
+              Approve
+            </button>
+            <button
+              *ngIf="leave.status === 'PENDING'"
+              type="button"
+              class="reject-btn"
+              (click)="openRejectModal(leave)"
+              title="Reject leave">
+              <i class="fas fa-xmark"></i>
+              Reject
+            </button>
+            <span *ngIf="leave.status !== 'PENDING'" class="action-done">—</span>
           </div>
         </div>
       </div>
@@ -115,12 +145,10 @@
 
   <div *ngIf="totalPages > 1" class="table-pagination">
     <span class="pagination-info">Page {{ currentPage }} of {{ totalPages }} · {{ filteredCount }} records</span>
-
     <div class="pagination-controls">
       <button type="button" class="pagination-arrow" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Previous page">
         <i class="fas fa-chevron-left"></i>
       </button>
-
       <div class="pagination-pages">
         <button
           *ngFor="let page of [].constructor(totalPages); let i = index"
@@ -131,10 +159,42 @@
           {{ i + 1 }}
         </button>
       </div>
-
       <button type="button" class="pagination-arrow" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" aria-label="Next page">
         <i class="fas fa-chevron-right"></i>
       </button>
     </div>
   </div>
 </section>
+
+<!-- Rejection reason modal -->
+<div *ngIf="rejectingLeave" class="reject-modal-backdrop" (click)="closeRejectModal()">
+  <div class="reject-modal-card" (click)="$event.stopPropagation()">
+    <div class="reject-modal-header">
+      <div>
+        <h3>Reject leave request</h3>
+        <p>Provide a reason so the employee understands the decision.</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closeRejectModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="reject-modal-body">
+      <p class="reject-employee">
+        <strong>{{ rejectingLeave.fullName }}</strong> — {{ rejectingLeave.leaveType }}
+        ({{ rejectingLeave.fromDate | date: 'dd MMM' }} to {{ rejectingLeave.toDate | date: 'dd MMM yyyy' }})
+      </p>
+      <label class="reject-field">
+        <span>Rejection reason <span class="required-mark">*</span></span>
+        <textarea
+          [(ngModel)]="rejectionReason"
+          [class.input-invalid]="rejectionSubmitted && !rejectionReason.trim()"
+          placeholder="Explain why this leave is being rejected"
+          rows="3"
+          maxlength="500"></textarea>
+        <small *ngIf="rejectionSubmitted && !rejectionReason.trim()">Rejection reason is required</small>
+      </label>
+    </div>
+    <div class="reject-modal-actions">
+      <button type="button" class="secondary-btn" (click)="closeRejectModal()">Cancel</button>
+      <button type="button" class="reject-confirm-btn" (click)="confirmReject()">Confirm rejection</button>
+    </div>
+  </div>
+</div>
