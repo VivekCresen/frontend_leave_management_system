@@ -1,0 +1,225 @@
+/* ─── Table Card ─────────────────────────────────────────── */
+.table-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 16px 20px 14px;
+  box-shadow:
+    0 1px 4px rgba(15, 23, 42, 0.06),
+    0 12px 40px -20px rgba(15, 23, 42, 0.14);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Heading ────────────────────────────────────────────── */
+.table-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+.eyebrow {
+  margin: 0;
+  color: #0f8b8d;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.table-heading h3,
+.table-heading p {
+  margin: 0;
+}
+
+.table-heading h3 {
+  margin-top: 2px;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.table-heading > div > p:last-child {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* ─── Count Pill ─────────────────────────────────────────── */
+.count-pill {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 139, 141, 0.2);
+  background: rgba(15, 139, 141, 0.08);
+  color: #0f766e;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Empty State ────────────────────────────────────────── */
+.empty-state {
+  margin-top: 24px;
+  padding: 32px;
+  border-radius: 16px;
+  border: 1.5px dashed rgba(148, 163, 184, 0.45);
+  text-align: center;
+  background: rgba(248, 250, 252, 0.6);
+}
+
+.empty-state h4,
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state h4 {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.empty-state p {
+  margin-top: 8px;
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+/* ─── AG Grid Shell ──────────────────────────────────────── */
+.ag-shell {
+  margin-top: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.history-ag-grid {
+  width: 100%;
+}
+
+/* ─── Header ─────────────────────────────────────────────── */
+:host ::ng-deep .history-ag-grid .ag-header-cell-label {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+}
+
+/* ─── Cells ──────────────────────────────────────────────── */
+:host ::ng-deep .history-ag-grid .ag-cell {
+  display: flex;
+  align-items: center;
+  color: #0f172a;
+  font-size: 0.88rem;
+}
+
+/* Leave name cell */
+:host ::ng-deep .history-ag-grid .ag-leave-name-cell {
+  display: flex;
+  align-items: center;
+}
+
+:host ::ng-deep .history-ag-grid .ag-leave-name-cell strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/* Date range cell */
+:host ::ng-deep .history-ag-grid .ag-date-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0;
+  line-height: 1.4;
+}
+
+:host ::ng-deep .history-ag-grid .ag-date-cell strong {
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+:host ::ng-deep .history-ag-grid .ag-date-cell span {
+  color: #0f8b8d;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Duration pill */
+:host ::ng-deep .history-ag-grid .ag-duration-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  color: #c2410c;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* Status badge */
+:host ::ng-deep .history-ag-grid .ag-status-badge {
+  
+  align-items: center;
+  
+  font-size: 0.76rem;
+  font-weight: 800;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .history-ag-grid .ag-status-pending {
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  background: rgba(251, 191, 36, 0.12);
+  color: #92400e;
+}
+
+:host ::ng-deep .history-ag-grid .ag-status-approved {
+  border: 1px solid rgba(15, 139, 141, 0.22);
+  color: #0f766e;
+}
+
+:host ::ng-deep .history-ag-grid .ag-status-rejected {
+  border: 1px solid rgba(180, 35, 24, 0.22);
+  background: rgba(180, 35, 24, 0.08);
+  color: #b42318;
+}
+
+/* Pagination bar */
+:host ::ng-deep .history-ag-grid .ag-paging-panel {
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  background: rgba(248, 250, 252, 0.7);
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 0 16px;
+  min-height: 44px;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .table-card {
+    padding: 18px;
+  }
+
+  .table-heading {
+    flex-direction: column;
+  }
+}

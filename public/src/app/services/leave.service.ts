@@ -7,6 +7,7 @@ export interface LeaveType {
   leaveUniqueName: string;
   description: string | null;
   maxDays: number;
+  genderRestriction: 'MALE' | 'FEMALE' | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -52,6 +53,7 @@ export interface CreateLeaveTypePayload {
   leaveUniqueName: string;
   description: string;
   maxDays: number;
+  genderRestriction: string | null;
 }
 
 export interface LeaveTypeSavePayload {
@@ -60,6 +62,7 @@ export interface LeaveTypeSavePayload {
   leaveUniqueName: string;
   description: string;
   maxDays: number;
+  genderRestriction: string | null;
 }
 
 export interface LeaveApiErrorResponse {
@@ -71,6 +74,8 @@ export interface LeaveApiErrorResponse {
 
 export interface LeaveService {
   getLeaves(): Observable<LeaveRecord[]>;
+  getLeavesByUsername(username: string): Observable<LeaveRecord[]>;
+  getLeavesByManagerUsername(managerUsername: string): Observable<LeaveRecord[]>;
   getLeaveTypes(): Observable<LeaveType[]>;
   createLeave(payload: CreateLeavePayload): Observable<LeaveRecord>;
   updateLeaveStatus(leaveId: number, payload: UpdateLeaveStatusPayload): Observable<LeaveRecord>;

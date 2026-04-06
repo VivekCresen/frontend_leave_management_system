@@ -1,90 +1,141 @@
 <section class="role-dashboard">
+
   <ng-container *ngIf="pageId === 'overview'">
-    <app-dashboard-stat-cards [cards]="stats"></app-dashboard-stat-cards>
+    <app-dashboard-stat-cards [cards]="stats" [compact]="true"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
 
+    <!-- PROFILE -->
     <section *ngSwitchCase="'profile'" class="panel-grid">
-      <article class="surface">
-        <h3>Account details</h3>
-        <div class="surface-scroll">
-          <div class="profile-grid">
-            <div>
-              <span>Full name</span>
-              <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
-            </div>
-            <div>
-              <span>Username</span>
-              <strong>{{ user.username }}</strong>
-            </div>
-            <div>
-              <span>Email</span>
-              <strong>{{ user.email }}</strong>
-            </div>
-            <div>
-              <span>Company ID</span>
-              <strong>{{ dashboard?.actor?.companyId || 'Not assigned' }}</strong>
-            </div>
-            <div>
-              <span>Gender</span>
-              <strong>{{ dashboard?.actor?.gender || 'Not provided' }}</strong>
-            </div>
-            <div>
-              <span>Assigned manager</span>
-              <strong>{{ dashboard?.actor?.createdBy || 'System' }}</strong>
+      <article class="surface surface-full">
+
+        <div class="profile-card-header">
+          <div>
+            <p class="eyebrow">My Profile</p>
+            <h3>Account details</h3>
+            <p class="body-copy">Your personal information and account settings.</p>
+          </div>
+          <button type="button" class="edit-profile-btn" (click)="editProfileRequested.emit()">
+            <i class="fas fa-user-pen"></i>
+            <span>Edit profile</span>
+          </button>
+        </div>
+
+        <div class="profile-banner">
+          <div class="profile-banner-avatar">{{ profileInitials }}</div>
+          <div class="profile-banner-info">
+            <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
+            <span>{{ user.email }}</span>
+            <div class="profile-banner-badges">
+              <span class="profile-role-badge">{{ dashboard?.actor?.role || user.role }}</span>
+              <span class="profile-status-badge"
+                [class.active-badge]="user.active"
+                [class.inactive-badge]="!user.active">
+                <i class="fas fa-circle"></i>
+                {{ user.active ? 'Active' : 'Inactive' }}
+              </span>
             </div>
           </div>
         </div>
+
+        <div class="profile-grid">
+          <div class="profile-field-card">
+            <span>Full name</span>
+            <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
+          </div>
+          <div class="profile-field-card">
+            <span>Username</span>
+            <strong>{{ user.username }}</strong>
+          </div>
+          <div class="profile-field-card">
+            <span>Email</span>
+            <strong>{{ user.email }}</strong>
+          </div>
+          <div class="profile-field-card">
+            <span>Company ID</span>
+            <strong>{{ dashboard?.actor?.companyId || 'Not assigned' }}</strong>
+          </div>
+          <div class="profile-field-card">
+            <span>Gender</span>
+            <strong>{{ dashboard?.actor?.gender || 'Not provided' }}</strong>
+          </div>
+          <div class="profile-field-card">
+            <span>Assigned manager</span>
+            <strong>{{ dashboard?.actor?.createdBy || 'System' }}</strong>
+          </div>
+        </div>
+
       </article>
     </section>
 
-    <!-- Leave Requests -->
+    <!-- LEAVE REQUESTS -->
     <section *ngSwitchCase="'requests'" class="management-grid">
       <div class="management-toolbar">
         <div>
           <h3>Leave requests</h3>
           <p class="body-copy">Submit a new leave request or review your pending applications.</p>
         </div>
-        <button
-          *ngIf="!isLeaveFormOpen"
-          type="button"
-          class="primary-toolbar-button"
-          (click)="openLeaveFormRequested.emit()">
-          <i class="fas fa-plus"></i>
-          <span>New request</span>
-        </button>
+        <div class="toolbar-actions">
+          <div *ngIf="pendingLeaves.length > 0" class="leave-count-pill">
+            {{ pendingLeaves.length }} pending
+          </div>
+          <button
+            *ngIf="!isLeaveFormOpen"
+            type="button"
+            class="primary-toolbar-button"
+            (click)="openLeaveFormRequested.emit()">
+            <i class="fas fa-plus"></i>
+            <span>New request</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Inline leave form -->
-      <div *ngIf="isLeaveFormOpen" class="leave-form-wrapper">
-        <app-dashboard-leave-form
-          [leaveTypes]="leaveTypes"
-          [isSaving]="isSaving"
-          [fieldErrors]="leaveFieldErrors"
-          (saveRequested)="leaveSubmitRequested.emit($event)"
-          (cancelRequested)="cancelLeaveFormRequested.emit()">
-        </app-dashboard-leave-form>
-      </div>
-
-      <article *ngIf="!isLeaveFormOpen" class="surface">
-        <h3>No requests yet</h3>
-        <p class="body-copy">Click "New request" to apply for leave.</p>
-      </article>
+      <app-dashboard-history-table
+        [leaves]="pendingLeaves"
+        title="Pending requests"
+        description="Your leave requests that are awaiting manager approval.">
+      </app-dashboard-history-table>
     </section>
 
-    <section *ngSwitchCase="'history'" class="panel-grid">
-      <article class="surface">
-        <h3>Module status</h3>
-        <p class="body-copy">Request history will be connected here.</p>
-      </article>
+    <!-- HISTORY -->
+    <section *ngSwitchCase="'history'" class="management-grid">
+      <app-dashboard-history-table
+        [leaves]="myLeaves"
+        [leaveTypes]="leaveTypes">
+      </app-dashboard-history-table>
     </section>
 
+    <!-- CALENDAR -->
     <section *ngSwitchCase="'calendar'" class="panel-grid">
-      <article class="surface">
-        <h3>Module status</h3>
-        <p class="body-copy">Calendar will be connected here.</p>
+      <article class="surface surface-full">
+        <p class="eyebrow">My Calendar</p>
+        <h3>Approved leave schedule</h3>
+        <p class="body-copy">Your approved leave periods are listed below.</p>
+
+        <div *ngIf="approvedLeaves.length === 0" class="leave-empty-state">
+          <h4>No approved leave yet</h4>
+          <p>Submit a leave request and once approved it will appear here.</p>
+        </div>
+
+        <div *ngIf="approvedLeaves.length > 0" class="calendar-leave-list">
+          <div *ngFor="let leave of approvedLeaves" class="calendar-leave-item">
+            <div class="calendar-leave-icon">
+              <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="calendar-leave-info">
+              <strong>{{ leave.leaveType }}</strong>
+              <span>{{ leave.reason || 'No reason provided' }}</span>
+            </div>
+            <div class="calendar-leave-dates">
+              <span>{{ leave.fromDate | date:'MMM d' }} – {{ leave.toDate | date:'MMM d, y' }}</span>
+              <small>{{ leave.durationDays }} day{{ leave.durationDays !== 1 ? 's' : '' }}</small>
+            </div>
+            <span class="status-badge status-approved">Approved</span>
+          </div>
+        </div>
       </article>
     </section>
+
   </ng-container>
 </section>

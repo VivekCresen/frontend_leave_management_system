@@ -160,6 +160,22 @@
   </section>
 
   <ng-container *ngIf="!isLoading && !errorMessage">
+
+    <!-- Leave form modal — shared across employee and manager roles -->
+    <div *ngIf="isLeaveFormOpen" class="leave-modal-backdrop" (click)="cancelLeaveForm()">
+      <section class="leave-modal-card" (click)="$event.stopPropagation()">
+        <app-dashboard-leave-form
+          [leaveTypes]="leaveTypes"
+          [userGender]="dashboard?.actor?.gender ?? null"
+          [myLeaves]="myLeaves"
+          [isSaving]="isLeaveSaving"
+          [fieldErrors]="leaveFieldErrors"
+          (saveRequested)="handleCreateLeave($event)"
+          (cancelRequested)="cancelLeaveForm()">
+        </app-dashboard-leave-form>
+      </section>
+    </div>
+
     <app-admin-dashboard
       *ngIf="normalizedRole === 'ADMIN'"
       [dashboard]="dashboard"
@@ -200,6 +216,7 @@
       [isLeaveSaving]="isLeaveSaving"
       [leaveFieldErrors]="leaveFieldErrors"
       [managerLeaves]="managerLeaves"
+      [myLeaves]="myLeaves"
       [pageId]="pageId"
       [user]="user"
       (cancelEditRequested)="cancelEdit()"
@@ -220,10 +237,12 @@
       [isLeaveFormOpen]="isLeaveFormOpen"
       [isSaving]="isLeaveSaving"
       [leaveFieldErrors]="leaveFieldErrors"
+      [myLeaves]="myLeaves"
       [pageId]="pageId"
       [user]="user"
       (openLeaveFormRequested)="openLeaveForm()"
       (leaveSubmitRequested)="handleCreateLeave($event)"
-      (cancelLeaveFormRequested)="cancelLeaveForm()"></app-employee-dashboard>
+      (cancelLeaveFormRequested)="cancelLeaveForm()"
+      (editProfileRequested)="openProfileEditor()"></app-employee-dashboard>
   </ng-container>
 </section>

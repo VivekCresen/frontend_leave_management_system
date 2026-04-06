@@ -18,6 +18,18 @@ export class LeaveApiService implements LeaveService {
     );
   }
 
+  getLeavesByUsername(username: string): Observable<LeaveRecord[]> {
+    return this.http.get<{ content: LeaveRecord[] }>(
+      `${this.apiUrl}/by-username/${encodeURIComponent(username)}?size=200`
+    ).pipe(map((response) => response.content ?? []));
+  }
+
+  getLeavesByManagerUsername(managerUsername: string): Observable<LeaveRecord[]> {
+    return this.http.get<{ content: LeaveRecord[] }>(
+      `${this.apiUrl}/by-manager/${encodeURIComponent(managerUsername)}?size=200`
+    ).pipe(map((response) => response.content ?? []));
+  }
+
   getLeaveTypes(): Observable<LeaveType[]> {
     return this.http.get<LeaveType[]>(`${this.apiUrl}/types`);
   }
@@ -47,7 +59,8 @@ export class LeaveApiService implements LeaveService {
       leaveName: payload.leaveName.trim(),
       leaveUniqueName: payload.leaveUniqueName.trim(),
       description: payload.description.trim(),
-      maxDays: payload.maxDays
+      maxDays: payload.maxDays,
+      genderRestriction: payload.genderRestriction || null
     });
   }
 
@@ -56,7 +69,8 @@ export class LeaveApiService implements LeaveService {
       leaveName: payload.leaveName.trim(),
       leaveUniqueName: payload.leaveUniqueName.trim(),
       description: payload.description.trim(),
-      maxDays: payload.maxDays
+      maxDays: payload.maxDays,
+      genderRestriction: payload.genderRestriction || null
     });
   }
 

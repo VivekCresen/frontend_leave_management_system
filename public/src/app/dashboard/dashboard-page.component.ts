@@ -22,7 +22,7 @@ import { EmployeeDashboardComponent } from './role-views/employee-dashboard.comp
 import { ManagerDashboardComponent } from './role-views/manager-dashboard.component';
 import { DashboardUserSubmitEvent } from './components/dashboard-user-form.component';
 import { AdminLeaveTableRow } from './components/dashboard-leave-table.component';
-import { LeaveFormSubmitEvent } from './components/dashboard-leave-form.component';
+import { DashboardLeaveFormComponent, LeaveFormSubmitEvent } from './components/dashboard-leave-form.component';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -32,7 +32,8 @@ import { LeaveFormSubmitEvent } from './components/dashboard-leave-form.componen
     FormsModule,
     AdminDashboardComponent,
     ManagerDashboardComponent,
-    EmployeeDashboardComponent
+    EmployeeDashboardComponent,
+    DashboardLeaveFormComponent
   ],
   templateUrl: './dashboard-page.component.html',
   styleUrls: ['./dashboard-page.component.css']
@@ -75,6 +76,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   isLeaveSaving = false;
   leaveFieldErrors: Record<string, string> = {};
   managerLeaves: AdminLeaveTableRow[] = [];
+  myLeaves: AdminLeaveTableRow[] = [];
 
   constructor(
     authService: AuthApiService,
@@ -391,6 +393,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.isLeaveSaving = false;
         this.isLeaveFormOpen = false;
         this.toastService.success('Leave request submitted successfully');
+        this.loadDashboard();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.isLeaveSaving = false;
@@ -511,6 +514,9 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         if (this.normalizedRole === 'MANAGER') {
           this.loadManagerLeaves(response);
         }
+        if (this.normalizedRole === 'EMPLOYEE') {
+          this.loadMyLeaves(response);
+        }
         // Load leave types for all roles (needed for create leave form)
         this.loadLeaveTypes();
       },
@@ -542,13 +548,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   private loadManagerLeaves(response: UserDashboardResponse): void {
     this.isLeavesLoading = true;
 
-    this.leaveService.getLeaves().subscribe({
+    this.leaveService.getLeavesByManagerUsername(this.user.username).subscribe({
       next: (leaves) => {
         this.isLeavesLoading = false;
-        const employeeIds = new Set(response.users.map((u) => u.id));
-
         this.managerLeaves = leaves
-          .filter((leave) => employeeIds.has(leave.userId))
           .map((leave) => ({
             id: leave.id,
             userId: leave.userId,
@@ -575,6 +578,40 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     });
   }
 
+  private loadMyLeaves(response: UserDashboardResponse): void {
+    this.isLeavesLoading = true;
+
+    this.leaveService.getLeavesByUsername(this.user.username).subscribe({
+      next: (leaves) => {
+        this.isLeavesLoading = false;
+        this.myLeaves = leaves
+          .map((leave) => ({
+            id: leave.id,
+            userId: leave.userId,
+            fullName: leave.fullName?.trim() || response.actor?.fullName || 'Me',
+            emailId: leave.emailId?.trim() || response.actor?.email || '',
+            role: 'EMPLOYEE',
+            leaveType: leave.leaveType?.trim() || 'Unassigned',
+            fromDate: leave.fromDate,
+            toDate: leave.toDate,
+            reason: leave.reason?.trim() || '',
+            comments: leave.comments?.trim() || '',
+            createdAt: leave.createdAt,
+            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate),
+            status: leave.status ?? 'PENDING',
+            approvedBy: leave.approvedBy ?? null,
+            rejectionReason: leave.rejectionReason ?? null
+          } satisfies AdminLeaveTableRow))
+          .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isLeavesLoading = false;
+        this.myLeaves = [];
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load your leave records.'));
+      }
+    });
+  }
+
   private updateLeaveInList(updated: import('../services/leave.service').LeaveRecord): void {
     const patch = (row: AdminLeaveTableRow): AdminLeaveTableRow =>
       row.id === updated.id
@@ -583,6 +620,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
 
     this.leaves = this.leaves.map(patch);
     this.managerLeaves = this.managerLeaves.map(patch);
+    this.myLeaves = this.myLeaves.map(patch);
   }
 
   private loadLeaves(response: UserDashboardResponse): void {
