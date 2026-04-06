@@ -1,34 +1,33 @@
 <section class="role-dashboard">
-  <ng-container *ngIf="pageId === 'overview'">
-    
 
+  <!-- OVERVIEW -->
+  <ng-container *ngIf="pageId === 'overview'">
     <app-dashboard-stat-cards [cards]="stats" [compact]="true"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
-   
 
-
+    <!-- TEAM MANAGEMENT -->
     <section *ngSwitchCase="'team'" class="management-grid">
       <div class="management-toolbar">
         <div>
           <h3>Employee management</h3>
+          <p class="body-copy">Create, update, or remove employee accounts within your team.</p>
         </div>
-
         <button type="button" class="primary-toolbar-button" (click)="createRequested.emit()">
           <i class="fas fa-user-plus"></i>
-          <span>Create user</span>
+          <span>Add employee</span>
         </button>
-       
       </div>
 
       <app-dashboard-user-table
         [users]="dashboard?.users ?? []"
         title="My employees"
-        description="Employees within your scope."
+        description="Employees within your scope. Search, filter, and manage their accounts."
         emptyTitle="No employees yet"
-        emptyMessage="Create your first employee from the form."
+        emptyMessage="Add your first employee using the button above."
         [showTableTools]="true"
+        [useAgGrid]="true"
         [compactCard]="true"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
@@ -47,30 +46,24 @@
       </div>
     </section>
 
+    <!-- APPROVALS -->
     <section *ngSwitchCase="'approvals'" class="management-grid">
       <div class="management-toolbar">
         <div>
-          <h3>Leave requests</h3>
+          <h3>Leave approvals</h3>
           <p class="body-copy">Review and action team leave requests, or submit your own.</p>
         </div>
-        <button
-          *ngIf="!isLeaveFormOpen"
-          type="button"
-          class="primary-toolbar-button"
-          (click)="openLeaveFormRequested.emit()">
-          <i class="fas fa-plus"></i>
-          <span>New request</span>
-        </button>
-      </div>
-
-      <div *ngIf="isLeaveFormOpen" class="leave-form-wrapper">
-        <app-dashboard-leave-form
-          [leaveTypes]="leaveTypes"
-          [isSaving]="isLeaveSaving"
-          [fieldErrors]="leaveFieldErrors"
-          (saveRequested)="leaveSubmitRequested.emit($event)"
-          (cancelRequested)="cancelLeaveFormRequested.emit()">
-        </app-dashboard-leave-form>
+        <div class="toolbar-actions">
+          <div class="leave-count-pill">{{ managerLeaves.length }} total</div>
+          <button
+            *ngIf="!isLeaveFormOpen"
+            type="button"
+            class="primary-toolbar-button"
+            (click)="openLeaveFormRequested.emit()">
+            <i class="fas fa-plus"></i>
+            <span>New request</span>
+          </button>
+        </div>
       </div>
 
       <app-dashboard-leave-table
@@ -85,22 +78,155 @@
       </app-dashboard-leave-table>
     </section>
 
-    <section *ngSwitchCase="'calendar'" class="panel-grid">
+    <!-- CALENDAR -->
+    <section *ngSwitchCase="'calendar'" class="calendar-page">
+
+      <!-- Header -->
+      <div class="management-toolbar">
+        <div>
+          <h3>Team Calendar</h3>
+          <p class="body-copy">View all team leave and your own leave in one place.</p>
+        </div>
+        <div class="toolbar-actions">
+          <span class="cal-legend-dot own"></span><span class="cal-legend-label">My leave</span>
+          <span class="cal-legend-dot team"></span><span class="cal-legend-label">Team leave</span>
+        </div>
+      </div>
+
+      <!-- Calendar card -->
+      <article class="surface cal-surface">
+
+        <!-- Month nav -->
+        <div class="cal-nav">
+          <button type="button" class="cal-nav-btn" (click)="prevMonth()">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="cal-month-label">{{ calendarMonthLabel }}</span>
+          <button type="button" class="cal-nav-btn" (click)="nextMonth()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+          <button type="button" class="cal-today-btn" (click)="goToToday()">Today</button>
+        </div>
+
+        <!-- Day headers -->
+        <div class="cal-grid cal-header-row">
+          <div *ngFor="let d of weekDays" class="cal-header-cell">{{ d }}</div>
+        </div>
+
+        <!-- Weeks -->
+        <div *ngFor="let week of calendarWeeks" class="cal-grid cal-week-row">
+          <div
+            *ngFor="let day of week"
+            class="cal-day"
+            [class.other-month]="!day.isCurrentMonth"
+            [class.today]="day.isToday"
+            [class.has-leaves]="day.leaves.length > 0"
+            [class.selected]="selectedDay?.date?.getTime() === day.date.getTime()"
+            (click)="selectDay(day)">
+            <span class="cal-day-num">{{ day.date | date:'d' }}</span>
+            <div class="cal-dots">
+              <ng-container *ngFor="let leave of day.leaves.slice(0, 3)">
+                <span class="cal-dot" [class.own-dot]="leave.isOwn" [class.team-dot]="!leave.isOwn"></span>
+              </ng-container>
+              <span *ngIf="day.leaves.length > 3" class="cal-dot-more">+{{ day.leaves.length - 3 }}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Selected day detail panel -->
+      <article *ngIf="selectedDay" class="surface cal-detail-panel">
+        <div class="cal-detail-header">
+          <span class="eyebrow">{{ selectedDay.date | date:'EEEE, MMMM d, y' }}</span>
+          <span class="cal-detail-count">{{ selectedDay.leaves.length }} on leave</span>
+        </div>
+        <div class="cal-detail-list">
+          <div *ngFor="let leave of selectedDay.leaves" class="cal-detail-item">
+            <div class="calendar-leave-avatar" [class.own-avatar]="leave.isOwn">
+              {{ getInitials(leave.fullName) }}
+            </div>
+            <div class="calendar-leave-info">
+              <strong>{{ leave.fullName }}<span *ngIf="leave.isOwn" class="you-badge">You</span></strong>
+              <span>{{ leave.leaveType }}</span>
+            </div>
+            <div class="calendar-leave-dates">
+              <span>{{ leave.fromDate | date:'MMM d' }} – {{ leave.toDate | date:'MMM d' }}</span>
+              <small>{{ leave.durationDays }} day{{ leave.durationDays !== 1 ? 's' : '' }}</small>
+            </div>
+            <span class="status-badge"
+              [class.status-approved]="leave.status === 'APPROVED'"
+              [class.status-pending]="leave.status === 'PENDING'"
+              [class.status-rejected]="leave.status === 'REJECTED'">
+              {{ leave.status | titlecase }}
+            </span>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- REPORTS -->
+    <section *ngSwitchCase="'reports'" class="panel-grid">
       <article class="surface">
-        <h3>Module status</h3>
-        <p class="body-copy">Calendar will be connected here.</p>
+        <p class="eyebrow">Team Summary</p>
+        <h3>Headcount overview</h3>
+        <div class="report-metric-grid">
+          <div class="report-metric">
+            <strong>{{ dashboard?.employeeCount ?? 0 }}</strong>
+            <span>Total employees</span>
+          </div>
+          <div class="report-metric">
+            <strong>{{ dashboard?.activeUsers ?? 0 }}</strong>
+            <span>Active</span>
+          </div>
+          <div class="report-metric">
+            <strong>{{ dashboard?.inactiveUsers ?? 0 }}</strong>
+            <span>Inactive</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="surface">
+        <p class="eyebrow">Leave Summary</p>
+        <h3>Request breakdown</h3>
+        <div class="report-metric-grid">
+          <div class="report-metric">
+            <strong>{{ managerLeaves.length }}</strong>
+            <span>Total requests</span>
+          </div>
+          <div class="report-metric pending-metric">
+            <strong>{{ pendingLeaves.length }}</strong>
+            <span>Pending</span>
+          </div>
+          <div class="report-metric approved-metric">
+            <strong>{{ approvedLeaves.length }}</strong>
+            <span>Approved</span>
+          </div>
+          <div class="report-metric rejected-metric">
+            <strong>{{ rejectedLeaves.length }}</strong>
+            <span>Rejected</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="surface surface-full">
+        <p class="eyebrow">Leave by Type</p>
+        <h3>Breakdown by leave category</h3>
+        <div *ngIf="leaveByType.length === 0" class="leave-empty-state">
+          <h4>No leave data yet</h4>
+          <p>Leave type breakdown will appear once requests are submitted.</p>
+        </div>
+        <div *ngIf="leaveByType.length > 0" class="leave-type-breakdown">
+          <div *ngFor="let item of leaveByType" class="leave-type-breakdown-row">
+            <span class="leave-type-breakdown-name">{{ item.type }}</span>
+            <div class="leave-type-breakdown-bar-wrap">
+              <div class="leave-type-breakdown-bar" [style.width.%]="item.pct"></div>
+            </div>
+            <span class="leave-type-breakdown-count">{{ item.count }}</span>
+          </div>
+        </div>
       </article>
     </section>
 
-    <section *ngSwitchCase="'reports'" class="panel-grid">
-      <article class="surface">
-        <h3>Team summary</h3>
-        <ul class="detail-list">
-          <li>{{ dashboard?.employeeCount ?? 0 }} total employees</li>
-          <li>{{ dashboard?.activeUsers ?? 0 }} active employees</li>
-          <li>{{ dashboard?.inactiveUsers ?? 0 }} inactive employees</li>
-        </ul>
-      </article>
-    </section>
   </ng-container>
 </section>
