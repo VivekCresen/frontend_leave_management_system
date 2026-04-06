@@ -441,6 +441,10 @@
   max-width: 220px;
 }
 
+.leave-field-half.leave-field-gender {
+  max-width: none;
+}
+
 .leave-field span {
   color: #334155;
   font-size: 0.84rem;
@@ -448,6 +452,7 @@
 }
 
 .leave-field input,
+.leave-field select,
 .leave-field textarea {
   width: 100%;
   box-sizing: border-box;
@@ -457,11 +462,28 @@
   color: #0f172a;
   font-size: 0.96rem;
   outline: none;
+  font-family: inherit;
 }
 
-.leave-field input {
+.leave-field input,
+.leave-field select {
   min-height: 48px;
   padding: 0 14px;
+}
+
+.leave-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 46px 0 14px;
+  background-color: #f8fbfc;
+  background-image:
+    linear-gradient(135deg, rgba(15, 139, 141, 0.08), rgba(21, 94, 117, 0.12)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='M3 5.25L7 9.25L11 5.25' stroke='%23155E75' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0, right 14px center;
+  background-size: auto, 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .leave-field textarea {
@@ -479,6 +501,7 @@
 }
 
 .leave-field input:focus,
+.leave-field select:focus,
 .leave-field textarea:focus {
   border-color: rgba(15, 139, 141, 0.66);
   box-shadow: 0 0 0 4px rgba(15, 139, 141, 0.12);
@@ -854,4 +877,27 @@
     width: 100%;
     max-height: calc(100vh - 28px);
   }
+}
+
+.optional-mark {
+  color: #64748b;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.leave-field small.hint {
+  color: #64748b;
+}
+
+.leave-type-gender-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(109, 40, 217, 0.08);
+  color: #5b21b6;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
 }

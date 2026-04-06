@@ -73,25 +73,6 @@ export class AdminDashboardComponent implements OnChanges {
         actionLabel: 'Open users'
       },
       {
-        label: 'Managers',
-        value: this.dashboard?.managerCount ?? 0,
-        note: 'Active management layer.',
-        tone: 'orange',
-        icon: 'fa-user-tie',
-        route: ['/dashboard', 'roles'],
-        actionLabel: 'Open roles'
-      },
-      {
-        label: 'Employees',
-        value: this.dashboard?.employeeCount ?? 0,
-        note: 'Employee accounts.',
-        tone: 'slate',
-        icon: 'fa-id-badge',
-        route: ['/dashboard', 'users'],
-        queryParams: { role: 'EMPLOYEE' },
-        actionLabel: 'View employees'
-      },
-      {
         label: 'Inactive accounts',
         value: this.dashboard?.inactiveUsers ?? 0,
         note: 'Require review.',
@@ -169,7 +150,8 @@ export class AdminDashboardComponent implements OnChanges {
       leaveName: this.leaveTypeModel.leaveName,
       leaveUniqueName: this.leaveTypeModel.leaveUniqueName,
       description: this.leaveTypeModel.description,
-      maxDays: Number(this.leaveTypeModel.maxDays)
+      maxDays: Number(this.leaveTypeModel.maxDays),
+      genderRestriction: this.leaveTypeModel.genderRestriction || null
     });
   }
 
@@ -292,7 +274,8 @@ export class AdminDashboardComponent implements OnChanges {
       leaveName: this.leaveTypeModel.leaveName.trim(),
       leaveUniqueName: this.leaveTypeModel.leaveUniqueName.trim(),
       description: this.leaveTypeModel.description.trim(),
-      maxDays: Number(this.leaveTypeModel.maxDays)
+      maxDays: Number(this.leaveTypeModel.maxDays),
+      genderRestriction: this.leaveTypeModel.genderRestriction
     };
   }
 
@@ -301,7 +284,8 @@ export class AdminDashboardComponent implements OnChanges {
       leaveName: '',
       leaveUniqueName: '',
       description: '',
-      maxDays: 1
+      maxDays: 1,
+      genderRestriction: '' as string
     };
   }
 
@@ -336,7 +320,8 @@ export class AdminDashboardComponent implements OnChanges {
       leaveName: leaveType.leaveName ?? '',
       leaveUniqueName: leaveType.leaveUniqueName ?? '',
       description: leaveType.description ?? '',
-      maxDays: leaveType.maxDays ?? 1
+      maxDays: leaveType.maxDays ?? 1,
+      genderRestriction: leaveType.genderRestriction ?? ''
     };
   }
 }

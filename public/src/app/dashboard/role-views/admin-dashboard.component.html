@@ -186,6 +186,9 @@
                 </div>
                 <div class="leave-type-card-actions">
                   <span class="leave-type-days">{{ leaveType.maxDays }} days</span>
+                  <span *ngIf="leaveType.genderRestriction" class="leave-type-gender-badge">
+                    {{ leaveType.genderRestriction === 'MALE' ? '♂ Male only' : '♀ Female only' }}
+                  </span>
                   <button type="button" class="edit-button" (click)="openEditLeaveTypeModal(leaveType)">Edit</button>
                   <button type="button" class="delete-button" (click)="requestDeleteLeaveType(leaveType)">Delete</button>
                 </div>
@@ -273,6 +276,18 @@
                   <small *ngIf="getLeaveTypeControlError(maxDays, 'maxDays')" aria-live="polite">
                     {{ getLeaveTypeControlError(maxDays, 'maxDays') }}
                   </small>
+                </label>
+
+                <label class="leave-field leave-field-half leave-field-gender">
+                  <span>Gender restriction <span class="optional-mark">(optional)</span></span>
+                  <select
+                    [(ngModel)]="leaveTypeModel.genderRestriction"
+                    name="genderRestriction">
+                    <option value="">No restriction</option>
+                    <option value="MALE">Male only</option>
+                    <option value="FEMALE">Female only</option>
+                  </select>
+                  <small class="hint">Leave blank to allow all genders.</small>
                 </label>
 
                 <div class="leave-form-actions">
