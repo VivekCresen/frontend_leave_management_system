@@ -42,6 +42,11 @@
   background: rgba(146, 64, 14, 0.88);
 }
 
+.toast-warn {
+  border-color: rgba(234, 179, 8, 0.4);
+  background: rgba(113, 63, 18, 0.92);
+}
+
 .toast-close {
   border: none;
   background: transparent;

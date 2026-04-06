@@ -214,6 +214,26 @@
   box-shadow: 0 34px 90px -44px rgba(15, 23, 42, 0.58);
 }
 
+.leave-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px 24px;
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(10px);
+  z-index: 30;
+}
+
+.leave-modal-card {
+  width: min(680px, 100%);
+  max-height: calc(100vh - 72px);
+  overflow: auto;
+  border-radius: 28px;
+  background: transparent;
+}
+
 .profile-modal-header {
   display: flex;
   align-items: flex-start;
@@ -496,6 +516,14 @@
 
   .profile-modal-card {
     padding: 18px;
+  }
+
+  .leave-modal-backdrop {
+    padding-top: 20px;
+  }
+
+  .leave-modal-card {
+    width: 100%;
   }
 
   .profile-form {

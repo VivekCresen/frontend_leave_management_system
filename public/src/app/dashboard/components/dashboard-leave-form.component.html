@@ -17,7 +17,6 @@
 
   <form #leaveForm="ngForm" class="leave-form" (ngSubmit)="submit(leaveForm)" novalidate>
 
-    <!-- Leave Type -->
     <label class="field">
       <span>Leave type <span class="required-mark">*</span></span>
       <select
@@ -25,11 +24,12 @@
         [(ngModel)]="model.leaveTypeId"
         [class.input-invalid]="submitted && !model.leaveTypeId"
         [class.placeholder-selected]="!model.leaveTypeId"
+        (ngModelChange)="onLeaveTypeChange()"
         name="leaveTypeId"
         required>
         <option [ngValue]="null" disabled>Select leave type</option>
-        <option *ngFor="let lt of leaveTypes" [ngValue]="lt.id">
-          {{ lt.leaveName }} (max {{ lt.maxDays }} days)
+        <option *ngFor="let lt of availableLeaveTypes" [ngValue]="lt.id">
+          {{ lt.leaveName }} (max {{ lt.maxDays }} days){{ lt.genderRestriction ? ' — ' + (lt.genderRestriction === 'MALE' ? 'Male only' : 'Female only') : '' }}
         </option>
       </select>
       <small [class.field-message-empty]="!(submitted && !model.leaveTypeId) && !getFieldError('leaveTypeId')" aria-live="polite">
@@ -37,49 +37,49 @@
       </small>
     </label>
 
-    <!-- Leave type description hint -->
-    <div *ngIf="selectedLeaveType?.description" class="info-box">
-      <i class="fas fa-circle-info"></i>
-      <span>{{ selectedLeaveType!.description }}</span>
+    <!-- Date Range -->
+    <div class="field field-full date-range-group">
+      <div class="date-range-labels">
+        <span>Start date <span class="required-mark">*</span></span>
+        <span>End date <span class="required-mark">*</span></span>
+      </div>
+      <div class="date-range-inputs"
+           [class.date-range-invalid]="(submitted && !model.fromDate) || (submitted && (!model.toDate || !!dateRangeError))">
+        <input
+          #fromDate="ngModel"
+          [(ngModel)]="model.fromDate"
+          [min]="today"
+          (ngModelChange)="onFromDateChange()"
+          name="fromDate"
+          type="date"
+          required />
+        <span class="date-range-arrow">
+          <i class="fas fa-arrow-right"></i>
+        </span>
+        <input
+          #toDate="ngModel"
+          [(ngModel)]="model.toDate"
+          [min]="minToDate"
+          name="toDate"
+          type="date"
+          required />
+      </div>
+      <small
+        [class.field-message-empty]="!(submitted && !model.fromDate) && !dateRangeError && !getFieldError('fromDate') && !getFieldError('toDate')"
+        aria-live="polite">
+        {{ getFieldError('fromDate') || getFieldError('toDate') || (submitted && !model.fromDate ? 'Start date is required' : '') || (submitted && !model.toDate ? 'End date is required' : '') || dateRangeError || ' ' }}
+      </small>
     </div>
 
-    <!-- From Date -->
-    <label class="field">
-      <span>Start date <span class="required-mark">*</span></span>
-      <input
-        #fromDate="ngModel"
-        [(ngModel)]="model.fromDate"
-        [class.input-invalid]="submitted && !model.fromDate"
-        [min]="today"
-        (ngModelChange)="onFromDateChange()"
-        name="fromDate"
-        type="date"
-        required />
-      <small [class.field-message-empty]="!(submitted && !model.fromDate) && !getFieldError('fromDate')" aria-live="polite">
-        {{ getFieldError('fromDate') || (submitted && !model.fromDate ? 'Start date is required' : ' ') }}
-      </small>
-    </label>
 
-    <!-- To Date -->
-    <label class="field">
-      <span>End date <span class="required-mark">*</span></span>
-      <input
-        #toDate="ngModel"
-        [(ngModel)]="model.toDate"
-        [class.input-invalid]="submitted && (!model.toDate || !!dateRangeError)"
-        [min]="minToDate"
-        name="toDate"
-        type="date"
-        required />
-      <small [class.field-message-empty]="!dateRangeError && !getFieldError('toDate')" aria-live="polite">
-        {{ getFieldError('toDate') || dateRangeError || ' ' }}
-      </small>
-    </label>
 
     <!-- Duration badge -->
     <div *ngIf="durationDays > 0" class="duration-badge">
       <i class="fas fa-calendar-days"></i>
-      <span>{{ durationDays }} day{{ durationDays === 1 ? '' : 's' }} selected</span>
+      <span>{{ durationDays }} working day{{ durationDays === 1 ? '' : 's' }} selected</span>
+      <span *ngIf="weekendDaysCount > 0" class="duration-note">
+        ({{ totalCalendarDays }} calendar day{{ totalCalendarDays === 1 ? '' : 's' }})
+      </span>
       <span *ngIf="selectedLeaveType && durationDays > selectedLeaveType.maxDays" class="duration-warning">
         — exceeds max {{ selectedLeaveType.maxDays }} days
       </span>
@@ -102,17 +102,7 @@
       </small>
     </label>
 
-    <!-- Comments (optional) -->
-    <label class="field field-full">
-      <span>Additional comments <span class="optional-mark">(optional)</span></span>
-      <textarea
-        [(ngModel)]="model.comments"
-        name="comments"
-        placeholder="Any extra notes for your manager"
-        rows="2"
-        maxlength="500"></textarea>
-    </label>
-
+    
     <div class="form-actions">
       <button type="button" class="secondary-button" (click)="reset()" [disabled]="isSaving">
         Reset
