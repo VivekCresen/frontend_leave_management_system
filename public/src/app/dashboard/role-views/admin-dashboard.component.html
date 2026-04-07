@@ -136,6 +136,15 @@
             <i class="fas fa-layer-group"></i>
             <span>Leave Types</span>
           </button>
+          <button
+            type="button"
+            class="leave-tab-button"
+            [class.active]="isHolidaysTabActive"
+            [attr.aria-selected]="isHolidaysTabActive"
+            (click)="selectLeaveTab('holidays')">
+            <i class="fas fa-umbrella-beach"></i>
+            <span>Public Holidays</span>
+          </button>
         </div>
 
         <div *ngIf="isRecordsTabActive" class="leave-tab-panel">
@@ -195,7 +204,97 @@
             </article>
           </div>
         </div>
+
+        <div *ngIf="isHolidaysTabActive" class="leave-tab-panel">
+          <div class="leave-types-toolbar">
+            <div>
+              <h3>Public holidays</h3>
+              <p class="body-copy">Company-wide holidays visible to all employees on their calendars.</p>
+            </div>
+            <div class="leave-types-toolbar-actions">
+              <span class="leave-count-pill">{{ holidays.length }} holidays</span>
+              <button type="button" class="primary-toolbar-button" (click)="openCreateHolidayModal()">
+                <i class="fas fa-plus"></i>
+                <span>Add holiday</span>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="isHolidaysLoading" class="leave-empty-state">
+            <h4>Loading holidays</h4>
+          </div>
+
+          <div *ngIf="!isHolidaysLoading && holidays.length === 0" class="leave-empty-state">
+            <h4>No public holidays yet</h4>
+            <p>Add the first company holiday so it appears on all employee calendars.</p>
+          </div>
+
+          <div *ngIf="!isHolidaysLoading && holidays.length > 0" class="leave-type-list leave-type-list-managed">
+            <article *ngFor="let h of holidays" class="leave-type-card">
+              <div class="leave-type-card-header">
+                <div>
+                  <h4>{{ h.name }}</h4>
+                  <p>{{ h.date | date:'dd MMM yyyy' }}</p>
+                </div>
+                <div class="leave-type-card-actions">
+                  <span class="leave-type-days">
+                    <i class="fas fa-calendar-star"></i>
+                    Holiday
+                  </span>
+                  <button type="button" class="edit-button" (click)="openEditHolidayModal(h)">Edit</button>
+                  <button type="button" class="delete-button" (click)="holidayDeleteRequested.emit(h.id)">Delete</button>
+                </div>
+              </div>
+              <p class="leave-type-description">{{ h.description || 'No description provided.' }}</p>
+            </article>
+          </div>
+        </div>
       </article>
+
+      <!-- Holiday create/edit modal -->
+      <div *ngIf="isHolidayModalOpen" class="form-modal-backdrop" (click)="closeHolidayModal()">
+        <section class="leave-type-modal-card" (click)="$event.stopPropagation()">
+          <section class="leave-form-card">
+            <div class="leave-form-heading">
+              <div>
+                <p class="leave-form-eyebrow">Company Holiday</p>
+                <h3>{{ editingHoliday ? 'Update holiday' : 'Create public holiday' }}</h3>
+                <p>This holiday will be visible to all employees on their calendars.</p>
+              </div>
+              <button type="button" class="close-button leave-type-close-button" (click)="closeHolidayModal()" aria-label="Close">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+            <form #holidayForm="ngForm" class="leave-type-form" (ngSubmit)="submitHoliday(holidayForm)">
+              <label class="leave-field">
+                <span>Holiday name</span>
+                <input #hName="ngModel" [(ngModel)]="holidayModel.name" name="hName"
+                  placeholder="e.g. Kite Festival (Uttarayan)" required maxlength="100" type="text"
+                  [class.input-invalid]="holidaySubmitted && hName.invalid" />
+                <small *ngIf="holidaySubmitted && hName.invalid">Holiday name is required</small>
+              </label>
+              <label class="leave-field">
+                <span>Date</span>
+                <input #hDate="ngModel" [(ngModel)]="holidayModel.date" name="hDate"
+                  type="date" required
+                  [class.input-invalid]="holidaySubmitted && hDate.invalid" />
+                <small *ngIf="holidaySubmitted && hDate.invalid">Date is required</small>
+              </label>
+              <label class="leave-field leave-field-wide">
+                <span>Description <span class="optional-mark">(optional)</span></span>
+                <textarea [(ngModel)]="holidayModel.description" name="hDesc"
+                  placeholder="Brief description of the holiday" rows="3" maxlength="255"></textarea>
+              </label>
+              <div class="leave-form-actions">
+                <button type="button" class="secondary-toolbar-button" (click)="closeHolidayModal()">Cancel</button>
+                <button type="submit" class="primary-toolbar-button">
+                  {{ editingHoliday ? 'Update' : 'Create' }}
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+      </div>
 
       <div *ngIf="isLeaveTypeModalOpen" class="form-modal-backdrop" (click)="closeLeaveTypeModal()">
         <section class="leave-type-modal-card" (click)="$event.stopPropagation()">

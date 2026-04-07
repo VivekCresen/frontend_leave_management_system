@@ -966,3 +966,24 @@
     flex-wrap: wrap;
   }
 }
+
+/* ── Public holiday calendar markers ── */
+.cal-day.is-holiday {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.cal-holiday-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #92400e;
+  background: rgba(251, 191, 36, 0.18);
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

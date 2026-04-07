@@ -229,9 +229,11 @@
 .leave-modal-card {
   width: min(680px, 100%);
   max-height: calc(100vh - 72px);
-  overflow: auto;
+  overflow: hidden;
   border-radius: 28px;
   background: transparent;
+  display: flex;
+  flex-direction: column;
 }
 
 .profile-modal-header {

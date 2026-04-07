@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { AdminLeaveTableRow } from '../components/dashboard-leave-table.component';
-import { LeaveType } from '../../services/leave.service';
+import { Holiday, LeaveType, NotifyUser } from '../../services/leave.service';
 import { ToastService } from '../../services/toast.service';
 
 export interface LeaveFormSubmitEvent {
@@ -12,6 +12,9 @@ export interface LeaveFormSubmitEvent {
   toDate: string;
   reason: string;
   comments: string;
+  halfDay: boolean;
+  halfDaySession: 'MORNING' | 'AFTERNOON' | null;
+  notifyUserIds: number[];
 }
 
 type LeaveFormModel = {
@@ -20,6 +23,9 @@ type LeaveFormModel = {
   toDate: string;
   reason: string;
   comments: string;
+  durationType: 'FULL' | 'HALF';
+  halfDaySession: 'MORNING' | 'AFTERNOON';
+  notifyUserIds: number[];
 };
 
 @Component({
@@ -33,8 +39,12 @@ export class DashboardLeaveFormComponent implements OnChanges {
   @Input({ required: true }) leaveTypes: LeaveType[] = [];
   @Input() userGender: string | null = null;
   @Input() myLeaves: AdminLeaveTableRow[] = [];
+  @Input() holidays: Holiday[] = [];
+  @Input() notifyUsers: NotifyUser[] = [];
+  @Input() notifyUsersLoading = false;
   @Input() isSaving = false;
   @Input() fieldErrors: Record<string, string> = {};
+  @Input() editingLeave: AdminLeaveTableRow | null = null;
 
   @Output() saveRequested = new EventEmitter<LeaveFormSubmitEvent>();
   @Output() cancelRequested = new EventEmitter<void>();
@@ -43,6 +53,16 @@ export class DashboardLeaveFormComponent implements OnChanges {
 
   submitted = false;
   model: LeaveFormModel = this.createDefaultModel();
+
+  // Random time slots for half-day display
+  readonly morningSlots = ['9:00 AM – 1:00 PM', '9:30 AM – 1:30 PM', '10:00 AM – 2:00 PM'];
+  readonly afternoonSlots = ['1:00 PM – 5:00 PM', '1:30 PM – 5:30 PM', '2:00 PM – 6:00 PM'];
+  randomMorningTime = this.morningSlots[Math.floor(Math.random() * this.morningSlots.length)];
+  randomAfternoonTime = this.afternoonSlots[Math.floor(Math.random() * this.afternoonSlots.length)];
+
+  get isHalfDay(): boolean {
+    return this.model.durationType === 'HALF';
+  }
 
   constructor(private readonly toast: ToastService) {}
 
@@ -63,10 +83,36 @@ export class DashboardLeaveFormComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['editingLeave']) {
+      this.populateForm(this.editingLeave);
+    }
+
     if (changes['userGender'] && !changes['userGender'].firstChange && this.genderRestrictedCount > 0) {
       const count = this.genderRestrictedCount;
       this.toast.info(`${count} leave type${count === 1 ? ' is' : 's are'} not available for your gender.`);
     }
+  }
+
+  get isEditMode(): boolean {
+    return !!this.editingLeave;
+  }
+
+  get headingTitle(): string {
+    return this.isEditMode ? 'Edit leave request' : 'Apply for leave';
+  }
+
+  get headingDescription(): string {
+    return this.isEditMode
+      ? 'Update the details of your pending leave request before approval.'
+      : 'Fill in the details below and submit your leave request for approval.';
+  }
+
+  get submitLabel(): string {
+    if (this.isSaving) {
+      return this.isEditMode ? 'Saving...' : 'Submitting...';
+    }
+
+    return this.isEditMode ? 'Save changes' : 'Submit request';
   }
 
   onLeaveTypeChange(): void {
@@ -92,6 +138,7 @@ export class DashboardLeaveFormComponent implements OnChanges {
   }
 
   get durationDays(): number {
+    if (this.isHalfDay) return this.model.fromDate ? 0.5 : 0;
     if (!this.model.fromDate || !this.model.toDate) return 0;
     const from = new Date(this.model.fromDate);
     const to = new Date(this.model.toDate);
@@ -100,8 +147,7 @@ export class DashboardLeaveFormComponent implements OnChanges {
     let count = 0;
     const cur = new Date(from);
     while (cur <= to) {
-      const day = cur.getDay();
-      if (day !== 0 && day !== 6) count++;
+      if (this.isWorkingDay(cur)) count++;
       cur.setDate(cur.getDate() + 1);
     }
     return count;
@@ -115,7 +161,40 @@ export class DashboardLeaveFormComponent implements OnChanges {
   }
 
   get weekendDaysCount(): number {
-    return this.totalCalendarDays - this.durationDays;
+    if (!this.model.fromDate || !this.model.toDate || this.isHalfDay) return 0;
+
+    let count = 0;
+    const from = new Date(this.model.fromDate);
+    const to = new Date(this.model.toDate);
+    const cur = new Date(from);
+
+    while (cur <= to) {
+      const day = cur.getDay();
+      if (day === 0 || day === 6) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return count;
+  }
+
+  get publicHolidayCount(): number {
+    if (!this.model.fromDate) return 0;
+    if (this.isHalfDay) {
+      return this.isHolidayDateString(this.model.fromDate) ? 1 : 0;
+    }
+    if (!this.model.toDate) return 0;
+
+    let count = 0;
+    const from = new Date(this.model.fromDate);
+    const to = new Date(this.model.toDate);
+    const cur = new Date(from);
+
+    while (cur <= to) {
+      if (this.isHolidayDate(cur) && cur.getDay() !== 0 && cur.getDay() !== 6) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    return count;
   }
 
   get selectedLeaveType(): LeaveType | null {
@@ -125,8 +204,8 @@ export class DashboardLeaveFormComponent implements OnChanges {
   get dateRangeError(): string | null {
     if (!this.submitted) return null;
     if (!this.model.fromDate) return 'Start date is required';
-    if (!this.model.toDate) return 'End date is required';
-    if (new Date(this.model.toDate) < new Date(this.model.fromDate)) {
+    if (!this.isHalfDay && !this.model.toDate) return 'End date is required';
+    if (!this.isHalfDay && new Date(this.model.toDate) < new Date(this.model.fromDate)) {
       return 'End date must be on or after start date';
     }
     return null;
@@ -141,12 +220,33 @@ export class DashboardLeaveFormComponent implements OnChanges {
     return !!lt && this.durationDays > lt.maxDays;
   }
 
+  get hasNoWorkingDaysSelected(): boolean {
+    if (!this.model.fromDate) return false;
+    return this.durationDays === 0;
+  }
+
   get hasPendingOfSameType(): boolean {
     const lt = this.selectedLeaveType;
     if (!lt) return false;
     return this.myLeaves.some(
-      (l) => l.status === 'PENDING' && l.leaveType.trim().toLowerCase() === lt.leaveName.trim().toLowerCase()
+      (l) =>
+        l.id !== this.editingLeave?.id &&
+        l.status === 'PENDING' &&
+        l.leaveType.trim().toLowerCase() === lt.leaveName.trim().toLowerCase()
     );
+  }
+
+  toggleNotifyUser(userId: number): void {
+    const idx = this.model.notifyUserIds.indexOf(userId);
+    if (idx === -1) {
+      this.model.notifyUserIds = [...this.model.notifyUserIds, userId];
+    } else {
+      this.model.notifyUserIds = this.model.notifyUserIds.filter((id) => id !== userId);
+    }
+  }
+
+  isNotifyUserSelected(userId: number): boolean {
+    return this.model.notifyUserIds.includes(userId);
   }
 
   submit(form: NgForm): void {
@@ -166,6 +266,13 @@ export class DashboardLeaveFormComponent implements OnChanges {
       return;
     }
 
+    if (this.hasNoWorkingDaysSelected) {
+      this.toast.warn(
+        `Excluding ${this.weekendDaysCount} weekend day${this.weekendDaysCount === 1 ? '' : 's'} and ${this.publicHolidayCount} public holiday${this.publicHolidayCount === 1 ? '' : 's'}. Please choose at least one working day.`
+      );
+      return;
+    }
+
     if (this.hasPendingOfSameType) {
       this.toast.warn(
         `You already have a pending ${leaveType.leaveName} request. Please wait for it to be processed before submitting another.`
@@ -173,13 +280,17 @@ export class DashboardLeaveFormComponent implements OnChanges {
       return;
     }
 
+    const isHalf = this.isHalfDay;
     this.saveRequested.emit({
       leaveTypeId: this.model.leaveTypeId,
       leaveType: leaveType.leaveName,
       fromDate: this.model.fromDate,
-      toDate: this.model.toDate,
+      toDate: isHalf ? this.model.fromDate : this.model.toDate,
       reason: this.model.reason.trim(),
-      comments: this.model.comments.trim()
+      comments: this.model.comments.trim(),
+      halfDay: isHalf,
+      halfDaySession: isHalf ? this.model.halfDaySession : null,
+      notifyUserIds: this.model.notifyUserIds
     });
   }
 
@@ -190,7 +301,9 @@ export class DashboardLeaveFormComponent implements OnChanges {
 
   reset(): void {
     this.submitted = false;
-    this.model = this.createDefaultModel();
+    this.model = this.createModelFromLeave(this.editingLeave);
+    this.randomMorningTime = this.morningSlots[Math.floor(Math.random() * this.morningSlots.length)];
+    this.randomAfternoonTime = this.afternoonSlots[Math.floor(Math.random() * this.afternoonSlots.length)];
     this.leaveForm?.resetForm(this.model);
   }
 
@@ -200,13 +313,60 @@ export class DashboardLeaveFormComponent implements OnChanges {
     }
   }
 
+  private isWorkingDay(date: Date): boolean {
+    const day = date.getDay();
+    return day !== 0 && day !== 6 && !this.isHolidayDate(date);
+  }
+
+  private isHolidayDate(date: Date): boolean {
+    const dateKey = this.toDateKey(date);
+    return this.holidays.some((holiday) => holiday.date === dateKey);
+  }
+
+  private isHolidayDateString(date: string): boolean {
+    return this.holidays.some((holiday) => holiday.date === date);
+  }
+
+  private toDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   private createDefaultModel(): LeaveFormModel {
     return {
       leaveTypeId: null,
       fromDate: '',
       toDate: '',
       reason: '',
-      comments: ''
+      comments: '',
+      durationType: 'FULL',
+      halfDaySession: 'MORNING',
+      notifyUserIds: []
+    };
+  }
+
+  private populateForm(leave: AdminLeaveTableRow | null): void {
+    this.submitted = false;
+    this.model = this.createModelFromLeave(leave);
+    this.leaveForm?.resetForm(this.model);
+  }
+
+  private createModelFromLeave(leave: AdminLeaveTableRow | null): LeaveFormModel {
+    if (!leave) {
+      return this.createDefaultModel();
+    }
+
+    return {
+      leaveTypeId: leave.leaveTypeId,
+      fromDate: leave.fromDate,
+      toDate: leave.toDate,
+      reason: leave.reason,
+      comments: leave.comments,
+      durationType: leave.halfDay ? 'HALF' : 'FULL',
+      halfDaySession: leave.halfDaySession === 'AFTERNOON' ? 'AFTERNOON' : 'MORNING',
+      notifyUserIds: [...leave.notifyUserIds]
     };
   }
 }

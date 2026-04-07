@@ -91,50 +91,261 @@
         </div>
       </div>
 
-      <app-dashboard-history-table
-        [leaves]="pendingLeaves"
-        title="Pending requests"
-        description="Your leave requests that are awaiting manager approval.">
-      </app-dashboard-history-table>
+      <!-- Pending leave cards with notify info -->
+      <div *ngIf="pendingLeaves.length === 0" class="requests-empty-state">
+        <i class="fas fa-calendar-check requests-empty-icon"></i>
+        <h4>No pending requests</h4>
+        <p>You're all clear. Click "New request" to apply for leave.</p>
+      </div>
+
+      <div *ngIf="pendingLeaves.length > 0" class="requests-page-meta">
+        <span>Showing {{ requestPageStart }}-{{ requestPageEnd }} of {{ pendingLeaves.length }} pending requests</span>
+      </div>
+
+      <div *ngIf="pendingLeaves.length > 0" class="pending-cards-list">
+        <div *ngFor="let leave of paginatedPendingLeaves" class="pending-leave-card">
+
+          <div class="pending-card-header">
+            <div class="pending-card-type">
+              <i class="fas fa-calendar-days"></i>
+              <strong>{{ leave.leaveType }}</strong>
+            </div>
+            <span class="pending-status-badge">
+              <i class="fas fa-clock"></i> Pending
+            </span>
+          </div>
+
+          <div class="pending-card-meta">
+            <div class="pending-meta-item">
+              <i class="fas fa-calendar"></i>
+              <span>
+                {{ leave.fromDate | date:'MMM d' }}
+                <ng-container *ngIf="!leave.halfDay"> – {{ leave.toDate | date:'MMM d, y' }}</ng-container>
+                <ng-container *ngIf="leave.halfDay"> ({{ leave.halfDaySession === 'MORNING' ? '🌅 Morning' : '🌇 Afternoon' }})</ng-container>
+              </span>
+            </div>
+            <div class="pending-meta-item">
+              <i class="fas fa-hourglass-half"></i>
+              <span>{{ leave.halfDay ? '0.5 day' : leave.durationDays + ' day' + (leave.durationDays !== 1 ? 's' : '') }}</span>
+            </div>
+            <div *ngIf="leave.reason" class="pending-meta-item pending-meta-reason">
+              <i class="fas fa-comment-lines"></i>
+              <span>{{ leave.reason }}</span>
+            </div>
+          </div>
+
+          <!-- Notify users section -->
+          <div *ngIf="leave.notifyUserIds && leave.notifyUserIds.length > 0" class="notify-section">
+            <div class="notify-section-label">
+              <i class="fas fa-bell"></i>
+              <span>Notified teammates</span>
+            </div>
+            <div class="notify-avatars">
+              <ng-container *ngFor="let uid of leave.notifyUserIds">
+                <ng-container *ngIf="getNotifyUser(uid) as u">
+                  <div class="notify-avatar-chip" [title]="u.fullName + ' (' + u.emailId + ')'">
+                    <span class="notify-avatar-initials">{{ getInitials(u.fullName) }}</span>
+                    <span class="notify-avatar-name">{{ u.fullName || u.emailId }}</span>
+                  </div>
+                </ng-container>
+              </ng-container>
+              <span *ngIf="getUnknownNotifyCount(leave.notifyUserIds) > 0" class="notify-avatar-more">
+                +{{ getUnknownNotifyCount(leave.notifyUserIds) }} more
+              </span>
+            </div>
+          </div>
+
+          <div *ngIf="!leave.notifyUserIds || leave.notifyUserIds.length === 0" class="notify-section notify-section-empty">
+            <i class="fas fa-bell-slash"></i>
+            <span>No teammates notified</span>
+          </div>
+
+          <div *ngIf="leave.editable" class="pending-card-actions">
+            <button type="button" class="secondary-toolbar-button" (click)="editLeaveRequested.emit(leave)">
+              <i class="fas fa-pen"></i>
+              <span>Edit</span>
+            </button>
+            <button type="button" class="secondary-toolbar-button delete-action-button" (click)="deleteLeaveRequested.emit(leave)">
+              <i class="fas fa-trash"></i>
+              <span>Delete</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <div *ngIf="pendingLeaves.length > requestsPageSize" class="requests-pagination">
+        <button
+          type="button"
+          class="requests-page-button"
+          (click)="goToRequestsPage(currentRequestsPage - 1)"
+          [disabled]="currentRequestsPage === 1">
+          <i class="fas fa-chevron-left"></i>
+          <span>Previous</span>
+        </button>
+
+        <span class="requests-page-indicator">Page {{ currentRequestsPage }} of {{ totalRequestPages }}</span>
+
+        <button
+          type="button"
+          class="requests-page-button"
+          (click)="goToRequestsPage(currentRequestsPage + 1)"
+          [disabled]="currentRequestsPage === totalRequestPages">
+          <span>Next</span>
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
     </section>
 
     <!-- HISTORY -->
     <section *ngSwitchCase="'history'" class="management-grid">
       <app-dashboard-history-table
         [leaves]="myLeaves"
-        [leaveTypes]="leaveTypes">
+        [leaveTypes]="leaveTypes"
+        [showRequestActions]="true"
+        (editRequested)="editLeaveRequested.emit($event)"
+        (deleteRequested)="deleteLeaveRequested.emit($event)">
       </app-dashboard-history-table>
     </section>
 
     <!-- CALENDAR -->
-    <section *ngSwitchCase="'calendar'" class="panel-grid">
-      <article class="surface surface-full">
-        <p class="eyebrow">My Calendar</p>
-        <h3>Approved leave schedule</h3>
-        <p class="body-copy">Your approved leave periods are listed below.</p>
+    <section *ngSwitchCase="'calendar'" class="calendar-page">
 
-        <div *ngIf="approvedLeaves.length === 0" class="leave-empty-state">
-          <h4>No approved leave yet</h4>
-          <p>Submit a leave request and once approved it will appear here.</p>
-        </div>
+    
 
-        <div *ngIf="approvedLeaves.length > 0" class="calendar-leave-list">
-          <div *ngFor="let leave of approvedLeaves" class="calendar-leave-item">
-            <div class="calendar-leave-icon">
-              <i class="fas fa-calendar-check"></i>
+      <div class="calendar-layout">
+        <article class="surface cal-surface">
+          <div class="cal-topbar">
+            <div class="cal-topbar-copy">
+              <span class="cal-overline">Monthly overview</span>
+              <strong>{{ calendarMonthLabel }}</strong>
             </div>
-            <div class="calendar-leave-info">
-              <strong>{{ leave.leaveType }}</strong>
-              <span>{{ leave.reason || 'No reason provided' }}</span>
+            <div class="cal-legend">
+              <span class="cal-legend-item"><span class="cal-legend-dot emp-leave-dot"></span><span class="cal-legend-label">My leave</span></span>
+              <span class="cal-legend-item"><span class="cal-legend-dot holiday-dot"></span><span class="cal-legend-label">Holiday</span></span>
             </div>
-            <div class="calendar-leave-dates">
-              <span>{{ leave.fromDate | date:'MMM d' }} – {{ leave.toDate | date:'MMM d, y' }}</span>
-              <small>{{ leave.durationDays }} day{{ leave.durationDays !== 1 ? 's' : '' }}</small>
-            </div>
-            <span class="status-badge status-approved">Approved</span>
           </div>
-        </div>
-      </article>
+
+          <div class="cal-nav">
+            <div class="cal-nav-group">
+              <button type="button" class="cal-nav-btn" (click)="prevMonth()">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <span class="cal-month-label">{{ calendarMonthLabel }}</span>
+              <button type="button" class="cal-nav-btn" (click)="nextMonth()">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+            <div class="cal-nav-actions">
+              <input
+                type="month"
+                class="cal-jump-input"
+                [value]="jumpDate"
+                (change)="onJumpDateChange($any($event.target).value)"
+                title="Jump to month" />
+              <button type="button" class="cal-today-btn" (click)="goToToday()">Today</button>
+            </div>
+          </div>
+
+          <div class="cal-grid cal-header-row">
+            <div *ngFor="let d of weekDays" class="cal-header-cell">{{ d }}</div>
+          </div>
+
+          <div *ngFor="let week of calendarWeeks" class="cal-grid cal-week-row">
+            <div
+              *ngFor="let day of week"
+              class="cal-day"
+              [class.other-month]="!day.isCurrentMonth"
+              [class.today]="day.isToday"
+              [class.has-leaves]="day.leaves.length > 0"
+              [class.is-holiday]="day.holidays.length > 0"
+              [class.selected]="selectedDay?.date?.getTime() === day.date.getTime()"
+              (click)="selectDay(day)">
+              <div class="cal-day-head">
+                <span class="cal-day-num">{{ day.date | date:'d' }}</span>
+                <span *ngIf="day.leaves.length > 0" class="cal-day-count">{{ day.leaves.length }}</span>
+              </div>
+              <span *ngIf="day.holidays.length > 0" class="cal-holiday-label" [title]="day.holidays[0].name">
+                {{ day.holidays[0].name }}
+              </span>
+              <div *ngIf="day.leaves.length > 0" class="cal-day-caption">
+                {{ day.leaves[0].leaveType }}
+              </div>
+              <div class="cal-dots">
+                <span *ngFor="let l of day.leaves.slice(0, 3)" class="cal-dot emp-leave-dot-sm"
+                  [class.approved-dot]="l.status === 'APPROVED'"
+                  [class.pending-dot]="l.status === 'PENDING'"></span>
+                <span *ngIf="day.leaves.length > 3" class="cal-dot-more">+{{ day.leaves.length - 3 }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <aside class="surface cal-side-panel">
+          <div class="cal-side-section">
+            <span class="cal-side-label">Selected day</span>
+            <ng-container *ngIf="selectedDay; else emptyDayState">
+              <div class="cal-selected-summary">
+                <strong>{{ selectedDay.date | date:'EEEE, MMM d' }}</strong>
+                <span>{{ selectedDay.leaves.length }} leave item{{ selectedDay.leaves.length === 1 ? '' : 's' }}</span>
+              </div>
+
+              <span *ngIf="selectedDay.holidays.length > 0" class="holiday-badge">
+                🎉 {{ selectedDay.holidays[0].name }}
+              </span>
+
+              <div *ngIf="selectedDay.leaves.length > 0" class="cal-detail-list">
+                <div *ngFor="let leave of selectedDay.leaves" class="cal-detail-item">
+                  <div class="calendar-leave-avatar">
+                    {{ profileInitials }}
+                  </div>
+                  <div class="calendar-leave-info">
+                    <strong>{{ leave.leaveType }}</strong>
+                    <span>{{ leave.reason || 'No reason provided' }}</span>
+                  </div>
+                  <div class="calendar-leave-dates">
+                    <span>{{ leave.fromDate | date:'MMM d' }} – {{ leave.toDate | date:'MMM d' }}</span>
+                    <small>{{ leave.durationDays }} day{{ leave.durationDays !== 1 ? 's' : '' }}</small>
+                  </div>
+                  <span class="status-badge"
+                    [class.status-approved]="leave.status === 'APPROVED'"
+                    [class.status-pending]="leave.status === 'PENDING'"
+                    [class.status-rejected]="leave.status === 'REJECTED'">
+                    {{ leave.status | titlecase }}
+                  </span>
+                </div>
+              </div>
+
+              <div *ngIf="selectedDay.holidays.length > 0 && selectedDay.leaves.length === 0" class="cal-holiday-detail">
+                <i class="fas fa-umbrella-beach"></i>
+                <div>
+                  <strong>{{ selectedDay.holidays[0].name }}</strong>
+                  <span>{{ selectedDay.holidays[0].description || 'Company public holiday' }}</span>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-template #emptyDayState>
+              <div class="cal-empty-selection">
+                <i class="fas fa-calendar-day"></i>
+                <strong>Select a date</strong>
+                <span>Pick any day with leave or a holiday to see the details here.</span>
+              </div>
+            </ng-template>
+          </div>
+
+          <div class="cal-side-section" *ngIf="holidaysThisMonth.length > 0">
+            <span class="cal-side-label">This month’s holidays</span>
+            <div class="cal-holiday-list">
+              <div *ngFor="let holiday of holidaysThisMonth.slice(0, 4)" class="cal-holiday-list-item">
+                <strong>{{ holiday.name }}</strong>
+                <span>{{ holiday.date | date:'EEE, MMM d' }}</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
     </section>
 
   </ng-container>

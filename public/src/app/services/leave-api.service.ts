@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CreateLeavePayload, CreateLeaveTypePayload, LeaveRecord, LeaveService, LeaveType, UpdateLeaveStatusPayload } from './leave.service';
+import { CreateHolidayPayload, CreateLeavePayload, CreateLeaveTypePayload, Holiday, LeaveRecord, LeaveService, LeaveType, NotifyUser, UpdateLeavePayload, UpdateLeaveStatusPayload } from './leave.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LeaveApiService implements LeaveService {
   private readonly apiUrl = this.resolveApiUrl();
+  private readonly holidayUrl = this.apiUrl.replace('/api/leaves', '/api/holidays');
 
   constructor(private readonly http: HttpClient) {}
 
@@ -34,6 +35,29 @@ export class LeaveApiService implements LeaveService {
     return this.http.get<LeaveType[]>(`${this.apiUrl}/types`);
   }
 
+  getNotifyUsers(username: string): Observable<NotifyUser[]> {
+    return this.http.get<NotifyUser[]>(
+      `${this.apiUrl}/notify-users?username=${encodeURIComponent(username)}`
+    );
+  }
+
+  getHolidays(year?: number): Observable<Holiday[]> {
+    const url = year ? `${this.holidayUrl}?year=${year}` : this.holidayUrl;
+    return this.http.get<Holiday[]>(url);
+  }
+
+  createHoliday(payload: CreateHolidayPayload): Observable<Holiday> {
+    return this.http.post<Holiday>(this.holidayUrl, payload);
+  }
+
+  updateHoliday(id: number, payload: CreateHolidayPayload): Observable<Holiday> {
+    return this.http.put<Holiday>(`${this.holidayUrl}/${id}`, payload);
+  }
+
+  deleteHoliday(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.holidayUrl}/${id}`);
+  }
+
   createLeave(payload: CreateLeavePayload): Observable<LeaveRecord> {
     return this.http.post<LeaveRecord>(this.apiUrl, {
       username: payload.username,
@@ -42,8 +66,28 @@ export class LeaveApiService implements LeaveService {
       fromDate: payload.fromDate,
       toDate: payload.toDate,
       reason: payload.reason,
-      comments: payload.comments
+      comments: payload.comments,
+      halfDay: payload.halfDay,
+      halfDaySession: payload.halfDaySession ?? null,
+      notifyUserIds: payload.notifyUserIds ?? []
     });
+  }
+
+  updateLeave(leaveId: number, payload: UpdateLeavePayload): Observable<LeaveRecord> {
+    return this.http.put<LeaveRecord>(`${this.apiUrl}/${leaveId}`, {
+      leaveTypeId: payload.leaveTypeId,
+      fromDate: payload.fromDate,
+      toDate: payload.toDate,
+      reason: payload.reason,
+      comments: payload.comments,
+      halfDay: payload.halfDay,
+      halfDaySession: payload.halfDaySession ?? null,
+      notifyUserIds: payload.notifyUserIds ?? []
+    });
+  }
+
+  deleteLeave(leaveId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${leaveId}`);
   }
 
   updateLeaveStatus(leaveId: number, payload: UpdateLeaveStatusPayload): Observable<LeaveRecord> {

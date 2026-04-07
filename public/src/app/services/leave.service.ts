@@ -30,6 +30,9 @@ export interface LeaveRecord {
   rejectionReason: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  halfDay: boolean;
+  halfDaySession: 'MORNING' | 'AFTERNOON' | null;
+  notifyUserIds: number[];
 }
 
 export interface UpdateLeaveStatusPayload {
@@ -46,6 +49,27 @@ export interface CreateLeavePayload {
   toDate: string;
   reason: string;
   comments: string;
+  halfDay: boolean;
+  halfDaySession: 'MORNING' | 'AFTERNOON' | null;
+  notifyUserIds: number[];
+}
+
+export interface UpdateLeavePayload {
+  leaveTypeId: number;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  comments: string;
+  halfDay: boolean;
+  halfDaySession: 'MORNING' | 'AFTERNOON' | null;
+  notifyUserIds: number[];
+}
+
+export interface NotifyUser {
+  id: number;
+  fullName: string | null;
+  emailId: string | null;
+  role: string | null;
 }
 
 export interface CreateLeaveTypePayload {
@@ -72,12 +96,35 @@ export interface LeaveApiErrorResponse {
   details: string[];
 }
 
+export interface Holiday {
+  id: number;
+  name: string;
+  date: string;
+  description: string | null;
+  createdBy: string | null;
+  createdAt: string | null;
+}
+
+export interface CreateHolidayPayload {
+  name: string;
+  date: string;
+  description: string;
+  createdBy: string;
+}
+
 export interface LeaveService {
   getLeaves(): Observable<LeaveRecord[]>;
   getLeavesByUsername(username: string): Observable<LeaveRecord[]>;
   getLeavesByManagerUsername(managerUsername: string): Observable<LeaveRecord[]>;
   getLeaveTypes(): Observable<LeaveType[]>;
+  getNotifyUsers(username: string): Observable<NotifyUser[]>;
+  getHolidays(year?: number): Observable<Holiday[]>;
+  createHoliday(payload: CreateHolidayPayload): Observable<Holiday>;
+  updateHoliday(id: number, payload: CreateHolidayPayload): Observable<Holiday>;
+  deleteHoliday(id: number): Observable<void>;
   createLeave(payload: CreateLeavePayload): Observable<LeaveRecord>;
+  updateLeave(leaveId: number, payload: UpdateLeavePayload): Observable<LeaveRecord>;
+  deleteLeave(leaveId: number): Observable<void>;
   updateLeaveStatus(leaveId: number, payload: UpdateLeaveStatusPayload): Observable<LeaveRecord>;
   createLeaveType(payload: CreateLeaveTypePayload): Observable<LeaveType>;
   updateLeaveType(leaveTypeId: number, payload: CreateLeaveTypePayload): Observable<LeaveType>;

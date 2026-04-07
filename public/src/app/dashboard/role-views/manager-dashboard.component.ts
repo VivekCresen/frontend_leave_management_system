@@ -10,13 +10,15 @@ import { DashboardUserTableComponent } from '../components/dashboard-user-table.
 import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../services/auth.service';
 import { LeaveFormSubmitEvent } from '../components/dashboard-leave-form.component';
 import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
-import { LeaveType } from '../../services/leave.service';
+import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
+import { LeaveType, Holiday } from '../../services/leave.service';
 
 export type CalendarDay = {
   date: Date;
   isCurrentMonth: boolean;
   isToday: boolean;
   leaves: (AdminLeaveTableRow & { isOwn: boolean })[];
+  holidays: Holiday[];
 };
 
 @Component({
@@ -29,7 +31,8 @@ export type CalendarDay = {
     DashboardStatCardsComponent,
     DashboardUserFormComponent,
     DashboardUserTableComponent,
-    DashboardLeaveTableComponent
+    DashboardLeaveTableComponent,
+    DashboardHistoryTableComponent
   ],
   templateUrl: './manager-dashboard.component.html',
   styleUrls: ['./manager-dashboard.component.css']
@@ -48,6 +51,7 @@ export class ManagerDashboardComponent implements OnChanges {
   @Input() leaveFieldErrors: Record<string, string> = {};
   @Input() managerLeaves: AdminLeaveTableRow[] = [];
   @Input() myLeaves: AdminLeaveTableRow[] = [];
+  @Input() holidays: Holiday[] = [];
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
@@ -59,15 +63,18 @@ export class ManagerDashboardComponent implements OnChanges {
   @Output() cancelLeaveFormRequested = new EventEmitter<void>();
   @Output() leaveApproveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() leaveRejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
+  @Output() editLeaveRequested = new EventEmitter<AdminLeaveTableRow>();
+  @Output() deleteLeaveRequested = new EventEmitter<AdminLeaveTableRow>();
 
   calendarYear = new Date().getFullYear();
   calendarMonth = new Date().getMonth();
   calendarWeeks: CalendarDay[][] = [];
   selectedDay: CalendarDay | null = null;
   readonly weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  jumpDate = '';
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['managerLeaves'] || changes['myLeaves']) {
+    if (changes['managerLeaves'] || changes['myLeaves'] || changes['holidays']) {
       this.buildCalendar();
     }
   }
@@ -93,6 +100,15 @@ export class ManagerDashboardComponent implements OnChanges {
     const now = new Date();
     this.calendarYear = now.getFullYear();
     this.calendarMonth = now.getMonth();
+    this.jumpDate = this.toMonthValue(this.calendarYear, this.calendarMonth);
+    this.buildCalendar();
+  }
+
+  onJumpDateChange(value: string): void {
+    if (!value) return;
+    const [y, m] = value.split('-').map(Number);
+    this.calendarYear = y;
+    this.calendarMonth = m - 1;
     this.buildCalendar();
   }
 
@@ -137,7 +153,11 @@ export class ManagerDashboardComponent implements OnChanges {
         date: new Date(cursor),
         isCurrentMonth: cursor.getMonth() === this.calendarMonth,
         isToday: cursor.getTime() === today.getTime(),
-        leaves: dayLeaves
+        leaves: dayLeaves,
+        holidays: this.holidays.filter(h => {
+          const hd = new Date(h.date); hd.setHours(0,0,0,0);
+          return hd.getTime() === dayDate.getTime();
+        })
       });
 
       if (week.length === 7) { weeks.push(week); week = []; }
@@ -146,6 +166,7 @@ export class ManagerDashboardComponent implements OnChanges {
 
     this.calendarWeeks = weeks;
     this.selectedDay = null;
+    this.jumpDate = this.toMonthValue(this.calendarYear, this.calendarMonth);
   }
 
   get stats(): DashboardStatCard[] {
@@ -215,5 +236,9 @@ export class ManagerDashboardComponent implements OnChanges {
   getInitials(name: string): string {
     const parts = (name || 'U').trim().split(/\s+/);
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U';
+  }
+
+  private toMonthValue(year: number, month: number): string {
+    return `${year}-${String(month + 1).padStart(2, '0')}`;
   }
 }

@@ -58,6 +58,7 @@ const DASHBOARD_MENUS: Record<DashboardRole, DashboardMenuItem[]> = {
     { path: 'team', label: 'Team Members', icon: 'fa-user-group' },
     { path: 'approvals', label: 'Approvals', icon: 'fa-circle-check' },
     { path: 'calendar', label: 'Team Calendar', icon: 'fa-calendar-days' },
+    { path: 'history', label: 'My Leave History', icon: 'fa-clock-rotate-left' },
     { path: 'reports', label: 'Reports', icon: 'fa-chart-line' }
   ],
   EMPLOYEE: [
@@ -367,7 +368,28 @@ function getManagerView(user: LoginResponse, pageId: DashboardPageId): Dashboard
     settings: buildUnavailableView('Settings', 'This section belongs to the admin workspace.'),
     profile: buildUnavailableView('My Profile', 'This section belongs to the employee workspace.'),
     requests: buildUnavailableView('Leave Requests', 'This section belongs to the employee workspace.'),
-    history: buildUnavailableView('History', 'This section belongs to the employee workspace.')
+    history: {
+      eyebrow: 'My Leave History',
+      title: 'Your leave records',
+      description: 'Review all your personal leave requests, their status, and approval history.',
+      metrics: [
+        { label: 'History view', value: 'Personal records', note: 'Your own leave submissions' },
+        { label: 'Manager', value: user.username, note: 'Viewing your own leave history' },
+        { label: 'Use case', value: 'Personal planning', note: 'Track your leave usage and patterns' }
+      ],
+      focusTitle: 'History review',
+      focusItems: [
+        'Review your approved and pending leave to plan upcoming time off.',
+        'Check rejection reasons to improve future leave requests.',
+        'Use your history to stay aware of remaining leave balance.'
+      ],
+      workTitle: 'History actions',
+      workItems: [
+        { label: 'Past approvals', detail: 'See which requests were approved and when.', status: 'Visible' },
+        { label: 'Pending review', detail: 'Track requests still awaiting a decision.', status: 'Monitor' },
+        { label: 'Future planning', detail: 'Use past patterns to plan upcoming leave.', status: 'Recommended' }
+      ]
+    }
   };
 
   return views[pageId];

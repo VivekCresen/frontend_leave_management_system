@@ -10,7 +10,7 @@ import {
 import { DashboardUserTableComponent } from '../components/dashboard-user-table.component';
 import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
 import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../services/auth.service';
-import { LeaveType, LeaveTypeSavePayload } from '../../services/leave.service';
+import { LeaveType, LeaveTypeSavePayload, Holiday, CreateHolidayPayload } from '../../services/leave.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -43,6 +43,8 @@ export class AdminDashboardComponent implements OnChanges {
   @Input() lastLeaveTypeCreatedAt = 0;
   @Input() filterRole = '';
   @Input() filterStatus = '';
+  @Input() holidays: Holiday[] = [];
+  @Input() isHolidaysLoading = false;
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
@@ -53,13 +55,22 @@ export class AdminDashboardComponent implements OnChanges {
   @Output() leaveTypeDeleteRequested = new EventEmitter<LeaveType>();
   @Output() leaveApproveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() leaveRejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
+  @Output() holidayCreateRequested = new EventEmitter<CreateHolidayPayload>();
+  @Output() holidayUpdateRequested = new EventEmitter<{ id: number; payload: CreateHolidayPayload }>();
+  @Output() holidayDeleteRequested = new EventEmitter<number>();
 
-  leaveTab: 'records' | 'types' = 'records';
+  leaveTab: 'records' | 'types' | 'holidays' = 'records';
   isLeaveTypeModalOpen = false;
   editingLeaveType: LeaveType | null = null;
   leaveTypeSubmitted = false;
   leaveUniqueNameTouched = false;
   leaveTypeModel = this.createLeaveTypeModel();
+
+  // Holiday form state
+  isHolidayModalOpen = false;
+  editingHoliday: Holiday | null = null;
+  holidaySubmitted = false;
+  holidayModel = this.createHolidayModel();
 
   get stats(): DashboardStatCard[] {
     return [
@@ -133,7 +144,7 @@ export class AdminDashboardComponent implements OnChanges {
     }
   }
 
-  selectLeaveTab(tab: 'records' | 'types'): void {
+  selectLeaveTab(tab: 'records' | 'types' | 'holidays'): void {
     this.leaveTab = tab;
   }
 
@@ -267,6 +278,51 @@ export class AdminDashboardComponent implements OnChanges {
 
   isLeaveTypeFieldInvalid(control: NgModel | null, field: 'leaveName' | 'leaveUniqueName' | 'maxDays'): boolean {
     return this.getLeaveTypeControlError(control, field) !== null;
+  }
+
+  get isHolidaysTabActive(): boolean {
+    return this.leaveTab === 'holidays';
+  }
+
+  openCreateHolidayModal(): void {
+    this.editingHoliday = null;
+    this.holidaySubmitted = false;
+    this.holidayModel = this.createHolidayModel();
+    this.isHolidayModalOpen = true;
+  }
+
+  openEditHolidayModal(h: Holiday): void {
+    this.editingHoliday = h;
+    this.holidaySubmitted = false;
+    this.holidayModel = { name: h.name, date: h.date, description: h.description ?? '' };
+    this.isHolidayModalOpen = true;
+  }
+
+  closeHolidayModal(): void {
+    this.isHolidayModalOpen = false;
+    this.editingHoliday = null;
+    this.holidayModel = this.createHolidayModel();
+  }
+
+  submitHoliday(form: NgForm): void {
+    this.holidaySubmitted = true;
+    if (form.invalid) return;
+    const payload: CreateHolidayPayload = {
+      name: this.holidayModel.name.trim(),
+      date: this.holidayModel.date,
+      description: this.holidayModel.description.trim(),
+      createdBy: ''
+    };
+    if (this.editingHoliday) {
+      this.holidayUpdateRequested.emit({ id: this.editingHoliday.id, payload });
+    } else {
+      this.holidayCreateRequested.emit(payload);
+    }
+    this.closeHolidayModal();
+  }
+
+  private createHolidayModel() {
+    return { name: '', date: '', description: '' };
   }
 
   private normalizeLeaveTypeModel(): void {

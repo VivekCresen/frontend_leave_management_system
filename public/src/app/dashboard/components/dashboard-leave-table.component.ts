@@ -30,6 +30,7 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 export type AdminLeaveTableRow = {
   id: number;
   userId: number;
+  leaveTypeId: number | null;
   fullName: string;
   emailId: string;
   role: string;
@@ -43,6 +44,10 @@ export type AdminLeaveTableRow = {
   status: string;
   approvedBy: string | null;
   rejectionReason: string | null;
+  halfDay: boolean;
+  halfDaySession: string | null;
+  notifyUserIds: number[];
+  editable: boolean;
 };
 
 const leaveGridTheme = themeQuartz.withParams({
@@ -90,7 +95,6 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   @Output() approveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() rejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
 
-  // Legacy table state
   searchTerm = '';
   selectedRole = 'ALL';
   selectedLeaveType = 'ALL';
@@ -144,7 +148,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
           data ? `<div class="ag-date-cell">
             <strong>${this.fmtDate(data.fromDate)}</strong>
             <span>to ${this.fmtDate(data.toDate)}</span>
-            <small>${data.durationDays} day${data.durationDays !== 1 ? 's' : ''}</small>
+            <small>${data.halfDay ? '½ day — ' + (data.halfDaySession === 'MORNING' ? 'Morning' : 'Afternoon') : data.durationDays + ' day' + (data.durationDays !== 1 ? 's' : '')}</small>
           </div>` : ''
       },
       {

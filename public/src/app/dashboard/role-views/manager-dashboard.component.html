@@ -51,18 +51,7 @@
       <div class="management-toolbar">
         <div>
           <h3>Leave approvals</h3>
-          <p class="body-copy">Review and action team leave requests, or submit your own.</p>
-        </div>
-        <div class="toolbar-actions">
-          <div class="leave-count-pill">{{ managerLeaves.length }} total</div>
-          <button
-            *ngIf="!isLeaveFormOpen"
-            type="button"
-            class="primary-toolbar-button"
-            (click)="openLeaveFormRequested.emit()">
-            <i class="fas fa-plus"></i>
-            <span>New request</span>
-          </button>
+          <p class="body-copy">Review and action team leave requests.</p>
         </div>
       </div>
 
@@ -124,6 +113,9 @@
             [class.selected]="selectedDay?.date?.getTime() === day.date.getTime()"
             (click)="selectDay(day)">
             <span class="cal-day-num">{{ day.date | date:'d' }}</span>
+            <span *ngIf="day.holidays.length > 0" class="cal-holiday-label" [title]="day.holidays[0].name">
+              🎉 {{ day.holidays[0].name }}
+            </span>
             <div class="cal-dots">
               <ng-container *ngFor="let leave of day.leaves.slice(0, 3)">
                 <span class="cal-dot" [class.own-dot]="leave.isOwn" [class.team-dot]="!leave.isOwn"></span>
@@ -163,6 +155,36 @@
         </div>
       </article>
 
+    </section>
+
+    <!-- HISTORY (Manager's own leave history) -->
+    <section *ngSwitchCase="'history'" class="management-grid">
+      <div class="management-toolbar">
+        <div>
+          <h3>My leave history</h3>
+          <p class="body-copy">Your personal leave requests and their current status.</p>
+        </div>
+        <div class="toolbar-actions">
+          <button
+            *ngIf="!isLeaveFormOpen"
+            type="button"
+            class="primary-toolbar-button"
+            (click)="openLeaveFormRequested.emit()">
+            <i class="fas fa-plus"></i>
+            <span>New request</span>
+          </button>
+        </div>
+      </div>
+
+      <app-dashboard-history-table
+        [leaves]="myLeaves"
+        [leaveTypes]="leaveTypes"
+        title="My leave requests"
+        description="All leave requests you have submitted."
+        [showRequestActions]="true"
+        (editRequested)="editLeaveRequested.emit($event)"
+        (deleteRequested)="deleteLeaveRequested.emit($event)">
+      </app-dashboard-history-table>
     </section>
 
     <!-- REPORTS -->

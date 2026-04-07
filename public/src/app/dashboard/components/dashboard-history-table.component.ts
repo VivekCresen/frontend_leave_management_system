@@ -3,9 +3,11 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  EventEmitter,
   inject,
   Input,
   OnChanges,
+  Output,
   PLATFORM_ID,
   SimpleChanges
 } from '@angular/core';
@@ -62,7 +64,7 @@ const historyTheme = themeQuartz.withParams({
       <div class="balance-info">
         <span class="balance-name">{{ b.name }}</span>
         <span class="balance-remaining" [class.balance-zero]="b.remaining === 0" [class.balance-warn-text]="b.pct >= 75 && b.pct < 100">
-          {{ b.remaining }} day{{ b.remaining !== 1 ? 's' : '' }} left
+          {{ b.remaining % 1 === 0 ? b.remaining : b.remaining.toFixed(1) }} day{{ b.remaining !== 1 ? 's' : '' }} left
         </span>
       </div>
     </div>
@@ -74,7 +76,7 @@ const historyTheme = themeQuartz.withParams({
       </div>
     </div>
     <div class="balance-bottom">
-      <span>{{ b.usedDays }} used</span>
+      <span>{{ b.usedDays % 1 === 0 ? b.usedDays : b.usedDays.toFixed(1) }} used</span>
       <span>{{ b.maxDays }} total</span>
     </div>
   </div>
@@ -260,6 +262,34 @@ const historyTheme = themeQuartz.withParams({
       padding: 0 16px;
       min-height: 44px;
     }
+    :host ::ng-deep .history-ag-grid .ag-actions-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    :host ::ng-deep .history-ag-grid .ag-action-button {
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    :host ::ng-deep .history-ag-grid .ag-action-button:hover {
+      background: rgba(248, 250, 252, 0.95);
+    }
+    :host ::ng-deep .history-ag-grid .ag-action-button.delete {
+      color: #b42318;
+      border-color: rgba(180, 35, 24, 0.22);
+    }
+    :host ::ng-deep .history-ag-grid .ag-action-muted {
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
     @media (max-width: 720px) {
       .table-card { padding: 18px; }
       .table-heading { flex-direction: column; }
@@ -386,6 +416,10 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   @Input() leaveTypes: LeaveType[] = [];
   @Input() title = 'All leave requests';
   @Input() description = 'Your complete leave request history.';
+  @Input() showRequestActions = false;
+
+  @Output() editRequested = new EventEmitter<AdminLeaveTableRow>();
+  @Output() deleteRequested = new EventEmitter<AdminLeaveTableRow>();
 
   gridMounted = false;
   readonly agTheme = historyTheme;
@@ -397,7 +431,7 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
         .reduce((sum, l) => sum + (l.durationDays ?? 0), 0);
       const remaining = Math.max(0, lt.maxDays - usedDays);
       const pct = lt.maxDays > 0 ? Math.min(100, Math.round((usedDays / lt.maxDays) * 100)) : 0;
-      return { name: lt.leaveName, maxDays: lt.maxDays, usedDays, remaining, pct };
+      return { name: lt.leaveName, maxDays: lt.maxDays, usedDays: Math.round(usedDays * 2) / 2, remaining: Math.round(remaining * 2) / 2, pct };
     });
   }
 
@@ -408,63 +442,110 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
     suppressMovable: true
   };
 
-  readonly columnDefs: ColDef<AdminLeaveTableRow>[] = [
-    {
-      headerName: 'Leave Name',
-      field: 'leaveType',
-      minWidth: 150,
-      flex: 1.5,
-      cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) =>
-        `<div class="ag-leave-name-cell"><strong>${this.esc(value) || 'Unassigned'}</strong></div>`
-    },
-    {
-      headerName: 'Date Range',
-      field: 'fromDate',
-      minWidth: 200,
-      flex: 1.8,
-      cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) =>
-        data
-          ? `<div class="ag-date-cell">
-               <strong>${this.fmtDate(data.fromDate)}</strong>
-               <span>to ${this.fmtDate(data.toDate)}</span>
-             </div>`
-          : ''
-    },
-    {
-      headerName: 'Days',
-      field: 'durationDays',
-      minWidth: 90,
-      flex: 0.7,
-      cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) =>
-        `<span class="ag-duration-pill">${value ?? 1} day${value !== 1 ? 's' : ''}</span>`
-    },
-    {
-      headerName: 'Reason',
-      field: 'reason',
-      minWidth: 220,
-      flex: 2,
-      valueFormatter: ({ value }: ValueFormatterParams) => value?.trim() || '—'
-    },
-    {
-      headerName: 'Status',
-      field: 'status',
-      minWidth: 130,
-      flex: 1,
-      cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) => {
-        const cls = (value ?? '').toLowerCase();
-        const icons: Record<string, string> = {
-          pending: 'fa-clock',
-          approved: 'fa-circle-check',
-          rejected: 'fa-circle-xmark'
-        };
-        const icon = icons[cls] ?? 'fa-circle';
-        return `<span class="ag-status-badge ag-status-${cls}">
-                  <i class="fas ${icon}"></i>
-                  ${this.titleCase(value)}
-                </span>`;
+  get columnDefs(): ColDef<AdminLeaveTableRow>[] {
+    return [
+      {
+        headerName: 'Leave Name',
+        field: 'leaveType',
+        minWidth: 150,
+        flex: 1.5,
+        cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) =>
+          `<div class="ag-leave-name-cell"><strong>${this.esc(value) || 'Unassigned'}</strong></div>`
+      },
+      {
+        headerName: 'Date Range',
+        field: 'fromDate',
+        minWidth: 200,
+        flex: 1.8,
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) =>
+          data
+            ? `<div class="ag-date-cell">
+                 <strong>${this.fmtDate(data.fromDate)}</strong>
+                 <span>${data.halfDay ? (data.halfDaySession === 'MORNING' ? '🌅 Morning session' : '🌇 Afternoon session') : 'to ' + this.fmtDate(data.toDate)}</span>
+               </div>`
+            : ''
+      },
+      {
+        headerName: 'Days',
+        field: 'durationDays',
+        minWidth: 90,
+        flex: 0.7,
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) return '';
+          if (data.halfDay) {
+            return `<span class="ag-duration-pill">0.5 day</span>`;
+          }
+          const v = data.durationDays ?? 1;
+          return `<span class="ag-duration-pill">${v} day${v !== 1 ? 's' : ''}</span>`;
+        }
+      },
+      {
+        headerName: 'Reason',
+        field: 'reason',
+        minWidth: 220,
+        flex: 2,
+        valueFormatter: ({ value }: ValueFormatterParams) => value?.trim() || '—'
+      },
+      {
+        headerName: 'Status',
+        field: 'status',
+        minWidth: 130,
+        flex: 1,
+        cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) => {
+          const cls = (value ?? '').toLowerCase();
+          const icons: Record<string, string> = {
+            pending: 'fa-clock',
+            approved: 'fa-circle-check',
+            rejected: 'fa-circle-xmark'
+          };
+          const icon = icons[cls] ?? 'fa-circle';
+          return `<span class="ag-status-badge ag-status-${cls}">
+                    <i class="fas ${icon}"></i>
+                    ${this.titleCase(value)}
+                  </span>`;
+        }
+      },
+      {
+        headerName: 'Actions',
+        minWidth: 180,
+        flex: 1.2,
+        hide: !this.showRequestActions,
+        sortable: false,
+        resizable: false,
+        suppressHeaderMenuButton: true,
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) {
+            return '';
+          }
+
+          if (!data.editable || data.status !== 'PENDING') {
+            return `<span class="ag-action-muted">No actions</span>`;
+          }
+
+          return `<div class="ag-actions-cell">
+            <button type="button" class="ag-action-button" data-action="edit">Edit</button>
+            <button type="button" class="ag-action-button delete" data-action="delete">Delete</button>
+          </div>`;
+        },
+        onCellClicked: ({ data, event }) => {
+          if (!data) {
+            return;
+          }
+
+          const target = event?.target as HTMLElement | null;
+          const action = target?.closest('[data-action]')?.getAttribute('data-action');
+
+          if (action === 'edit') {
+            this.editRequested.emit(data);
+          }
+
+          if (action === 'delete') {
+            this.deleteRequested.emit(data);
+          }
+        }
       }
-    }
-  ];
+    ];
+  }
 
   ngAfterViewInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -475,6 +556,10 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['showRequestActions'] && this.gridApi) {
+      this.gridApi.setGridOption('columnDefs', this.columnDefs);
+    }
+
     if (changes['leaves'] && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.leaves);
     }

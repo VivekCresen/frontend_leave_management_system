@@ -11,7 +11,7 @@ import {
   UserManagementPayload,
   UserDashboardResponse
 } from '../services/auth.service';
-import { CreateLeavePayload, LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload, UpdateLeaveStatusPayload } from '../services/leave.service';
+import { CreateLeavePayload, LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload, UpdateLeaveStatusPayload, NotifyUser, Holiday, CreateHolidayPayload } from '../services/leave.service';
 import { ToastService } from '../services/toast.service';
 import {
   DashboardPageId,
@@ -75,8 +75,13 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   isLeaveFormOpen = false;
   isLeaveSaving = false;
   leaveFieldErrors: Record<string, string> = {};
+  editingLeave: AdminLeaveTableRow | null = null;
   managerLeaves: AdminLeaveTableRow[] = [];
   myLeaves: AdminLeaveTableRow[] = [];
+  notifyUsers: NotifyUser[] = [];
+  notifyUsersLoading = false;
+  holidays: Holiday[] = [];
+  isHolidaysLoading = false;
 
   constructor(
     authService: AuthApiService,
@@ -333,15 +338,23 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     });
   }
 
-  openLeaveForm(): void {
+  openLeaveForm(leave: AdminLeaveTableRow | null = null): void {
     this.leaveFieldErrors = {};
+    this.editingLeave = leave;
+    this.notifyUsers = [];
+    this.notifyUsersLoading = true;
     this.isLeaveFormOpen = true;
+    this.leaveService.getNotifyUsers(this.user.username).subscribe({
+      next: (users) => { this.notifyUsers = users; this.notifyUsersLoading = false; },
+      error: () => { this.notifyUsers = []; this.notifyUsersLoading = false; }
+    });
   }
 
   cancelLeaveForm(): void {
     this.isLeaveFormOpen = false;
     this.isLeaveSaving = false;
     this.leaveFieldErrors = {};
+    this.editingLeave = null;
   }
 
   handleApproveLeave(leave: AdminLeaveTableRow): void {
@@ -380,6 +393,11 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   handleCreateLeave(event: LeaveFormSubmitEvent): void {
+    if (this.editingLeave) {
+      this.handleUpdateLeave(event);
+      return;
+    }
+
     this.isLeaveSaving = true;
     this.leaveFieldErrors = {};
 
@@ -392,6 +410,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       next: () => {
         this.isLeaveSaving = false;
         this.isLeaveFormOpen = false;
+        this.editingLeave = null;
         this.toastService.success('Leave request submitted successfully');
         this.loadDashboard();
       },
@@ -400,6 +419,74 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.leaveFieldErrors = this.mapLeaveTypeErrors(err.error);
         this.toastService.error(
           this.buildLeaveTypeErrorMessage(err.error, 'Unable to submit leave request right now.')
+        );
+      }
+    });
+  }
+
+  handleEditLeave(leave: AdminLeaveTableRow): void {
+    if (!leave.editable || leave.status !== 'PENDING') {
+      this.toastService.warn('Only pending leave requests can be edited.');
+      return;
+    }
+
+    this.openLeaveForm(leave);
+  }
+
+  handleDeleteLeave(leave: AdminLeaveTableRow): void {
+    if (!leave.editable || leave.status !== 'PENDING') {
+      this.toastService.warn('Only pending leave requests can be deleted.');
+      return;
+    }
+
+    if (!confirm(`Delete the ${leave.leaveType} leave request from ${leave.fromDate} to ${leave.toDate}?`)) {
+      return;
+    }
+
+    this.leaveService.deleteLeave(leave.id).subscribe({
+      next: () => {
+        if (this.editingLeave?.id === leave.id) {
+          this.cancelLeaveForm();
+        }
+        this.toastService.success('Leave request deleted successfully');
+        this.loadDashboard();
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to delete leave request right now.'));
+      }
+    });
+  }
+
+  private handleUpdateLeave(event: LeaveFormSubmitEvent): void {
+    if (!this.editingLeave) {
+      return;
+    }
+
+    this.isLeaveSaving = true;
+    this.leaveFieldErrors = {};
+
+    this.leaveService.updateLeave(this.editingLeave.id, {
+      leaveTypeId: event.leaveTypeId,
+      fromDate: event.fromDate,
+      toDate: event.toDate,
+      reason: event.reason,
+      comments: event.comments,
+      halfDay: event.halfDay,
+      halfDaySession: event.halfDaySession,
+      notifyUserIds: event.notifyUserIds
+    }).subscribe({
+      next: () => {
+        this.isLeaveSaving = false;
+        this.isLeaveFormOpen = false;
+        this.editingLeave = null;
+        this.toastService.success('Leave request updated successfully');
+        this.loadDashboard();
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isLeaveSaving = false;
+        this.leaveFieldErrors = this.mapLeaveTypeErrors(err.error);
+        this.toastService.error(
+          this.buildLeaveTypeErrorMessage(err.error, 'Unable to update leave request right now.')
         );
       }
     });
@@ -516,9 +603,15 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         }
         if (this.normalizedRole === 'EMPLOYEE') {
           this.loadMyLeaves(response);
+          // Pre-load notify users so the requests page shows them immediately
+          this.leaveService.getNotifyUsers(this.user.username).subscribe({
+            next: (users) => { this.notifyUsers = users; },
+            error: () => { this.notifyUsers = []; }
+          });
         }
         // Load leave types for all roles (needed for create leave form)
         this.loadLeaveTypes();
+        this.loadHolidays();
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
@@ -545,6 +638,36 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     });
   }
 
+  private loadHolidays(): void {
+    this.isHolidaysLoading = true;
+    this.leaveService.getHolidays().subscribe({
+      next: (h) => { this.holidays = h; this.isHolidaysLoading = false; },
+      error: () => { this.holidays = []; this.isHolidaysLoading = false; }
+    });
+  }
+
+  handleCreateHoliday(payload: CreateHolidayPayload): void {
+    this.leaveService.createHoliday({ ...payload, createdBy: this.user.username }).subscribe({
+      next: (h) => { this.holidays = [...this.holidays, h].sort((a, b) => a.date.localeCompare(b.date)); this.toastService.success('Holiday created'); },
+      error: (err: { error?: LeaveApiErrorResponse }) => this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to create holiday.'))
+    });
+  }
+
+  handleUpdateHoliday(event: { id: number; payload: CreateHolidayPayload }): void {
+    this.leaveService.updateHoliday(event.id, event.payload).subscribe({
+      next: (h) => { this.holidays = this.holidays.map((x) => x.id === h.id ? h : x); this.toastService.success('Holiday updated'); },
+      error: (err: { error?: LeaveApiErrorResponse }) => this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to update holiday.'))
+    });
+  }
+
+  handleDeleteHoliday(id: number): void {
+    if (!confirm('Delete this holiday?')) return;
+    this.leaveService.deleteHoliday(id).subscribe({
+      next: () => { this.holidays = this.holidays.filter((h) => h.id !== id); this.toastService.success('Holiday deleted'); },
+      error: () => this.toastService.error('Unable to delete holiday.')
+    });
+  }
+
   private loadManagerLeaves(response: UserDashboardResponse): void {
     this.isLeavesLoading = true;
 
@@ -555,6 +678,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           .map((leave) => ({
             id: leave.id,
             userId: leave.userId,
+            leaveTypeId: leave.leaveTypeId,
             fullName: leave.fullName?.trim() || 'Unknown user',
             emailId: leave.emailId?.trim() || 'No email',
             role: response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE',
@@ -564,10 +688,14 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             reason: leave.reason?.trim() || '',
             comments: leave.comments?.trim() || '',
             createdAt: leave.createdAt,
-            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate),
+            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate, leave.halfDay, leave.halfDaySession),
             status: leave.status ?? 'PENDING',
             approvedBy: leave.approvedBy ?? null,
-            rejectionReason: leave.rejectionReason ?? null
+            rejectionReason: leave.rejectionReason ?? null,
+            halfDay: leave.halfDay ?? false,
+            halfDaySession: leave.halfDaySession ?? null,
+            notifyUserIds: leave.notifyUserIds ?? [],
+            editable: leave.editable ?? false
           } satisfies AdminLeaveTableRow))
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
@@ -588,6 +716,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           .map((leave) => ({
             id: leave.id,
             userId: leave.userId,
+            leaveTypeId: leave.leaveTypeId,
             fullName: leave.fullName?.trim() || response.actor?.fullName || 'Me',
             emailId: leave.emailId?.trim() || response.actor?.email || '',
             role: 'EMPLOYEE',
@@ -597,10 +726,14 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             reason: leave.reason?.trim() || '',
             comments: leave.comments?.trim() || '',
             createdAt: leave.createdAt,
-            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate),
+            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate, leave.halfDay, leave.halfDaySession),
             status: leave.status ?? 'PENDING',
             approvedBy: leave.approvedBy ?? null,
-            rejectionReason: leave.rejectionReason ?? null
+            rejectionReason: leave.rejectionReason ?? null,
+            halfDay: leave.halfDay ?? false,
+            halfDaySession: leave.halfDaySession ?? null,
+            notifyUserIds: leave.notifyUserIds ?? [],
+            editable: leave.editable ?? false
           } satisfies AdminLeaveTableRow))
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
@@ -645,6 +778,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             return {
               id: leave.id,
               userId: leave.userId,
+              leaveTypeId: leave.leaveTypeId,
               fullName: leave.fullName?.trim() || 'Unknown user',
               emailId: leave.emailId?.trim() || 'No email',
               role,
@@ -654,10 +788,14 @@ export class DashboardPageComponent implements OnInit, OnChanges {
               reason: leave.reason?.trim() || '',
               comments: leave.comments?.trim() || '',
               createdAt: leave.createdAt,
-              durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate),
+              durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate, leave.halfDay, leave.halfDaySession),
               status: leave.status ?? 'PENDING',
               approvedBy: leave.approvedBy ?? null,
-              rejectionReason: leave.rejectionReason ?? null
+              rejectionReason: leave.rejectionReason ?? null,
+              halfDay: leave.halfDay ?? false,
+              halfDaySession: (leave.halfDaySession ?? null) as string | null,
+              notifyUserIds: leave.notifyUserIds ?? [],
+              editable: leave.editable ?? false
             } satisfies AdminLeaveTableRow;
           })
           .filter((leave): leave is AdminLeaveTableRow => leave !== null)
@@ -786,7 +924,9 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     return error?.details?.[0] || fallback;
   }
 
-  private calculateDurationDays(fromDate: string, toDate: string): number {
+  private calculateDurationDays(fromDate: string, toDate: string, halfDay = false, halfDaySession: string | null = null): number {
+    // treat as half day if flag is set OR if session is present (fallback for old records)
+    if (halfDay || !!halfDaySession) return 0.5;
     const start = new Date(fromDate);
     const end = new Date(toDate);
     const millisecondsPerDay = 24 * 60 * 60 * 1000;
