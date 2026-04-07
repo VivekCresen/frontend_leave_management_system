@@ -4,7 +4,7 @@ import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
 import { LoginResponse, UserDashboardResponse } from '../../services/auth.service';
 import { LeaveFormSubmitEvent } from '../components/dashboard-leave-form.component';
-import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
+import { AdminLeaveTableRow } from '../components/dashboard-leave-table.component';
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType } from '../../services/leave.service';
 
@@ -15,7 +15,6 @@ import { LeaveType } from '../../services/leave.service';
     CommonModule,
     DatePipe,
     DashboardStatCardsComponent,
-    DashboardLeaveTableComponent,
     DashboardHistoryTableComponent
   ],
   templateUrl: './employee-dashboard.component.html',

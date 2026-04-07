@@ -146,9 +146,7 @@
             emptyTitle="No manager or employee leave records"
             emptyMessage="Once staff submit leave requests, they will appear here."
             [initialRole]="filterRole"
-            [showActions]="true"
-            (approveRequested)="leaveApproveRequested.emit($event)"
-            (rejectRequested)="leaveRejectRequested.emit($event)"
+            [compactView]="true"
           ></app-dashboard-leave-table>
         </div>
 

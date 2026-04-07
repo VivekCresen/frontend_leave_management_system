@@ -600,3 +600,139 @@
   background: linear-gradient(135deg, #b42318, #991b1b);
   color: #fff;
 }
+
+/* ── AG Grid shell ── */
+.ag-shell {
+  margin-top: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.leave-ag-grid { width: 100%; }
+
+:host ::ng-deep .leave-ag-grid .ag-header-cell-label {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-cell {
+  display: flex;
+  align-items: center;
+  color: #0f172a;
+}
+
+/* Employee cell */
+:host ::ng-deep .leave-ag-grid .ag-employee-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 0;
+  line-height: 1.4;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-employee-cell strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-employee-cell span {
+  color: #0f8b8d;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* Leave type pill */
+:host ::ng-deep .leave-ag-grid .ag-type-pill {
+  display: inline-flex;
+  align-items: center;
+  color: #0f766e;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Date cell */
+:host ::ng-deep .leave-ag-grid .ag-date-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 0;
+  line-height: 1.4;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-date-cell strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-date-cell span {
+  color: #0f8b8d;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-date-cell small {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+/* Reason cell */
+:host ::ng-deep .leave-ag-grid .ag-reason-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 0;
+  line-height: 1.4;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-reason-cell span {
+  color: #0f172a;
+  font-size: 0.92rem;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-reason-cell small {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* Status badge */
+:host ::ng-deep .leave-ag-grid .ag-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-status-pending {
+  color: #92400e;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-status-approved {
+  color: #0f766e;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-status-rejected {
+  color: #b42318;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-paging-panel {
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  background: rgba(248, 250, 252, 0.7);
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 500;
+  padding: 0 16px;
+  min-height: 44px;
+}

@@ -7,19 +7,20 @@
     <span class="count-pill">{{ visibleCountLabel }}</span>
   </div>
 
+  <!-- Filters -->
   <div class="table-tools">
     <label class="tool-search">
       <i class="fas fa-magnifying-glass"></i>
       <input
         [(ngModel)]="searchTerm"
-        (ngModelChange)="onFilterChange()"
+        (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()"
         type="text"
         placeholder="Search by name, email, leave type, or reason" />
     </label>
 
     <label class="tool-select">
       <span>Role</span>
-      <select [(ngModel)]="selectedRole" (ngModelChange)="onFilterChange()">
+      <select [(ngModel)]="selectedRole" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
         <option value="ALL">All roles</option>
         <option *ngFor="let role of roleOptions" [ngValue]="role">{{ role | titlecase }}</option>
       </select>
@@ -27,7 +28,7 @@
 
     <label class="tool-select">
       <span>Leave Type</span>
-      <select [(ngModel)]="selectedLeaveType" (ngModelChange)="onFilterChange()">
+      <select [(ngModel)]="selectedLeaveType" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
         <option value="ALL">All leave types</option>
         <option *ngFor="let leaveType of leaveTypeOptions" [ngValue]="leaveType">{{ leaveType }}</option>
       </select>
@@ -35,135 +36,148 @@
 
     <label class="tool-select">
       <span>Status</span>
-      <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()">
-        <option value="ALL">All statuses</option>
-        <option *ngFor="let s of statusOptions" [ngValue]="s">{{ s | titlecase }}</option>
+      <select [(ngModel)]="selectedStatus" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
+        <option value="PENDING">Pending</option>
       </select>
     </label>
 
     <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">Reset</button>
   </div>
 
-  <div *ngIf="displayedLeaves.length === 0" class="empty-state">
-    <h4>{{ resolvedEmptyTitle }}</h4>
-    <p>{{ resolvedEmptyMessage }}</p>
-  </div>
+  <!-- ── AG Grid (compactView) ── -->
+  <ng-container *ngIf="compactView">
+    <div *ngIf="agFilteredCount === 0" class="empty-state">
+      <h4>{{ resolvedEmptyTitle }}</h4>
+      <p>{{ resolvedEmptyMessage }}</p>
+    </div>
+    <div *ngIf="agFilteredCount > 0 && gridMounted" class="ag-shell">
+      <ag-grid-angular
+        class="leave-ag-grid"
+        [theme]="agTheme"
+        [rowData]="agRowData"
+        [columnDefs]="columnDefs"
+        [defaultColDef]="defaultColDef"
+        [pagination]="true"
+        [paginationPageSize]="10"
+        [paginationPageSizeSelector]="[10, 20, 50]"
+        [suppressCellFocus]="true"
+        [domLayout]="'autoHeight'"
+        (gridReady)="onGridReady($event)">
+      </ag-grid-angular>
+    </div>
+  </ng-container>
 
-  <div *ngIf="displayedLeaves.length > 0" class="table-shell">
-    <div class="table-inner">
-      <div class="table-row table-head" [class.has-actions]="showActions">
-        <span class="sortable-header" (click)="toggleSort('fullName')">
-          Employee
-          <i class="fas" [class.fa-sort]="sortKey !== 'fullName'" [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
-        </span>
-        <span class="sortable-header" (click)="toggleSort('role')">
-          Role
-          <i class="fas" [class.fa-sort]="sortKey !== 'role'" [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
-        </span>
-        <span class="sortable-header" (click)="toggleSort('leaveType')">
-          Leave Type
-          <i class="fas" [class.fa-sort]="sortKey !== 'leaveType'" [class.fa-sort-up]="sortKey === 'leaveType' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'leaveType' && sortDirection === 'desc'"></i>
-        </span>
-        <span class="sortable-header" (click)="toggleSort('fromDate')">
-          Date Range
-          <i class="fas" [class.fa-sort]="sortKey !== 'fromDate'" [class.fa-sort-up]="sortKey === 'fromDate' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fromDate' && sortDirection === 'desc'"></i>
-        </span>
-        <span class="sortable-header" (click)="toggleSort('durationDays')">
-          Days
-          <i class="fas" [class.fa-sort]="sortKey !== 'durationDays'" [class.fa-sort-up]="sortKey === 'durationDays' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'durationDays' && sortDirection === 'desc'"></i>
-        </span>
-        <span>Reason / Notes</span>
-        <span class="sortable-header" (click)="toggleSort('status')">
-          Status
-          <i class="fas" [class.fa-sort]="sortKey !== 'status'" [class.fa-sort-up]="sortKey === 'status' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'status' && sortDirection === 'desc'"></i>
-        </span>
-        <span *ngIf="showActions">Actions</span>
-      </div>
+  <!-- ── Legacy table (non-compactView) ── -->
+  <ng-container *ngIf="!compactView">
+    <div *ngIf="displayedLeaves.length === 0" class="empty-state">
+      <h4>{{ resolvedEmptyTitle }}</h4>
+      <p>{{ resolvedEmptyMessage }}</p>
+    </div>
 
-      <div class="table-body">
-        <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions">
-          <div class="user-cell">
-            <strong>{{ leave.fullName }}</strong>
-            <span>{{ leave.emailId }}</span>
-            <small>ID #{{ leave.userId }}</small>
-          </div>
-          <span class="role-pill" [class.manager]="leave.role === 'MANAGER'">{{ leave.role | titlecase }}</span>
-          <div class="type-cell">
-            <strong>{{ leave.leaveType }}</strong>
-          </div>
-          <div class="date-cell">
-            <strong>{{ leave.fromDate | date: 'dd MMM yyyy' }}</strong>
-            <span>to {{ leave.toDate | date: 'dd MMM yyyy' }}</span>
-            <small>Created {{ leave.createdAt ? (leave.createdAt | date: 'dd MMM yyyy') : 'N/A' }}</small>
-          </div>
-          <span class="duration-pill">{{ leave.durationDays }} day{{ leave.durationDays === 1 ? '' : 's' }}</span>
-          <div class="reason-cell">
-            <strong>{{ leave.reason || 'No reason added' }}</strong>
-            <small>{{ leave.comments || 'No comments' }}</small>
-            <small *ngIf="leave.rejectionReason" class="rejection-note">
-              <i class="fas fa-circle-xmark"></i> {{ leave.rejectionReason }}
-            </small>
-          </div>
-          <div class="status-cell">
-            <span class="status-badge"
-              [class.status-pending]="leave.status === 'PENDING'"
-              [class.status-approved]="leave.status === 'APPROVED'"
-              [class.status-rejected]="leave.status === 'REJECTED'">
-              <i class="fas"
-                [class.fa-clock]="leave.status === 'PENDING'"
-                [class.fa-circle-check]="leave.status === 'APPROVED'"
-                [class.fa-circle-xmark]="leave.status === 'REJECTED'"></i>
-              {{ leave.status | titlecase }}
-            </span>
-            <small *ngIf="leave.approvedBy" class="approved-by-note">by {{ leave.approvedBy }}</small>
-          </div>
-          <div *ngIf="showActions" class="action-cell">
-            <button
-              *ngIf="leave.status === 'PENDING'"
-              type="button"
-              class="approve-btn"
-              (click)="approve(leave)"
-              title="Approve leave">
-              <i class="fas fa-check"></i>
-              Approve
-            </button>
-            <button
-              *ngIf="leave.status === 'PENDING'"
-              type="button"
-              class="reject-btn"
-              (click)="openRejectModal(leave)"
-              title="Reject leave">
-              <i class="fas fa-xmark"></i>
-              Reject
-            </button>
-            <span *ngIf="leave.status !== 'PENDING'" class="action-done">—</span>
+    <div *ngIf="displayedLeaves.length > 0" class="table-shell">
+      <div class="table-inner">
+        <div class="table-row table-head" [class.has-actions]="showActions">
+          <span class="sortable-header" (click)="toggleSort('fullName')">
+            Employee
+            <i class="fas" [class.fa-sort]="sortKey !== 'fullName'" [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('role')">
+            Role
+            <i class="fas" [class.fa-sort]="sortKey !== 'role'" [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('leaveType')">
+            Leave Type
+            <i class="fas" [class.fa-sort]="sortKey !== 'leaveType'" [class.fa-sort-up]="sortKey === 'leaveType' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'leaveType' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('fromDate')">
+            Date Range
+            <i class="fas" [class.fa-sort]="sortKey !== 'fromDate'" [class.fa-sort-up]="sortKey === 'fromDate' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fromDate' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('durationDays')">
+            Days
+            <i class="fas" [class.fa-sort]="sortKey !== 'durationDays'" [class.fa-sort-up]="sortKey === 'durationDays' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'durationDays' && sortDirection === 'desc'"></i>
+          </span>
+          <span>Reason / Notes</span>
+          <span class="sortable-header" (click)="toggleSort('status')">
+            Status
+            <i class="fas" [class.fa-sort]="sortKey !== 'status'" [class.fa-sort-up]="sortKey === 'status' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'status' && sortDirection === 'desc'"></i>
+          </span>
+          <span *ngIf="showActions">Actions</span>
+        </div>
+
+        <div class="table-body">
+          <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions">
+            <div class="user-cell">
+              <strong>{{ leave.fullName }}</strong>
+              <span>{{ leave.emailId }}</span>
+              <small>ID #{{ leave.userId }}</small>
+            </div>
+            <span class="role-pill" [class.manager]="leave.role === 'MANAGER'">{{ leave.role | titlecase }}</span>
+            <div class="type-cell">
+              <strong>{{ leave.leaveType }}</strong>
+            </div>
+            <div class="date-cell">
+              <strong>{{ leave.fromDate | date: 'dd MMM yyyy' }}</strong>
+              <span>to {{ leave.toDate | date: 'dd MMM yyyy' }}</span>
+              <small>Created {{ leave.createdAt ? (leave.createdAt | date: 'dd MMM yyyy') : 'N/A' }}</small>
+            </div>
+            <span class="duration-pill">{{ leave.durationDays }} day{{ leave.durationDays === 1 ? '' : 's' }}</span>
+            <div class="reason-cell">
+              <strong>{{ leave.reason || 'No reason added' }}</strong>
+              <small>{{ leave.comments || 'No comments' }}</small>
+              <small *ngIf="leave.rejectionReason" class="rejection-note">
+                <i class="fas fa-circle-xmark"></i> {{ leave.rejectionReason }}
+              </small>
+            </div>
+            <div class="status-cell">
+              <span class="status-badge"
+                [class.status-pending]="leave.status === 'PENDING'"
+                [class.status-approved]="leave.status === 'APPROVED'"
+                [class.status-rejected]="leave.status === 'REJECTED'">
+                <i class="fas"
+                  [class.fa-clock]="leave.status === 'PENDING'"
+                  [class.fa-circle-check]="leave.status === 'APPROVED'"
+                  [class.fa-circle-xmark]="leave.status === 'REJECTED'"></i>
+                {{ leave.status | titlecase }}
+              </span>
+              <small *ngIf="leave.approvedBy" class="approved-by-note">by {{ leave.approvedBy }}</small>
+            </div>
+            <div *ngIf="showActions" class="action-cell">
+              <button *ngIf="leave.status === 'PENDING'" type="button" class="approve-btn" (click)="approve(leave)" title="Approve leave">
+                <i class="fas fa-check"></i> Approve
+              </button>
+              <button *ngIf="leave.status === 'PENDING'" type="button" class="reject-btn" (click)="openRejectModal(leave)" title="Reject leave">
+                <i class="fas fa-xmark"></i> Reject
+              </button>
+              <span *ngIf="leave.status !== 'PENDING'" class="action-done">—</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div *ngIf="totalPages > 1" class="table-pagination">
-    <span class="pagination-info">Page {{ currentPage }} of {{ totalPages }} · {{ filteredCount }} records</span>
-    <div class="pagination-controls">
-      <button type="button" class="pagination-arrow" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Previous page">
-        <i class="fas fa-chevron-left"></i>
-      </button>
-      <div class="pagination-pages">
-        <button
-          *ngFor="let page of [].constructor(totalPages); let i = index"
-          type="button"
-          class="pagination-page"
-          [class.active]="currentPage === i + 1"
-          (click)="goToPage(i + 1)">
-          {{ i + 1 }}
+    <div *ngIf="totalPages > 1" class="table-pagination">
+      <span class="pagination-info">Page {{ currentPage }} of {{ totalPages }} · {{ filteredCount }} records</span>
+      <div class="pagination-controls">
+        <button type="button" class="pagination-arrow" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Previous page">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="pagination-pages">
+          <button
+            *ngFor="let page of [].constructor(totalPages); let i = index"
+            type="button"
+            class="pagination-page"
+            [class.active]="currentPage === i + 1"
+            (click)="goToPage(i + 1)">
+            {{ i + 1 }}
+          </button>
+        </div>
+        <button type="button" class="pagination-arrow" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" aria-label="Next page">
+          <i class="fas fa-chevron-right"></i>
         </button>
       </div>
-      <button type="button" class="pagination-arrow" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" aria-label="Next page">
-        <i class="fas fa-chevron-right"></i>
-      </button>
     </div>
-  </div>
+  </ng-container>
 </section>
 
 <!-- Rejection reason modal -->
