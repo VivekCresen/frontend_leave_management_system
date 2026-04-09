@@ -155,6 +155,7 @@
             emptyTitle="No manager or employee leave records"
             emptyMessage="Once staff submit leave requests, they will appear here."
             [initialRole]="filterRole"
+            [initialStatus]="filterStatus || 'ALL'"
             [compactView]="true"
           ></app-dashboard-leave-table>
         </div>

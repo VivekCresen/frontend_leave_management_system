@@ -127,7 +127,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0f8b8d, #155e75);
+  background: linear-gradient(135deg, #fb923c, #f59e0b);
   color: #fff;
   font-size: 0.88rem;
   font-weight: 800;
@@ -195,11 +195,11 @@
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 48px 16px 24px;
-  background: rgba(15, 23, 42, 0.34);
-  backdrop-filter: blur(10px);
+  padding: 24px 16px;
+  background: rgba(241, 245, 249, 0.72);
+  backdrop-filter: blur(6px);
   z-index: 30;
 }
 
@@ -218,19 +218,19 @@
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 48px 16px 24px;
-  background: rgba(15, 23, 42, 0.34);
-  backdrop-filter: blur(10px);
+  padding: 24px 12px;
+  background: rgba(241, 245, 249, 0.72);
+  backdrop-filter: blur(6px);
   z-index: 30;
 }
 
 .leave-modal-card {
-  width: min(680px, 100%);
-  max-height: calc(100vh - 72px);
+  width: min(620px, 100%);
+  max-height: calc(100vh - 28px);
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 24px;
   background: transparent;
   display: flex;
   flex-direction: column;

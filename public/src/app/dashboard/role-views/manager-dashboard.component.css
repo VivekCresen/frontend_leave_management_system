@@ -614,14 +614,17 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(15, 23, 42, 0.48);
-  backdrop-filter: blur(6px);
+  background: rgba(241, 245, 249, 0.72);
+  backdrop-filter: blur(4px);
 }
 
 .form-modal-card {
   width: min(760px, 100%);
   max-height: calc(100vh - 48px);
   overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .leave-form-wrapper {
