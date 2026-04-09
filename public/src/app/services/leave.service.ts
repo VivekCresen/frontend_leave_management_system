@@ -12,6 +12,11 @@ export interface LeaveType {
   updatedAt: string | null;
 }
 
+export interface LeaveDate {
+  date: string;       // ISO date string e.g. "2026-04-22"
+  dayType: string;    // FULL | MORNING_HALF | AFTERNOON_HALF
+}
+
 export interface LeaveRecord {
   id: number;
   userId: number;
@@ -19,8 +24,7 @@ export interface LeaveRecord {
   emailId: string | null;
   leaveTypeId: number | null;
   leaveType: string | null;
-  fromDate: string;
-  toDate: string;
+  leaveDates: LeaveDate[];
   reason: string | null;
   comments: string | null;
   trail: string | null;
@@ -30,8 +34,6 @@ export interface LeaveRecord {
   rejectionReason: string | null;
   createdAt: string | null;
   updatedAt: string | null;
-  halfDay: boolean;
-  halfDaySession: 'MORNING' | 'AFTERNOON' | null;
   notifyUserIds: number[];
 }
 
@@ -45,23 +47,17 @@ export interface CreateLeavePayload {
   username: string;
   leaveTypeId: number;
   leaveType: string;
-  fromDate: string;
-  toDate: string;
+  leaveDates: LeaveDate[];
   reason: string;
   comments: string;
-  halfDay: boolean;
-  halfDaySession: 'MORNING' | 'AFTERNOON' | null;
   notifyUserIds: number[];
 }
 
 export interface UpdateLeavePayload {
   leaveTypeId: number;
-  fromDate: string;
-  toDate: string;
+  leaveDates: LeaveDate[];
   reason: string;
   comments: string;
-  halfDay: boolean;
-  halfDaySession: 'MORNING' | 'AFTERNOON' | null;
   notifyUserIds: number[];
 }
 

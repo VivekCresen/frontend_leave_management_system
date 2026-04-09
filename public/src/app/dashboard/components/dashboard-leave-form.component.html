@@ -38,7 +38,7 @@
     </label>
 
     <!-- Duration Type: Full Day / Half Day -->
-    <div class="field field-full">
+    <div *ngIf="!usesDaySpecificCalendar" class="field field-full">
       <span>Duration type <span class="required-mark">*</span></span>
       <div class="duration-type-toggle">
         <label class="duration-option" [class.duration-option-active]="model.durationType === 'FULL'">
@@ -54,8 +54,45 @@
       </div>
     </div>
 
+    <div *ngIf="usesDaySpecificCalendar" class="field field-full">
+      <div class="calendar-select-header">
+        <div>
+          <span>Select leave days <span class="required-mark">*</span></span>
+        </div>
+        <button type="button" class="secondary-button calendar-trigger-button" (click)="openSelectionCalendar()">
+          <i class="fas fa-calendar-days"></i>
+          <span>Open calendar</span>
+        </button>
+      </div>
+
+    
+
+      <div *ngIf="selectedDaySelections.length > 0" class="day-selection-panel">
+        <div class="day-selection-list">
+          <div *ngFor="let selection of selectedDaySelections" class="day-selection-row">
+            <div class="day-selection-date">
+              <strong>{{ formatSelectedDate(selection.date) }}</strong>
+              <small>{{ getSessionLabel(selection.session) }}</small>
+            </div>
+            <div class="day-selection-actions">
+              <button type="button" class="day-session-chip" [class.active]="selection.session === 'FULL'" (click)="setSelectedDaySession(selection.date, 'FULL')">Full</button>
+              <button type="button" class="day-session-chip" [class.active]="selection.session === 'MORNING'" (click)="setSelectedDaySession(selection.date, 'MORNING')">Morning</button>
+              <button type="button" class="day-session-chip" [class.active]="selection.session === 'AFTERNOON'" (click)="setSelectedDaySession(selection.date, 'AFTERNOON')">Afternoon</button>
+              <button type="button" class="day-remove-button" (click)="removeSelectedDay(selection.date)" aria-label="Remove day">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <small [class.field-message-empty]="!(submitted && selectedDaySelections.length === 0)" aria-live="polite">
+        {{ submitted && selectedDaySelections.length === 0 ? 'Select at least one working day' : ' ' }}
+      </small>
+    </div>
+
     <!-- Half Day Session Picker -->
-    <div *ngIf="isHalfDay" class="field field-full">
+    <div *ngIf="isHalfDay && !usesDaySpecificCalendar" class="field field-full">
       <span>Session <span class="required-mark">*</span></span>
       <div class="session-toggle">
         <label class="session-option" [class.session-option-active]="model.halfDaySession === 'MORNING'">
@@ -77,24 +114,7 @@
       </div>
     </div>
 
-    <!-- Date: single date for half day, range for full day -->
-    <div *ngIf="isHalfDay" class="field field-full">
-      <span>Date <span class="required-mark">*</span></span>
-      <input
-        #fromDate="ngModel"
-        [(ngModel)]="model.fromDate"
-        [min]="today"
-        [class.input-invalid]="submitted && !model.fromDate"
-        name="fromDate"
-        type="date"
-        required />
-      <small [class.field-message-empty]="!(submitted && !model.fromDate)" aria-live="polite">
-        {{ submitted && !model.fromDate ? 'Date is required' : ' ' }}
-      </small>
-    </div>
-
-    <!-- Date Range (full day only) -->
-    <div *ngIf="!isHalfDay" class="field field-full date-range-group">
+    <div *ngIf="!usesDaySpecificCalendar" class="field field-full date-range-group">
       <div class="date-range-labels">
         <span>Start date <span class="required-mark">*</span></span>
         <span>End date <span class="required-mark">*</span></span>
@@ -131,14 +151,19 @@
 
     <div *ngIf="durationDays > 0" class="duration-badge">
       <i class="fas fa-calendar-days"></i>
-      <span *ngIf="!isHalfDay">{{ durationDays }} working day{{ durationDays === 1 ? '' : 's' }} selected</span>
-      <span *ngIf="isHalfDay">½ day — {{ model.halfDaySession === 'MORNING' ? 'Morning' : 'Afternoon' }} session</span>
-      <span *ngIf="!isHalfDay && (weekendDaysCount > 0 || publicHolidayCount > 0)" class="duration-note">
+      <span *ngIf="usesDaySpecificCalendar">{{ durationDays }} day{{ durationDays === 1 ? '' : 's' }} selected across {{ selectedDaySelections.length }} date{{ selectedDaySelections.length === 1 ? '' : 's' }}</span>
+      <span *ngIf="!usesDaySpecificCalendar && !isHalfDay">{{ durationDays }} working day{{ durationDays === 1 ? '' : 's' }} selected</span>
+      <span *ngIf="!usesDaySpecificCalendar && isHalfDay">{{ durationDays }} day{{ durationDays === 1 ? '' : 's' }} as {{ model.halfDaySession === 'MORNING' ? 'Morning' : 'Afternoon' }} half-day{{ durationDays === 0.5 ? '' : 's' }}</span>
+      <span *ngIf="weekendDaysCount > 0 || publicHolidayCount > 0" class="duration-note">
         ({{ totalCalendarDays }} calendar day{{ totalCalendarDays === 1 ? '' : 's' }})
       </span>
-      <span *ngIf="!isHalfDay && selectedLeaveType && durationDays > selectedLeaveType.maxDays" class="duration-warning">
-        — exceeds max {{ selectedLeaveType.maxDays }} days
-      </span>
+      <!-- Show only one warning: leave type limit takes priority, then request limit -->
+      <ng-container *ngIf="selectedLeaveType && durationDays > selectedLeaveType.maxDays; else requestLimitWarning">
+        <span class="duration-warning">— exceeds max {{ selectedLeaveType.maxDays }} days for {{ selectedLeaveType.leaveName }}</span>
+      </ng-container>
+      <ng-template #requestLimitWarning>
+        <span *ngIf="exceedsRequestDurationLimit" class="duration-warning">— exceeds max {{ maxRequestDurationDays }} days per request</span>
+      </ng-template>
     </div>
     <!-- Reason -->
     <label class="field field-full">
@@ -213,9 +238,67 @@
       <button type="button" class="secondary-button" (click)="reset()" [disabled]="isSaving">
         Reset
       </button>
-      <button type="submit" class="primary-button" [disabled]="isSaving">
+      <button type="submit" class="primary-button" [disabled]="isSubmitDisabled">
         {{ submitLabel }}
       </button>
     </div>
   </form>
 </section>
+
+<div *ngIf="isSelectionCalendarOpen" class="calendar-picker-backdrop" (click)="closeSelectionCalendar()">
+  <section class="calendar-picker-modal" (click)="$event.stopPropagation()">
+    <div class="calendar-picker-header">
+      <div>
+        <p class="eyebrow">Day Picker</p>
+        <h3>Select leave days</h3>
+        <p>Only working days can be selected. Weekends and public holidays are shown for reference and stay disabled.</p>
+      </div>
+      <button type="button" class="close-button" (click)="closeSelectionCalendar()" aria-label="Close calendar picker">✕</button>
+    </div>
+
+    <div class="calendar-picker-toolbar">
+      <button type="button" class="calendar-nav-button" (click)="previousSelectionMonth()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <strong>{{ selectionCalendarMonthLabel }}</strong>
+      <button type="button" class="calendar-nav-button" (click)="nextSelectionMonth()">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+
+    <div class="calendar-picker-legend">
+      <span><i class="fas fa-square-full legend-open"></i> Working day</span>
+      <span><i class="fas fa-square-full legend-selected"></i> Selected</span>
+      <span><i class="fas fa-square-full legend-blocked"></i> Weekend / holiday</span>
+    </div>
+
+    <div class="calendar-grid calendar-grid-header">
+      <span *ngFor="let day of calendarWeekDays">{{ day }}</span>
+    </div>
+
+    <div *ngFor="let week of selectionCalendarWeeks" class="calendar-grid">
+      <button
+        *ngFor="let day of week"
+        type="button"
+        class="calendar-day-button"
+        [class.other-month]="!day.isCurrentMonth"
+        [class.today]="day.isToday"
+        [class.past]="day.isPast"
+        [class.selected]="!!day.selectedSession"
+        [class.blocked]="day.isPast || day.isWeekend || day.isHoliday"
+        [disabled]="day.isPast || day.isWeekend || day.isHoliday"
+        (click)="toggleCalendarDaySelection(day.dateKey)">
+        <strong>{{ day.dayNumber }}</strong>
+        <small *ngIf="day.selectedSession">{{ getSessionLabel(day.selectedSession) }}</small>
+        <small *ngIf="!day.selectedSession && day.isPast">Past date</small>
+        <small *ngIf="!day.selectedSession && day.isHoliday">{{ day.holidayName }}</small>
+        <small *ngIf="!day.selectedSession && !day.isHoliday && day.isWeekend">Weekend</small>
+      </button>
+    </div>
+
+    <div class="calendar-picker-footer">
+      <button type="button" class="secondary-button" (click)="clearSelectedDays()">Clear selected days</button>
+      <button type="button" class="primary-button" (click)="closeSelectionCalendar()">Done</button>
+    </div>
+  </section>
+</div>

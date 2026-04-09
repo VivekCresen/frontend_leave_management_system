@@ -42,7 +42,7 @@ const historyTheme = themeQuartz.withParams({
   selectedRowBackgroundColor: 'rgba(15, 139, 141, 0.08)',
   accentColor: '#0f8b8d',
   foregroundColor: '#0f172a',
-  rowHeight: 68,
+  rowHeight: 100,
   headerHeight: 46,
   wrapperBorderRadius: '0px',
   wrapperBorder: false,
@@ -114,6 +114,36 @@ const historyTheme = themeQuartz.withParams({
     </ag-grid-angular>
   </div>
 </section>
+
+<!-- Dates popup -->
+<div *ngIf="popupLeave" class="dates-popup-backdrop" (click)="popupLeave = null">
+  <div class="dates-popup-card" (click)="$event.stopPropagation()">
+    <div class="dates-popup-header">
+      <div>
+        <p class="dates-popup-eyebrow">{{ popupLeave.leaveType }}</p>
+        <h3>All selected dates</h3>
+      </div>
+      <button type="button" class="dates-popup-close" (click)="popupLeave = null" aria-label="Close">✕</button>
+    </div>
+    <div class="dates-popup-list">
+      <div *ngFor="let d of popupLeave.leaveDates" class="dates-popup-row">
+        <span class="dates-popup-icon">{{ d.dayType === 'MORNING_HALF' ? '🌅' : d.dayType === 'AFTERNOON_HALF' ? '🌇' : '📅' }}</span>
+        <strong class="dates-popup-date">{{ fmtDatePublic(d.date) }}</strong>
+        <span class="dates-popup-session"
+          [class.session-morning]="d.dayType === 'MORNING_HALF'"
+          [class.session-afternoon]="d.dayType === 'AFTERNOON_HALF'"
+          [class.session-full]="!d.dayType || d.dayType === 'FULL'">
+          {{ d.dayType === 'MORNING_HALF' ? 'Morning half' : d.dayType === 'AFTERNOON_HALF' ? 'Afternoon half' : 'Full day' }}
+        </span>
+      </div>
+    </div>
+    <div class="dates-popup-footer">
+      {{ popupLeave.leaveDates.length }} date{{ popupLeave.leaveDates.length !== 1 ? 's' : '' }}
+      &nbsp;·&nbsp;
+      {{ popupLeave.durationDays % 1 === 0 ? popupLeave.durationDays : popupLeave.durationDays.toFixed(1) }} day{{ popupLeave.durationDays !== 1 ? 's' : '' }} total
+    </div>
+  </div>
+</div>
   `,
   styles: [`
     .table-card {
@@ -203,6 +233,8 @@ const historyTheme = themeQuartz.withParams({
       align-items: center;
       color: #0f172a;
       font-size: 0.95rem;
+      white-space: normal;
+      line-height: 1.5;
     }
     :host ::ng-deep .history-ag-grid .ag-leave-name-cell { display: flex; align-items: center; }
     :host ::ng-deep .history-ag-grid .ag-leave-name-cell strong {
@@ -289,6 +321,47 @@ const historyTheme = themeQuartz.withParams({
       color: #94a3b8;
       font-size: 0.8rem;
       font-weight: 600;
+    }
+
+    /* ── Individual date chips ───────────────────────────── */
+    :host ::ng-deep .history-ag-grid .ag-dates-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 0;
+      width: 100%;
+    }
+    :host ::ng-deep .history-ag-grid .ag-dates-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    :host ::ng-deep .history-ag-grid .ag-date-chip {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(248, 250, 252, 0.9);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      gap: 1px;
+    }
+    :host ::ng-deep .history-ag-grid .ag-date-chip-date {
+      color: #0f172a;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    :host ::ng-deep .history-ag-grid .ag-date-chip-session {
+      font-size: 0.7rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    :host ::ng-deep .history-ag-grid .ag-dates-summary {
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 2px;
     }
     @media (max-width: 720px) {
       .table-card { padding: 18px; }
@@ -405,6 +478,105 @@ const historyTheme = themeQuartz.withParams({
     @media (max-width: 560px) {
       .balance-card { flex: 1 1 100%; }
     }
+
+    /* ── Dates popup ─────────────────────────────────────── */
+    .dates-popup-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .dates-popup-card {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.4);
+      width: 100%;
+      max-width: 420px;
+      overflow: hidden;
+    }
+    .dates-popup-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      background: linear-gradient(135deg, #f0fdfa, #fff7ed);
+    }
+    .dates-popup-eyebrow {
+      margin: 0 0 4px;
+      color: #0f8b8d;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .dates-popup-header h3 {
+      margin: 0;
+      color: #0f172a;
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+    .dates-popup-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #64748b;
+      font-size: 1rem;
+      padding: 4px 6px;
+      border-radius: 6px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .dates-popup-close:hover { background: rgba(226, 232, 240, 0.6); }
+    .dates-popup-list {
+      padding: 12px 22px;
+      max-height: 360px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .dates-popup-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(248, 250, 252, 0.8);
+      border: 1px solid rgba(226, 232, 240, 0.7);
+    }
+    .dates-popup-icon { font-size: 1rem; flex-shrink: 0; }
+    .dates-popup-date {
+      color: #0f172a;
+      font-size: 0.9rem;
+      font-weight: 700;
+      flex: 1;
+    }
+    .dates-popup-session {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .session-full    { color: #0f766e; background: rgba(15, 118, 110, 0.1); }
+    .session-morning { color: #0369a1; background: rgba(3, 105, 161, 0.1); }
+    .session-afternoon { color: #7c3aed; background: rgba(124, 58, 237, 0.1); }
+    .dates-popup-footer {
+      padding: 12px 22px;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+      background: rgba(248, 250, 252, 0.6);
+      color: #64748b;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: center;
+    }
   `]
 })
 export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges {
@@ -423,6 +595,7 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
 
   gridMounted = false;
   readonly agTheme = historyTheme;
+  popupLeave: AdminLeaveTableRow | null = null;
 
   get leaveBalances(): { name: string; maxDays: number; usedDays: number; remaining: number; pct: number }[] {
     return this.leaveTypes.map((lt) => {
@@ -453,17 +626,43 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
           `<div class="ag-leave-name-cell"><strong>${this.esc(value) || 'Unassigned'}</strong></div>`
       },
       {
-        headerName: 'Date Range',
+        headerName: 'Selected Dates',
         field: 'fromDate',
-        minWidth: 200,
-        flex: 1.8,
-        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) =>
-          data
-            ? `<div class="ag-date-cell">
-                 <strong>${this.fmtDate(data.fromDate)}</strong>
-                 <span>${data.halfDay ? (data.halfDaySession === 'MORNING' ? '🌅 Morning session' : '🌇 Afternoon session') : 'to ' + this.fmtDate(data.toDate)}</span>
-               </div>`
-            : ''
+        minWidth: 260,
+        flex: 2.2,
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) return '';
+          const dates = data.leaveDates ?? [];
+          if (dates.length === 0) return '<span style="color:#94a3b8;">—</span>';
+
+          const sessionLabel = (dt: string) =>
+            dt === 'MORNING_HALF' ? 'Morning' : dt === 'AFTERNOON_HALF' ? 'Afternoon' : 'Full day';
+          const sessionColor = (dt: string) =>
+            dt === 'MORNING_HALF' ? '#0369a1' : dt === 'AFTERNOON_HALF' ? '#7c3aed' : '#0f766e';
+          const sessionIcon = (dt: string) =>
+            dt === 'MORNING_HALF' ? '🌅' : dt === 'AFTERNOON_HALF' ? '🌇' : '📅';
+
+          const total = dates.reduce((s, d) => s + (d.dayType?.includes('HALF') ? 0.5 : 1.0), 0);
+          const totalFmt = Number.isInteger(total) ? `${total}` : total.toFixed(1);
+          const first = dates[0];
+          const extra = dates.length - 1;
+
+          const dateText = this.fmtDate(first.date);
+          const color = sessionColor(first.dayType ?? '');
+          const badge = `<span style="color:${color};font-size:0.7rem;font-weight:700;background:${color}18;padding:1px 5px;border-radius:4px;margin-left:4px;">${sessionLabel(first.dayType ?? '')}</span>`;
+          const moreLink = extra > 0
+            ? `<br><button data-action="show-dates" data-leave-id="${data.id}" style="background:none;border:none;padding:0;cursor:pointer;color:#0f8b8d;font-size:0.76rem;font-weight:700;text-decoration:underline;text-underline-offset:2px;line-height:1.8;">+${extra} more date${extra !== 1 ? 's' : ''}</button>`
+            : '';
+          const summary = `<br><span style="color:#94a3b8;font-size:0.7rem;">${dates.length} date${dates.length !== 1 ? 's' : ''} · ${totalFmt} day${total !== 1 ? 's' : ''}</span>`;
+
+          return `<span style="font-size:0.82rem;font-weight:700;color:#0f172a;">${sessionIcon(first.dayType ?? '')} ${dateText}</span>${badge}${moreLink}${summary}`;
+        },
+        onCellClicked: ({ data, event }) => {
+          const target = event?.target as HTMLElement | null;
+          if (target?.closest('[data-action="show-dates"]') && data) {
+            this.popupLeave = data;
+          }
+        }
       },
       {
         headerName: 'Days',
@@ -472,11 +671,9 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
         flex: 0.7,
         cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
           if (!data) return '';
-          if (data.halfDay) {
-            return `<span class="ag-duration-pill">0.5 day</span>`;
-          }
           const v = data.durationDays ?? 1;
-          return `<span class="ag-duration-pill">${v} day${v !== 1 ? 's' : ''}</span>`;
+          const formatted = Number.isInteger(v) ? `${v}` : v.toFixed(1).replace(/\.0$/, '');
+          return `<span class="ag-duration-pill">${formatted} day${v !== 1 ? 's' : ''}</span>`;
         }
       },
       {
@@ -569,12 +766,28 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
     this.gridApi = event.api;
   }
 
-  private fmtDate(value: string): string {
-    if (!value) return '—';
-    const d = new Date(value);
-    return isNaN(d.getTime())
-      ? value
-      : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  fmtDatePublic(value: string | number[] | unknown): string {
+    return this.fmtDate(value);
+  }
+
+  private fmtDate(value: string | number[] | unknown): string {
+    if (value === null || value === undefined || value === '') return '—';
+    let iso = '';
+    if (Array.isArray(value) && value.length >= 3) {
+      const [y, m, d] = value as number[];
+      iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    } else {
+      iso = String(value).trim();
+    }
+    if (!iso) return '—';
+    // Parse as local date to avoid UTC offset shifting the day
+    const parts = iso.split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+    }
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
   }
 
   private titleCase(value: unknown): string {

@@ -61,7 +61,10 @@
         description="Approve or reject pending leave requests from your employees."
         emptyTitle="No leave requests yet"
         emptyMessage="Leave requests from your team will appear here."
-        [showActions]="true"
+        [compactView]="true"
+        [allowedStatuses]="['PENDING']"
+        [initialStatus]="'PENDING'"
+        [showStatusFilter]="false"
         (approveRequested)="leaveApproveRequested.emit($event)"
         (rejectRequested)="leaveRejectRequested.emit($event)">
       </app-dashboard-leave-table>

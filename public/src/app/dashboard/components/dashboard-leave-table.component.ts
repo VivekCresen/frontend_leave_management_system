@@ -35,8 +35,9 @@ export type AdminLeaveTableRow = {
   emailId: string;
   role: string;
   leaveType: string;
-  fromDate: string;
-  toDate: string;
+  leaveDates: { date: string; dayType: string }[];
+  fromDate: string;   // derived: earliest date in leaveDates
+  toDate: string;     // derived: latest date in leaveDates
   reason: string;
   comments: string;
   createdAt: string | null;
@@ -44,8 +45,6 @@ export type AdminLeaveTableRow = {
   status: string;
   approvedBy: string | null;
   rejectionReason: string | null;
-  halfDay: boolean;
-  halfDaySession: string | null;
   notifyUserIds: number[];
   editable: boolean;
 };
@@ -64,7 +63,7 @@ const leaveGridTheme = themeQuartz.withParams({
   selectedRowBackgroundColor: 'rgba(15, 139, 141, 0.08)',
   accentColor: '#0f8b8d',
   foregroundColor: '#0f172a',
-  rowHeight: 72,
+  rowHeight: 100,
   headerHeight: 44,
   wrapperBorderRadius: '0px',
   wrapperBorder: false,
@@ -89,6 +88,9 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   @Input() emptyTitle = 'No leave requests found';
   @Input() emptyMessage = 'Leave requests will appear here once managers or employees submit them.';
   @Input() initialRole = '';
+  @Input() initialStatus = 'ALL';
+  @Input() allowedStatuses: string[] = [];
+  @Input() showStatusFilter = true;
   @Input() showActions = false;
   @Input() compactView = false;
 
@@ -98,7 +100,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   searchTerm = '';
   selectedRole = 'ALL';
   selectedLeaveType = 'ALL';
-  selectedStatus = 'PENDING';
+  selectedStatus = 'ALL';
   sortKey: keyof AdminLeaveTableRow = 'fromDate';
   sortDirection: 'asc' | 'desc' = 'desc';
   currentPage = 1;
@@ -107,9 +109,9 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   rejectionReason = '';
   rejectionSubmitted = false;
 
-  // AG Grid state
   gridMounted = false;
   readonly agTheme = leaveGridTheme;
+  popupLeave: AdminLeaveTableRow | null = null;
 
   readonly defaultColDef: ColDef<AdminLeaveTableRow> = {
     sortable: true,
@@ -119,7 +121,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   };
 
   get columnDefs(): ColDef<AdminLeaveTableRow>[] {
-    return [
+    const columns: ColDef<AdminLeaveTableRow>[] = [
       {
         headerName: 'Employee',
         field: 'fullName',
@@ -140,16 +142,42 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
           `<span class="ag-type-pill">${this.esc(value) || '—'}</span>`
       },
       {
-        headerName: 'Date Range',
+        headerName: 'Selected Dates',
         field: 'fromDate',
-        minWidth: 200,
-        flex: 1.8,
-        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) =>
-          data ? `<div class="ag-date-cell">
-            <strong>${this.fmtDate(data.fromDate)}</strong>
-            <span>to ${this.fmtDate(data.toDate)}</span>
-            <small>${data.halfDay ? '½ day — ' + (data.halfDaySession === 'MORNING' ? 'Morning' : 'Afternoon') : data.durationDays + ' day' + (data.durationDays !== 1 ? 's' : '')}</small>
-          </div>` : ''
+        minWidth: 280,
+        flex: 2.2,
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) return '';
+          const dates = data.leaveDates ?? [];
+          if (dates.length === 0) return '<span style="color:#94a3b8;">—</span>';
+
+          const sessionLabel = (dt: string) =>
+            dt === 'MORNING_HALF' ? 'Morning' : dt === 'AFTERNOON_HALF' ? 'Afternoon' : 'Full day';
+          const sessionColor = (dt: string) =>
+            dt === 'MORNING_HALF' ? '#0369a1' : dt === 'AFTERNOON_HALF' ? '#7c3aed' : '#0f766e';
+          const sessionIcon = (dt: string) =>
+            dt === 'MORNING_HALF' ? '🌅' : dt === 'AFTERNOON_HALF' ? '🌇' : '📅';
+
+          const total = dates.reduce((s, d) => s + (d.dayType?.includes('HALF') ? 0.5 : 1.0), 0);
+          const totalFmt = Number.isInteger(total) ? `${total}` : total.toFixed(1);
+          const first = dates[0];
+          const extra = dates.length - 1;
+          const dateText = this.fmtDate(first.date);
+          const color = sessionColor(first.dayType ?? '');
+          const badge = `<span style="color:${color};font-size:0.7rem;font-weight:700;background:${color}18;padding:1px 5px;border-radius:4px;margin-left:4px;">${sessionLabel(first.dayType ?? '')}</span>`;
+          const moreLink = extra > 0
+            ? `<br><button data-action="show-dates" data-leave-id="${data.id}" style="background:none;border:none;padding:0;cursor:pointer;color:#0f8b8d;font-size:0.76rem;font-weight:700;text-decoration:underline;text-underline-offset:2px;line-height:1.8;">+${extra} more date${extra !== 1 ? 's' : ''}</button>`
+            : '';
+          const summary = `<br><span style="color:#94a3b8;font-size:0.7rem;">${dates.length} date${dates.length !== 1 ? 's' : ''} · ${totalFmt} day${total !== 1 ? 's' : ''}</span>`;
+
+          return `<span style="font-size:0.82rem;font-weight:700;color:#0f172a;">${sessionIcon(first.dayType ?? '')} ${dateText}</span>${badge}${moreLink}${summary}`;
+        },
+        onCellClicked: ({ data, event }) => {
+          const target = event?.target as HTMLElement | null;
+          if (target?.closest('[data-action="show-dates"]') && data) {
+            this.popupLeave = data;
+          }
+        }
       },
       {
         headerName: 'Reason',
@@ -177,6 +205,49 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
         }
       }
     ];
+
+    if (this.showActions) {
+      columns.push({
+        headerName: 'Actions',
+        minWidth: 180,
+        flex: 1.2,
+        sortable: false,
+        resizable: false,
+        suppressHeaderMenuButton: true,
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) {
+            return '';
+          }
+
+          if (data.status !== 'PENDING') {
+            return '<span class="ag-action-muted">No actions</span>';
+          }
+
+          return `<div class="ag-actions-cell">
+            <button type="button" class="ag-action-button approve" data-action="approve">Approve</button>
+            <button type="button" class="ag-action-button reject" data-action="reject">Reject</button>
+          </div>`;
+        },
+        onCellClicked: ({ data, event }) => {
+          if (!data) {
+            return;
+          }
+
+          const target = event?.target as HTMLElement | null;
+          const action = target?.closest('[data-action]')?.getAttribute('data-action');
+
+          if (action === 'approve') {
+            this.approve(data);
+          }
+
+          if (action === 'reject') {
+            this.openRejectModal(data);
+          }
+        }
+      });
+    }
+
+    return columns;
   }
 
   get agRowData(): AdminLeaveTableRow[] {
@@ -193,6 +264,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
 
   ngOnInit(): void {
     if (this.initialRole) this.selectedRole = this.initialRole;
+    this.selectedStatus = this.resolvedInitialStatus;
   }
 
   ngAfterViewInit(): void {
@@ -204,6 +276,14 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['initialStatus'] && !changes['initialStatus'].firstChange) {
+      this.selectedStatus = this.resolvedInitialStatus;
+    }
+
+    if ((changes['allowedStatuses'] || changes['showActions']) && this.gridApi) {
+      this.gridApi.setGridOption('columnDefs', this.columnDefs);
+    }
+
     if (changes['leaves'] && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.agRowData);
     }
@@ -218,7 +298,19 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   }
 
   get statusOptions(): string[] {
-    return ['PENDING'];
+    const unique = this.allowedStatuses.length
+      ? this.allowedStatuses
+      : Array.from(new Set(this.leaves.map((leave) => leave.status).filter(Boolean)));
+
+    const ordered = ['PENDING', 'APPROVED', 'REJECTED'];
+    return [...unique].sort((a, b) => {
+      const ai = ordered.indexOf(a);
+      const bi = ordered.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
   }
 
   get roleOptions(): string[] {
@@ -234,14 +326,17 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   }
 
   get hasActiveFilters(): boolean {
-    return this.searchTerm.trim().length > 0 || this.selectedRole !== 'ALL' || this.selectedLeaveType !== 'ALL' || this.selectedStatus !== 'PENDING';
+    return this.searchTerm.trim().length > 0
+      || this.selectedRole !== 'ALL'
+      || this.selectedLeaveType !== 'ALL'
+      || (this.showStatusFilter && this.selectedStatus !== this.resolvedInitialStatus);
   }
 
   clearFilters(): void {
     this.searchTerm = '';
     this.selectedRole = 'ALL';
     this.selectedLeaveType = 'ALL';
-    this.selectedStatus = 'PENDING';
+    this.selectedStatus = this.resolvedInitialStatus;
     this.currentPage = 1;
     if (this.gridApi) this.gridApi.setGridOption('rowData', this.agRowData);
   }
@@ -302,6 +397,12 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
     });
   }
 
+  private get resolvedInitialStatus(): string {
+    const requestedStatus = (this.initialStatus || 'ALL').toUpperCase();
+    const allowedStatusSet = new Set(this.statusOptions);
+    return requestedStatus === 'ALL' || allowedStatusSet.has(requestedStatus) ? requestedStatus : 'ALL';
+  }
+
   private compareRows(a: AdminLeaveTableRow, b: AdminLeaveTableRow): number {
     const av = this.resolveSortValue(a, this.sortKey);
     const bv = this.resolveSortValue(b, this.sortKey);
@@ -317,14 +418,36 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
     return (value ?? '').toString().toLowerCase();
   }
 
-  private fmtDate(value: string): string {
-    if (!value) return '—';
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+  fmtDatePublic(value: string | number[] | unknown): string {
+    return this.fmtDate(value);
+  }
+
+  private fmtDate(value: string | number[] | unknown): string {
+    if (value === null || value === undefined || value === '') return '—';
+    let iso = '';
+    if (Array.isArray(value) && value.length >= 3) {
+      const [y, m, d] = value as number[];
+      iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    } else {
+      iso = String(value).trim();
+    }
+    if (!iso) return '—';
+    const parts = iso.split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+    }
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
   }
 
   private titleCase(value: unknown): string {
     return typeof value === 'string' && value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
+  }
+
+  private formatDurationDays(value: number): string {
+    const normalized = Number.isInteger(value) ? value.toString() : value.toFixed(1).replace(/\.0$/, '');
+    return `${normalized} day${value === 1 ? '' : 's'}`;
   }
 
   private esc(v: string | null | undefined): string {

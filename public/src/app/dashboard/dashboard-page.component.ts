@@ -2,7 +2,8 @@ import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AuthApiService } from '../services/auth-api.service';
+import { from } from 'rxjs';
+import { concatMap, toArray } from 'rxjs/operators';import { AuthApiService } from '../services/auth-api.service';
 import { LeaveApiService } from '../services/leave-api.service';
 import {
   ApiErrorResponse,
@@ -401,17 +402,55 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     this.isLeaveSaving = true;
     this.leaveFieldErrors = {};
 
-    const payload: CreateLeavePayload = {
-      ...event,
-      username: this.user.username
-    };
+    // Group selections by session type → up to 3 separate requests:
+    //   FULL days → one request
+    //   MORNING half-days → one request
+    //   AFTERNOON half-days → one request
+    const groups: { dayType: string; dates: { date: string; dayType: string }[] }[] = [];
 
-    this.leaveService.createLeave(payload).subscribe({
+    const fullDates = event.daySelections
+      .filter(s => s.session === 'FULL')
+      .map(s => ({ date: s.date, dayType: 'FULL' }));
+    if (fullDates.length) groups.push({ dayType: 'FULL', dates: fullDates });
+
+    const morningDates = event.daySelections
+      .filter(s => s.session === 'MORNING')
+      .map(s => ({ date: s.date, dayType: 'MORNING_HALF' }));
+    if (morningDates.length) groups.push({ dayType: 'MORNING_HALF', dates: morningDates });
+
+    const afternoonDates = event.daySelections
+      .filter(s => s.session === 'AFTERNOON')
+      .map(s => ({ date: s.date, dayType: 'AFTERNOON_HALF' }));
+    if (afternoonDates.length) groups.push({ dayType: 'AFTERNOON_HALF', dates: afternoonDates });
+
+    if (groups.length === 0) {
+      this.isLeaveSaving = false;
+      this.toastService.warn('Select at least one leave day.');
+      return;
+    }
+
+    const payloads: CreateLeavePayload[] = groups.map(g => ({
+      username: this.user.username,
+      leaveTypeId: event.leaveTypeId,
+      leaveType: event.leaveType,
+      leaveDates: g.dates,
+      reason: event.reason,
+      comments: event.comments,
+      notifyUserIds: event.notifyUserIds
+    }));
+
+    from(payloads).pipe(
+      concatMap(payload => this.leaveService.createLeave(payload)),
+      toArray()
+    ).subscribe({
       next: () => {
         this.isLeaveSaving = false;
         this.isLeaveFormOpen = false;
         this.editingLeave = null;
-        this.toastService.success('Leave request submitted successfully');
+        const msg = payloads.length > 1
+          ? `${payloads.length} leave requests submitted successfully`
+          : 'Leave request submitted successfully';
+        this.toastService.success(msg);
         this.loadDashboard();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -465,14 +504,18 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     this.isLeaveSaving = true;
     this.leaveFieldErrors = {};
 
+    const leaveDates = event.daySelections.map((s) => ({
+      date: s.date,
+      dayType: s.session === 'FULL' ? 'FULL'
+        : s.session === 'MORNING' ? 'MORNING_HALF'
+        : 'AFTERNOON_HALF'
+    }));
+
     this.leaveService.updateLeave(this.editingLeave.id, {
       leaveTypeId: event.leaveTypeId,
-      fromDate: event.fromDate,
-      toDate: event.toDate,
+      leaveDates,
       reason: event.reason,
       comments: event.comments,
-      halfDay: event.halfDay,
-      halfDaySession: event.halfDaySession,
       notifyUserIds: event.notifyUserIds
     }).subscribe({
       next: () => {
@@ -675,28 +718,32 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       next: (leaves) => {
         this.isLeavesLoading = false;
         this.managerLeaves = leaves
-          .map((leave) => ({
-            id: leave.id,
-            userId: leave.userId,
-            leaveTypeId: leave.leaveTypeId,
-            fullName: leave.fullName?.trim() || 'Unknown user',
-            emailId: leave.emailId?.trim() || 'No email',
-            role: response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE',
-            leaveType: leave.leaveType?.trim() || 'Unassigned',
-            fromDate: leave.fromDate,
-            toDate: leave.toDate,
-            reason: leave.reason?.trim() || '',
-            comments: leave.comments?.trim() || '',
-            createdAt: leave.createdAt,
-            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate, leave.halfDay, leave.halfDaySession),
-            status: leave.status ?? 'PENDING',
-            approvedBy: leave.approvedBy ?? null,
-            rejectionReason: leave.rejectionReason ?? null,
-            halfDay: leave.halfDay ?? false,
-            halfDaySession: leave.halfDaySession ?? null,
-            notifyUserIds: leave.notifyUserIds ?? [],
-            editable: leave.editable ?? false
-          } satisfies AdminLeaveTableRow))
+          .map((leave) => {
+            const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
+            const fromDate = dates.map(d => this.toDateString(d.date)).sort()[0] ?? '';
+            const toDate = dates.map(d => this.toDateString(d.date)).sort().reverse()[0] ?? '';
+            return {
+              id: leave.id,
+              userId: leave.userId,
+              leaveTypeId: leave.leaveTypeId,
+              fullName: leave.fullName?.trim() || 'Unknown user',
+              emailId: leave.emailId?.trim() || 'No email',
+              role: response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE',
+              leaveType: leave.leaveType?.trim() || 'Unassigned',
+              leaveDates: dates,
+              fromDate,
+              toDate,
+              reason: leave.reason?.trim() || '',
+              comments: leave.comments?.trim() || '',
+              createdAt: leave.createdAt,
+              durationDays: this.calculateDurationDays(dates),
+              status: leave.status ?? 'PENDING',
+              approvedBy: leave.approvedBy ?? null,
+              rejectionReason: leave.rejectionReason ?? null,
+              notifyUserIds: leave.notifyUserIds ?? [],
+              editable: leave.editable ?? false
+            } satisfies AdminLeaveTableRow;
+          })
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -713,28 +760,32 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       next: (leaves) => {
         this.isLeavesLoading = false;
         this.myLeaves = leaves
-          .map((leave) => ({
-            id: leave.id,
-            userId: leave.userId,
-            leaveTypeId: leave.leaveTypeId,
-            fullName: leave.fullName?.trim() || response.actor?.fullName || 'Me',
-            emailId: leave.emailId?.trim() || response.actor?.email || '',
-            role: 'EMPLOYEE',
-            leaveType: leave.leaveType?.trim() || 'Unassigned',
-            fromDate: leave.fromDate,
-            toDate: leave.toDate,
-            reason: leave.reason?.trim() || '',
-            comments: leave.comments?.trim() || '',
-            createdAt: leave.createdAt,
-            durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate, leave.halfDay, leave.halfDaySession),
-            status: leave.status ?? 'PENDING',
-            approvedBy: leave.approvedBy ?? null,
-            rejectionReason: leave.rejectionReason ?? null,
-            halfDay: leave.halfDay ?? false,
-            halfDaySession: leave.halfDaySession ?? null,
-            notifyUserIds: leave.notifyUserIds ?? [],
-            editable: leave.editable ?? false
-          } satisfies AdminLeaveTableRow))
+          .map((leave) => {
+            const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
+            const fromDate = dates.map(d => this.toDateString(d.date)).sort()[0] ?? '';
+            const toDate = dates.map(d => this.toDateString(d.date)).sort().reverse()[0] ?? '';
+            return {
+              id: leave.id,
+              userId: leave.userId,
+              leaveTypeId: leave.leaveTypeId,
+              fullName: leave.fullName?.trim() || response.actor?.fullName || 'Me',
+              emailId: leave.emailId?.trim() || response.actor?.email || '',
+              role: 'EMPLOYEE',
+              leaveType: leave.leaveType?.trim() || 'Unassigned',
+              leaveDates: dates,
+              fromDate,
+              toDate,
+              reason: leave.reason?.trim() || '',
+              comments: leave.comments?.trim() || '',
+              createdAt: leave.createdAt,
+              durationDays: this.calculateDurationDays(dates),
+              status: leave.status ?? 'PENDING',
+              approvedBy: leave.approvedBy ?? null,
+              rejectionReason: leave.rejectionReason ?? null,
+              notifyUserIds: leave.notifyUserIds ?? [],
+              editable: leave.editable ?? false
+            } satisfies AdminLeaveTableRow;
+          })
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -774,7 +825,9 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             if (!role) {
               return null;
             }
-
+            const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
+            const fromDate = dates.map(d => this.toDateString(d.date)).sort()[0] ?? '';
+            const toDate = dates.map(d => this.toDateString(d.date)).sort().reverse()[0] ?? '';
             return {
               id: leave.id,
               userId: leave.userId,
@@ -783,17 +836,16 @@ export class DashboardPageComponent implements OnInit, OnChanges {
               emailId: leave.emailId?.trim() || 'No email',
               role,
               leaveType: leave.leaveType?.trim() || 'Unassigned',
-              fromDate: leave.fromDate,
-              toDate: leave.toDate,
+              leaveDates: dates,
+              fromDate,
+              toDate,
               reason: leave.reason?.trim() || '',
               comments: leave.comments?.trim() || '',
               createdAt: leave.createdAt,
-              durationDays: this.calculateDurationDays(leave.fromDate, leave.toDate, leave.halfDay, leave.halfDaySession),
+              durationDays: this.calculateDurationDays(dates),
               status: leave.status ?? 'PENDING',
               approvedBy: leave.approvedBy ?? null,
               rejectionReason: leave.rejectionReason ?? null,
-              halfDay: leave.halfDay ?? false,
-              halfDaySession: (leave.halfDaySession ?? null) as string | null,
               notifyUserIds: leave.notifyUserIds ?? [],
               editable: leave.editable ?? false
             } satisfies AdminLeaveTableRow;
@@ -924,12 +976,16 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     return error?.details?.[0] || fallback;
   }
 
-  private calculateDurationDays(fromDate: string, toDate: string, halfDay = false, halfDaySession: string | null = null): number {
-    // treat as half day if flag is set OR if session is present (fallback for old records)
-    if (halfDay || !!halfDaySession) return 0.5;
-    const start = new Date(fromDate);
-    const end = new Date(toDate);
-    const millisecondsPerDay = 24 * 60 * 60 * 1000;
-    return Math.max(1, Math.floor((end.getTime() - start.getTime()) / millisecondsPerDay) + 1);
+  private toDateString(val: string | number[] | unknown): string {
+    if (!val) return '';
+    if (Array.isArray(val) && val.length >= 3) {
+      const [y, m, d] = val as number[];
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    return String(val);
+  }
+
+  private calculateDurationDays(leaveDates: { date: string | number[] | unknown; dayType: string }[]): number {
+    return leaveDates.reduce((sum, d) => sum + (d.dayType && d.dayType.includes('HALF') ? 0.5 : 1.0), 0);
   }
 }

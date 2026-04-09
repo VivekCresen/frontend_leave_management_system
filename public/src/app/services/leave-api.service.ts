@@ -62,13 +62,9 @@ export class LeaveApiService implements LeaveService {
     return this.http.post<LeaveRecord>(this.apiUrl, {
       username: payload.username,
       leaveTypeId: payload.leaveTypeId,
-      leaveType: payload.leaveType,
-      fromDate: payload.fromDate,
-      toDate: payload.toDate,
+      leaveDates: payload.leaveDates,
       reason: payload.reason,
       comments: payload.comments,
-      halfDay: payload.halfDay,
-      halfDaySession: payload.halfDaySession ?? null,
       notifyUserIds: payload.notifyUserIds ?? []
     });
   }
@@ -76,12 +72,9 @@ export class LeaveApiService implements LeaveService {
   updateLeave(leaveId: number, payload: UpdateLeavePayload): Observable<LeaveRecord> {
     return this.http.put<LeaveRecord>(`${this.apiUrl}/${leaveId}`, {
       leaveTypeId: payload.leaveTypeId,
-      fromDate: payload.fromDate,
-      toDate: payload.toDate,
+      leaveDates: payload.leaveDates,
       reason: payload.reason,
       comments: payload.comments,
-      halfDay: payload.halfDay,
-      halfDaySession: payload.halfDaySession ?? null,
       notifyUserIds: payload.notifyUserIds ?? []
     });
   }

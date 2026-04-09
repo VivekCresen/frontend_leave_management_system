@@ -34,10 +34,11 @@
       </select>
     </label>
 
-    <label class="tool-select">
+    <label *ngIf="showStatusFilter" class="tool-select">
       <span>Status</span>
       <select [(ngModel)]="selectedStatus" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
-        <option value="PENDING">Pending</option>
+        <option value="ALL">All statuses</option>
+        <option *ngFor="let status of statusOptions" [ngValue]="status">{{ status | titlecase }}</option>
       </select>
     </label>
 
@@ -119,6 +120,7 @@
             <div class="date-cell">
               <strong>{{ leave.fromDate | date: 'dd MMM yyyy' }}</strong>
               <span>to {{ leave.toDate | date: 'dd MMM yyyy' }}</span>
+              <small>{{ leave.leaveDates.length }} date{{ leave.leaveDates.length !== 1 ? 's' : '' }}</small>
               <small>Created {{ leave.createdAt ? (leave.createdAt | date: 'dd MMM yyyy') : 'N/A' }}</small>
             </div>
             <span class="duration-pill">{{ leave.durationDays }} day{{ leave.durationDays === 1 ? '' : 's' }}</span>
@@ -209,6 +211,36 @@
     <div class="reject-modal-actions">
       <button type="button" class="secondary-btn" (click)="closeRejectModal()">Cancel</button>
       <button type="button" class="reject-confirm-btn" (click)="confirmReject()">Confirm rejection</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dates popup -->
+<div *ngIf="popupLeave" class="dates-popup-backdrop" (click)="popupLeave = null">
+  <div class="dates-popup-card" (click)="$event.stopPropagation()">
+    <div class="dates-popup-header">
+      <div>
+        <p class="dates-popup-eyebrow">{{ popupLeave.leaveType }}</p>
+        <h3>All selected dates</h3>
+      </div>
+      <button type="button" class="dates-popup-close" (click)="popupLeave = null" aria-label="Close">✕</button>
+    </div>
+    <div class="dates-popup-list">
+      <div *ngFor="let d of popupLeave.leaveDates" class="dates-popup-row">
+        <span class="dates-popup-icon">{{ d.dayType === 'MORNING_HALF' ? '🌅' : d.dayType === 'AFTERNOON_HALF' ? '🌇' : '📅' }}</span>
+        <strong class="dates-popup-date">{{ fmtDatePublic(d.date) }}</strong>
+        <span class="dates-popup-session"
+          [class.session-morning]="d.dayType === 'MORNING_HALF'"
+          [class.session-afternoon]="d.dayType === 'AFTERNOON_HALF'"
+          [class.session-full]="!d.dayType || d.dayType === 'FULL'">
+          {{ d.dayType === 'MORNING_HALF' ? 'Morning half' : d.dayType === 'AFTERNOON_HALF' ? 'Afternoon half' : 'Full day' }}
+        </span>
+      </div>
+    </div>
+    <div class="dates-popup-footer">
+      {{ popupLeave.leaveDates.length }} date{{ popupLeave.leaveDates.length !== 1 ? 's' : '' }}
+      &nbsp;·&nbsp;
+      {{ popupLeave.durationDays % 1 === 0 ? popupLeave.durationDays : popupLeave.durationDays.toFixed(1) }} day{{ popupLeave.durationDays !== 1 ? 's' : '' }} total
     </div>
   </div>
 </div>
