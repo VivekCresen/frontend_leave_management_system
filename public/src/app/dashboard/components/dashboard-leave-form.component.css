@@ -1,5 +1,6 @@
 .form-card {
-  width: min(100%, 620px);
+  width: 100%;
+  box-sizing: border-box;
   margin-inline: auto;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 24px;
@@ -8,12 +9,9 @@
   box-shadow: 0 24px 54px -38px rgba(15, 23, 42, 0.26);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 32px);
-  overflow: hidden;
 }
 
 .leave-form {
-  overflow-y: auto;
   flex: 1;
   padding-right: 4px;
 }
@@ -160,8 +158,8 @@
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  border-color: rgba(15, 139, 141, 0.66);
-  box-shadow: 0 0 0 4px rgba(15, 139, 141, 0.12);
+  border-color: rgba(203, 213, 225, 0.95);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.06);
 }
 
 .field small {
@@ -226,8 +224,8 @@
 }
 
 .date-range-inputs:focus-within {
-  border-color: rgba(15, 139, 141, 0.66);
-  box-shadow: 0 0 0 4px rgba(15, 139, 141, 0.12);
+  border-color: rgba(203, 213, 225, 0.95);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.06);
 }
 
 .date-range-inputs.date-range-invalid {
@@ -582,8 +580,8 @@
 }
 
 .notify-user-option-selected {
-  background: #e0f2fe;
-  border-color: #38bdf8;
+  background: #fef3e2;
+  border-color: rgba(249, 115, 22, 0.35);
 }
 
 .notify-user-option input[type="checkbox"] {

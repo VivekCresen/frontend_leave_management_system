@@ -149,8 +149,8 @@
 
 .field input:focus,
 .field select:focus {
-  border-color: rgba(15, 139, 141, 0.66);
-  box-shadow: 0 0 0 4px rgba(15, 139, 141, 0.12);
+  border-color: rgba(203, 213, 225, 0.95);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.06);
 }
 
 .password-input-wrapper {

@@ -7,8 +7,9 @@
 
 .login-page {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 32px 24px;
   background:
     radial-gradient(circle at top left, rgba(45, 211, 165, 0.12), transparent 34%),
@@ -78,9 +79,9 @@
   min-height: 34px;
   padding: 0 14px;
   border-radius: 999px;
-  background: rgba(15, 139, 141, 0.1);
-  border: 1px solid rgba(15, 139, 141, 0.16);
-  color: var(--app-teal);
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.18);
+  color: var(--app-orange);
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -187,12 +188,12 @@
 .login-input:focus {
   outline: 0;
   transform: translateY(-1px);
-  border-color: rgba(15, 139, 141, 0.72);
-  box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.14);
+  border-color: rgba(203, 213, 225, 0.95);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.06);
 }
 
 .input-wrapper:focus-within i {
-  color: var(--app-teal);
+  color: #64748b;
 }
 
 .input-invalid {
@@ -218,8 +219,8 @@
 }
 
 .toggle-password:hover {
-  background: var(--app-teal-soft);
-  color: var(--app-teal);
+  background: rgba(15, 23, 42, 0.08);
+  color: #334155;
 }
 
 .field-error {
@@ -253,7 +254,7 @@
 
 .forgot-password {
   align-self: flex-end;
-  color: var(--app-teal);
+  color: var(--app-orange);
   font-size: 0.92rem;
   font-weight: 800;
   text-decoration: none;
@@ -261,7 +262,7 @@
 }
 
 .forgot-password:hover {
-  color: var(--app-orange);
+  color: var(--app-gold);
 }
 
 .login-button {
