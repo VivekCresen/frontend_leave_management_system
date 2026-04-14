@@ -614,8 +614,7 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(15, 23, 42, 0.18);
-  backdrop-filter: blur(2px);
+  background: rgba(15, 23, 42, 0.38);
 }
 
 .form-modal-card {

@@ -777,7 +777,6 @@
   place-items: center;
   padding: 20px;
   background: rgba(15, 23, 42, 0.46);
-  backdrop-filter: blur(4px);
 }
 
 .calendar-picker-modal {

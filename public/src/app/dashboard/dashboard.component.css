@@ -6,8 +6,8 @@
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(244, 247, 250, 0.98)),
-    linear-gradient(135deg, #e8eef5 0%, #f5f8fb 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(250, 247, 243, 0.98)),
+    linear-gradient(135deg, #fcfaf6 0%, #f7f3ec 100%);
   color: #10233d;
   transition: grid-template-columns 0.24s ease;
   overflow: hidden;

@@ -157,6 +157,9 @@
             [initialRole]="filterRole"
             [initialStatus]="filterStatus || 'ALL'"
             [compactView]="true"
+            [showActions]="true"
+            (approveRequested)="leaveApproveRequested.emit($event)"
+            (rejectRequested)="leaveRejectRequested.emit($event)"
           ></app-dashboard-leave-table>
         </div>
 

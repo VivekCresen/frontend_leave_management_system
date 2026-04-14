@@ -476,7 +476,6 @@
   place-items: center;
   padding: 24px;
   background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(6px);
 }
 
 .reject-modal-card {
@@ -827,7 +826,6 @@
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(3px);
   z-index: 1000;
   display: flex;
   align-items: center;
