@@ -9,7 +9,7 @@ import { CreateHolidayPayload, CreateLeavePayload, CreateLeaveTypePayload, Holid
 })
 export class LeaveApiService implements LeaveService {
   private readonly apiUrl = this.resolveApiUrl();
-  private readonly holidayUrl = this.apiUrl.replace('/api/leaves', '/api/holidays');
+  private readonly holidayUrl = this.resolveHolidayUrl();
 
   constructor(private readonly http: HttpClient) {}
 
@@ -128,6 +128,11 @@ export class LeaveApiService implements LeaveService {
 
     const protocol = location.protocol === 'https:' ? 'https:' : 'http:';
     return `${protocol}//${location.hostname}:8082/api/leaves`;
+  }
+
+  private resolveHolidayUrl(): string {
+    const base = this.resolveApiUrl().replace(/\/api\/leaves.*$/, '');
+    return `${base}/api/holidays`;
   }
 
   private readConfiguredApiUrl(): string | null {
