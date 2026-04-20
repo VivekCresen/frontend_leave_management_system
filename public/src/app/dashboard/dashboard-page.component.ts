@@ -12,7 +12,7 @@ import {
   UserManagementPayload,
   UserDashboardResponse
 } from '../services/auth.service';
-import { CreateLeavePayload, LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload, UpdateLeaveStatusPayload, NotifyUser, Holiday, CreateHolidayPayload } from '../services/leave.service';
+import { CreateLeavePayload, LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload, UpdateLeaveStatusPayload, PartialLeaveStatusPayload, NotifyUser, Holiday, CreateHolidayPayload } from '../services/leave.service';
 import { ToastService } from '../services/toast.service';
 import {
   DashboardPageId,
@@ -82,6 +82,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   notifyUsers: NotifyUser[] = [];
   notifyUsersLoading = false;
   holidays: Holiday[] = [];
+  bookedDates: string[] = [];
   isHolidaysLoading = false;
 
   constructor(
@@ -349,6 +350,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       next: (users) => { this.notifyUsers = users; this.notifyUsersLoading = false; },
       error: () => { this.notifyUsers = []; this.notifyUsersLoading = false; }
     });
+    this.leaveService.getBookedDates(this.user.username).subscribe({
+      next: (dates) => { this.bookedDates = dates; },
+      error: () => { this.bookedDates = []; }
+    });
   }
 
   cancelLeaveForm(): void {
@@ -359,36 +364,60 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   handleApproveLeave(leave: AdminLeaveTableRow): void {
-    const payload: UpdateLeaveStatusPayload = {
-      actorUsername: this.user.username,
-      status: 'APPROVED'
-    };
+    // Manager approves → MANAGER_APPROVED (goes to admin for final approval)
+    // Admin approves → APPROVED (final)
+    const status = this.user.role === 'MANAGER' ? 'MANAGER_APPROVED' : 'APPROVED';
+    this.updateLeaveStatus(leave.id, status);
+  }
 
-    this.leaveService.updateLeaveStatus(leave.id, payload).subscribe({
+  handleRejectLeave(event: { leave: AdminLeaveTableRow; reason: string }): void {
+    this.updateLeaveStatus(event.leave.id, 'REJECTED', event.reason);
+  }
+
+  handlePartialLeaveStatus(event: { leave: AdminLeaveTableRow; decisions: import('../services/leave.service').DateDecision[]; rejectionReason?: string }): void {
+    const payload: PartialLeaveStatusPayload = {
+      actorUsername: this.user.username,
+      dateDecisions: event.decisions,
+      rejectionReason: event.rejectionReason
+    };
+    this.leaveService.applyPartialStatus(event.leave.id, payload).subscribe({
       next: (updated) => {
         this.updateLeaveInList(updated);
-        this.toastService.success('Leave request approved');
+        const approvedCount = event.decisions.filter(d => d.status === 'APPROVED').length;
+        const rejectedCount = event.decisions.filter(d => d.status === 'REJECTED').length;
+        if (rejectedCount === 0) {
+          this.toastService.success('All dates approved');
+        } else if (approvedCount === 0) {
+          this.toastService.success('Leave request rejected');
+        } else {
+          this.toastService.success(`${approvedCount} date(s) approved, ${rejectedCount} rejected — 2 emails sent`);
+        }
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
-        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to approve leave request.'));
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to apply partial status.'));
       }
     });
   }
 
-  handleRejectLeave(event: { leave: AdminLeaveTableRow; reason: string }): void {
+  private updateLeaveStatus(leaveId: number, status: 'APPROVED' | 'REJECTED' | 'MANAGER_APPROVED', rejectionReason?: string): void {
     const payload: UpdateLeaveStatusPayload = {
       actorUsername: this.user.username,
-      status: 'REJECTED',
-      rejectionReason: event.reason
+      status,
+      ...(rejectionReason ? { rejectionReason } : {})
     };
 
-    this.leaveService.updateLeaveStatus(event.leave.id, payload).subscribe({
+    this.leaveService.updateLeaveStatus(leaveId, payload).subscribe({
       next: (updated) => {
         this.updateLeaveInList(updated);
-        this.toastService.success('Leave request rejected');
+        if (status === 'MANAGER_APPROVED') {
+          this.toastService.success('Leave approved — sent to admin for final approval');
+        } else {
+          this.toastService.success(status === 'APPROVED' ? 'Leave request approved' : 'Leave request rejected');
+        }
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
-        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to reject leave request.'));
+        const action = status === 'APPROVED' || status === 'MANAGER_APPROVED' ? 'approve' : 'reject';
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, `Unable to ${action} leave request.`));
       }
     });
   }
@@ -626,7 +655,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     return null;
   }
 
-  private loadDashboard(): void {
+  protected loadDashboard(): void {
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -711,6 +740,33 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     });
   }
 
+  private mapLeaveToRow(leave: import('../services/leave.service').LeaveRecord, role: string, fallbackName?: string, fallbackEmail?: string): AdminLeaveTableRow {
+    const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
+    const sortedDates = dates.map(d => this.toDateString(d.date)).sort();
+    return {
+      id: leave.id,
+      userId: leave.userId,
+      leaveTypeId: leave.leaveTypeId,
+      fullName: leave.fullName?.trim() || fallbackName || 'Unknown user',
+      emailId: leave.emailId?.trim() || fallbackEmail || 'No email',
+      role,
+      leaveType: leave.leaveType?.trim() || 'Unassigned',
+      leaveDates: dates,
+      fromDate: sortedDates[0] ?? '',
+      toDate: sortedDates[sortedDates.length - 1] ?? '',
+      reason: leave.reason?.trim() || '',
+      comments: leave.comments?.trim() || '',
+      createdAt: leave.createdAt,
+      durationDays: this.calculateDurationDays(dates),
+      status: leave.status ?? 'PENDING',
+      approvedBy: leave.approvedBy ?? null,
+      managerApprovedBy: leave.managerApprovedBy ?? null,
+      rejectionReason: leave.rejectionReason ?? null,
+      notifyUserIds: leave.notifyUserIds ?? [],
+      editable: leave.editable ?? false
+    };
+  }
+
   private loadManagerLeaves(response: UserDashboardResponse): void {
     this.isLeavesLoading = true;
 
@@ -719,30 +775,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.isLeavesLoading = false;
         this.managerLeaves = leaves
           .map((leave) => {
-            const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
-            const fromDate = dates.map(d => this.toDateString(d.date)).sort()[0] ?? '';
-            const toDate = dates.map(d => this.toDateString(d.date)).sort().reverse()[0] ?? '';
-            return {
-              id: leave.id,
-              userId: leave.userId,
-              leaveTypeId: leave.leaveTypeId,
-              fullName: leave.fullName?.trim() || 'Unknown user',
-              emailId: leave.emailId?.trim() || 'No email',
-              role: response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE',
-              leaveType: leave.leaveType?.trim() || 'Unassigned',
-              leaveDates: dates,
-              fromDate,
-              toDate,
-              reason: leave.reason?.trim() || '',
-              comments: leave.comments?.trim() || '',
-              createdAt: leave.createdAt,
-              durationDays: this.calculateDurationDays(dates),
-              status: leave.status ?? 'PENDING',
-              approvedBy: leave.approvedBy ?? null,
-              rejectionReason: leave.rejectionReason ?? null,
-              notifyUserIds: leave.notifyUserIds ?? [],
-              editable: leave.editable ?? false
-            } satisfies AdminLeaveTableRow;
+            const role = response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE';
+            return this.mapLeaveToRow(leave, role);
           })
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
@@ -760,32 +794,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       next: (leaves) => {
         this.isLeavesLoading = false;
         this.myLeaves = leaves
-          .map((leave) => {
-            const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
-            const fromDate = dates.map(d => this.toDateString(d.date)).sort()[0] ?? '';
-            const toDate = dates.map(d => this.toDateString(d.date)).sort().reverse()[0] ?? '';
-            return {
-              id: leave.id,
-              userId: leave.userId,
-              leaveTypeId: leave.leaveTypeId,
-              fullName: leave.fullName?.trim() || response.actor?.fullName || 'Me',
-              emailId: leave.emailId?.trim() || response.actor?.email || '',
-              role: 'EMPLOYEE',
-              leaveType: leave.leaveType?.trim() || 'Unassigned',
-              leaveDates: dates,
-              fromDate,
-              toDate,
-              reason: leave.reason?.trim() || '',
-              comments: leave.comments?.trim() || '',
-              createdAt: leave.createdAt,
-              durationDays: this.calculateDurationDays(dates),
-              status: leave.status ?? 'PENDING',
-              approvedBy: leave.approvedBy ?? null,
-              rejectionReason: leave.rejectionReason ?? null,
-              notifyUserIds: leave.notifyUserIds ?? [],
-              editable: leave.editable ?? false
-            } satisfies AdminLeaveTableRow;
-          })
+          .map((leave) => this.mapLeaveToRow(leave, 'EMPLOYEE', response.actor?.fullName || 'Me', response.actor?.email || ''))
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -822,33 +831,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.leaves = leaves
           .map((leave) => {
             const role = roleByUserId.get(leave.userId);
-            if (!role) {
-              return null;
-            }
-            const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
-            const fromDate = dates.map(d => this.toDateString(d.date)).sort()[0] ?? '';
-            const toDate = dates.map(d => this.toDateString(d.date)).sort().reverse()[0] ?? '';
-            return {
-              id: leave.id,
-              userId: leave.userId,
-              leaveTypeId: leave.leaveTypeId,
-              fullName: leave.fullName?.trim() || 'Unknown user',
-              emailId: leave.emailId?.trim() || 'No email',
-              role,
-              leaveType: leave.leaveType?.trim() || 'Unassigned',
-              leaveDates: dates,
-              fromDate,
-              toDate,
-              reason: leave.reason?.trim() || '',
-              comments: leave.comments?.trim() || '',
-              createdAt: leave.createdAt,
-              durationDays: this.calculateDurationDays(dates),
-              status: leave.status ?? 'PENDING',
-              approvedBy: leave.approvedBy ?? null,
-              rejectionReason: leave.rejectionReason ?? null,
-              notifyUserIds: leave.notifyUserIds ?? [],
-              editable: leave.editable ?? false
-            } satisfies AdminLeaveTableRow;
+            if (!role) return null;
+            return this.mapLeaveToRow(leave, role);
           })
           .filter((leave): leave is AdminLeaveTableRow => leave !== null)
           .sort((left, right) => new Date(right.fromDate).getTime() - new Date(left.fromDate).getTime());

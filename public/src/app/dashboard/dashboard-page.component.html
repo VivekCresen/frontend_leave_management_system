@@ -173,6 +173,7 @@
           [userGender]="dashboard?.actor?.gender ?? null"
           [myLeaves]="myLeaves"
           [holidays]="holidays"
+          [bookedDates]="bookedDates"
           [notifyUsers]="notifyUsers"
           [notifyUsersLoading]="notifyUsersLoading"
           [isSaving]="isLeaveSaving"
@@ -212,9 +213,11 @@
       (leaveTypeSaveRequested)="handleSaveLeaveType($event)"
       (leaveApproveRequested)="handleApproveLeave($event)"
       (leaveRejectRequested)="handleRejectLeave($event)"
+      (leavePartialStatusRequested)="handlePartialLeaveStatus($event)"
       (holidayCreateRequested)="handleCreateHoliday($event)"
       (holidayUpdateRequested)="handleUpdateHoliday($event)"
       (holidayDeleteRequested)="handleDeleteHoliday($event)"
+      (importCompleted)="loadDashboard()"
       (saveRequested)="handleSave($event)"></app-admin-dashboard>
 
     <app-manager-dashboard
@@ -243,6 +246,7 @@
       (cancelLeaveFormRequested)="cancelLeaveForm()"
       (leaveApproveRequested)="handleApproveLeave($event)"
       (leaveRejectRequested)="handleRejectLeave($event)"
+      (leavePartialStatusRequested)="handlePartialLeaveStatus($event)"
       (editLeaveRequested)="handleEditLeave($event)"
       (deleteLeaveRequested)="handleDeleteLeave($event)"></app-manager-dashboard>
 

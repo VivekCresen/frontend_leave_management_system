@@ -10,7 +10,6 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
 }
 
 .table-card.expand-to-fill {
@@ -218,13 +217,13 @@
 .table-shell {
   margin-top: 10px;
   overflow-x: auto;
+  overflow-y: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 12px;
-  overflow: hidden;
 }
 
 .table-card.table-card-compact .table-shell {
@@ -241,7 +240,8 @@
   margin-top: 10px;
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .user-ag-grid {

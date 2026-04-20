@@ -32,11 +32,37 @@
           <p class="body-copy">Create, update, or remove accounts from one directory view.</p>
         </div>
 
-        <button type="button" class="primary-toolbar-button" (click)="createRequested.emit()">
-          <i class="fas fa-user-plus"></i>
-          <span>Create user</span>
-        </button>
-       
+        <div class="toolbar-actions">
+          <button type="button" class="secondary-toolbar-button" (click)="isImportPanelOpen = !isImportPanelOpen">
+            <i class="fas fa-file-excel"></i>
+            <span>Import Excel</span>
+          </button>
+          <button type="button" class="primary-toolbar-button" (click)="createRequested.emit()">
+            <i class="fas fa-user-plus"></i>
+            <span>Create user</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Excel import modal -->
+      <div *ngIf="isImportPanelOpen" class="form-modal-backdrop" (click)="isImportPanelOpen = false">
+        <div class="import-modal-card" (click)="$event.stopPropagation()">
+          <div class="import-modal-header">
+            <div class="import-modal-title">
+              <i class="fas fa-file-excel import-modal-icon"></i>
+              <div>
+                <h4>Bulk import users</h4>
+                <p>Download the template, fill it in, then upload to import multiple users at once.</p>
+              </div>
+            </div>
+            <button type="button" class="close-button" (click)="isImportPanelOpen = false" aria-label="Close import modal">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+          <div class="import-modal-body">
+            <app-user-excel-import (importCompleted)="isImportPanelOpen = false; importCompleted.emit()"></app-user-excel-import>
+          </div>
+        </div>
       </div>
 
       <app-dashboard-user-table
@@ -156,10 +182,13 @@
             emptyMessage="Once staff submit leave requests, they will appear here."
             [initialRole]="filterRole"
             [initialStatus]="filterStatus || 'ALL'"
+            [allowedStatuses]="['PENDING', 'MANAGER_APPROVED', 'APPROVED', 'REJECTED']"
             [compactView]="true"
             [showActions]="true"
+            [viewerRole]="'ADMIN'"
             (approveRequested)="leaveApproveRequested.emit($event)"
             (rejectRequested)="leaveRejectRequested.emit($event)"
+            (partialStatusRequested)="leavePartialStatusRequested.emit($event)"
           ></app-dashboard-leave-table>
         </div>
 

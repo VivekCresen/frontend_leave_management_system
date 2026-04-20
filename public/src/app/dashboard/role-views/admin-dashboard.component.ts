@@ -9,6 +9,7 @@ import {
 } from '../components/dashboard-user-form.component';
 import { DashboardUserTableComponent } from '../components/dashboard-user-table.component';
 import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
+import { UserExcelImportComponent } from '../components/user-excel-import.component';
 import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../services/auth.service';
 import { LeaveType, LeaveTypeSavePayload, Holiday, CreateHolidayPayload } from '../../services/leave.service';
 
@@ -21,7 +22,8 @@ import { LeaveType, LeaveTypeSavePayload, Holiday, CreateHolidayPayload } from '
     DashboardStatCardsComponent,
     DashboardUserFormComponent,
     DashboardUserTableComponent,
-    DashboardLeaveTableComponent
+    DashboardLeaveTableComponent,
+    UserExcelImportComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -55,10 +57,13 @@ export class AdminDashboardComponent implements OnChanges {
   @Output() leaveTypeDeleteRequested = new EventEmitter<LeaveType>();
   @Output() leaveApproveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() leaveRejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
+  @Output() leavePartialStatusRequested = new EventEmitter<{ leave: AdminLeaveTableRow; decisions: import('../../services/leave.service').DateDecision[]; rejectionReason?: string }>();
   @Output() holidayCreateRequested = new EventEmitter<CreateHolidayPayload>();
   @Output() holidayUpdateRequested = new EventEmitter<{ id: number; payload: CreateHolidayPayload }>();
   @Output() holidayDeleteRequested = new EventEmitter<number>();
+  @Output() importCompleted = new EventEmitter<void>();
 
+  isImportPanelOpen = false;
   leaveTab: 'records' | 'types' | 'holidays' = 'records';
   isLeaveTypeModalOpen = false;
   editingLeaveType: LeaveType | null = null;

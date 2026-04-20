@@ -903,3 +903,56 @@
   font-weight: 800;
   white-space: nowrap;
 }
+
+/* ── Import Excel modal ───────────────────────────────────────────────────── */
+.import-modal-card {
+  width: min(600px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+.import-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.import-modal-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.import-modal-icon {
+  font-size: 1.4rem;
+  color: #0f8b8d;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.import-modal-title h4 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.import-modal-title p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.import-modal-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  overflow-y: auto;
+}

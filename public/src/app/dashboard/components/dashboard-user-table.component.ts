@@ -85,7 +85,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   agGridMounted = false;
 
   readonly agTheme = userTableTheme;
-  readonly agPageSize = 10;
+  readonly agPageSize = 7;
   readonly defaultColDef: ColDef<ManagedUser> = {
     sortable: true,
     resizable: true,

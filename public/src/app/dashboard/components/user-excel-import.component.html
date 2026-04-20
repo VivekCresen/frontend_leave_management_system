@@ -1,0 +1,192 @@
+<div class="excel-import-panel">
+
+  <!-- Oracle XStream-style LCR Pipeline -->
+  <div class="lcr-pipeline">
+    <div class="lcr-pipeline-label">LCR Stream — Local Customer Repository</div>
+    <div class="lcr-pipeline-track">
+
+      <!-- Source -->
+      <div class="lcr-source" [class.active]="lcrStep === 'load'" [class.done]="lcrStep !== 'load'">
+        <i class="fas fa-file-excel"></i>
+        <span>Local Repo</span>
+        <span class="lcr-source-sub">Excel (LCR)</span>
+      </div>
+
+      <!-- Stream pipe -->
+      <div class="lcr-pipe" [class.flowing]="lcrStep !== 'load'">
+        <div class="lcr-pipe-line">
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+        </div>
+      </div>
+
+      <!-- L — Load capture -->
+      <div class="lcr-stage lcr-stage-load"
+           [class.stage-active]="lcrStep === 'load'"
+           [class.stage-done]="lcrStep !== 'load'">
+        <div class="lcr-stage-header">
+          <span class="lcr-tag">LCR</span>
+          <span class="lcr-stage-id">01</span>
+        </div>
+        <div class="lcr-stage-icon">
+          <i class="fas" [class.fa-file-arrow-down]="lcrStep === 'load'" [class.fa-check]="lcrStep !== 'load'"></i>
+        </div>
+        <div class="lcr-stage-name">LOAD</div>
+        <div class="lcr-stage-desc">Capture template</div>
+      </div>
+
+      <!-- Stream pipe -->
+      <div class="lcr-pipe" [class.flowing]="lcrStep === 'check' || lcrStep === 'resolve' || isSuccess">
+        <div class="lcr-pipe-line">
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+        </div>
+      </div>
+
+      <!-- C — Check apply -->
+      <div class="lcr-stage lcr-stage-check"
+           [class.stage-active]="lcrStep === 'check'"
+           [class.stage-done]="lcrStep === 'resolve' || isSuccess"
+           [class.stage-idle]="lcrStep === 'load'">
+        <div class="lcr-stage-header">
+          <span class="lcr-tag">LCR</span>
+          <span class="lcr-stage-id">02</span>
+        </div>
+        <div class="lcr-stage-icon">
+          <i class="fas fa-list-check"></i>
+        </div>
+        <div class="lcr-stage-name">CHECK</div>
+        <div class="lcr-stage-desc">Validate rows</div>
+      </div>
+
+      <!-- Stream pipe -->
+      <div class="lcr-pipe" [class.flowing]="lcrStep === 'resolve' || isSuccess">
+        <div class="lcr-pipe-line">
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+        </div>
+      </div>
+
+      <!-- R — Resolve apply -->
+      <div class="lcr-stage lcr-stage-resolve"
+           [class.stage-active]="lcrStep === 'resolve' && !isSuccess"
+           [class.stage-done]="isSuccess"
+           [class.stage-error]="isError"
+           [class.stage-idle]="lcrStep === 'load' || lcrStep === 'check'">
+        <div class="lcr-stage-header">
+          <span class="lcr-tag">LCR</span>
+          <span class="lcr-stage-id">03</span>
+        </div>
+        <div class="lcr-stage-icon">
+          <i class="fas"
+             [class.fa-circle-check]="isSuccess"
+             [class.fa-triangle-exclamation]="isError"
+             [class.fa-rotate]="lcrStep === 'resolve' && !isSuccess && !isError"
+             [class.fa-flag-checkered]="lcrStep !== 'resolve' && !isSuccess"></i>
+        </div>
+        <div class="lcr-stage-name">RESOLVE</div>
+        <div class="lcr-stage-desc">Apply / fix</div>
+      </div>
+
+      <!-- Target -->
+      <div class="lcr-pipe" [class.flowing]="isSuccess">
+        <div class="lcr-pipe-line">
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+          <div class="lcr-pipe-dot"></div>
+        </div>
+      </div>
+
+      <div class="lcr-source lcr-target" [class.active]="isSuccess">
+        <i class="fas fa-server"></i>
+        <span>Central DB</span>
+        <span class="lcr-source-sub">Synced</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="import-divider"></div>
+
+  <!-- Step 1: Download template -->
+  <div class="import-step">
+    <div class="step-header">
+      <span class="step-badge">1</span>
+      <div>
+        <h4>Download template</h4>
+        <p>Get the formatted Excel file with dropdowns, field rules, and an instructions sheet.</p>
+      </div>
+    </div>
+    <button type="button" class="import-action-btn" (click)="downloadTemplate()">
+      <i class="fas fa-file-arrow-down"></i>
+      Download template
+    </button>
+  </div>
+
+  <div class="import-divider"></div>
+
+  <!-- Step 2: Upload filled file -->
+  <div class="import-step">
+    <div class="step-header">
+      <span class="step-badge">2</span>
+      <div>
+        <h4>Upload filled file</h4>
+        <p>Fill in the template and upload it here. All rows are validated before import.</p>
+      </div>
+    </div>
+
+    <div class="drop-zone"
+         [class.dragging]="isDragging"
+         [class.has-file]="selectedFile"
+         (dragover)="onDragOver($event)"
+         (dragleave)="onDragLeave()"
+         (drop)="onDrop($event)"
+         (click)="fileInput.click()">
+      <input #fileInput type="file" accept=".xlsx,.xls" class="hidden-input" (change)="onFileSelected($event)" />
+
+      <ng-container *ngIf="!selectedFile">
+        <i class="fas fa-cloud-arrow-up drop-icon"></i>
+        <p class="drop-label">Drag &amp; drop your Excel file here, or click to browse</p>
+        <span class="drop-hint">.xlsx or .xls only</span>
+      </ng-container>
+
+      <ng-container *ngIf="selectedFile">
+        <i class="fas fa-file-excel drop-icon file-ready"></i>
+        <p class="drop-label file-name">{{ selectedFile.name }}</p>
+        <span class="drop-hint">{{ (selectedFile.size / 1024).toFixed(1) }} KB</span>
+      </ng-container>
+    </div>
+
+    <div *ngIf="selectedFile" class="file-actions">
+      <button type="button" class="clear-btn" (click)="clearFile()" [disabled]="isUploading">
+        <i class="fas fa-xmark"></i> Remove
+      </button>
+      <button type="button" class="upload-btn" (click)="uploadFile()" [disabled]="isUploading">
+        <i class="fas" [class.fa-upload]="!isUploading" [class.fa-spinner]="isUploading" [class.fa-spin]="isUploading"></i>
+        {{ isUploading ? 'Validating & importing...' : 'Import users' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Success result -->
+  <div *ngIf="isSuccess" class="import-result success">
+    <i class="fas fa-circle-check"></i>
+    <div>
+      <strong>Import complete</strong>
+      <p>{{ importedCount }} user(s) were added successfully.</p>
+    </div>
+  </div>
+
+  <!-- Error result -->
+  <div *ngIf="isError" class="import-result error">
+    <i class="fas fa-triangle-exclamation"></i>
+    <div>
+      <strong>Validation failed</strong>
+      <p>{{ errorMessage }}</p>
+    </div>
+  </div>
+
+</div>
