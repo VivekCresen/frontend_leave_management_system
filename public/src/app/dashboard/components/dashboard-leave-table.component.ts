@@ -24,6 +24,8 @@ import {
   PaginationModule,
   themeQuartz
 } from 'ag-grid-community';
+import { DateDecision } from '../../services/leave.service';
+import { LeaveProgressModalComponent } from './leave-progress-modal.component';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -44,6 +46,7 @@ export type AdminLeaveTableRow = {
   durationDays: number;
   status: string;
   approvedBy: string | null;
+  managerApprovedBy: string | null;
   rejectionReason: string | null;
   notifyUserIds: number[];
   editable: boolean;
@@ -73,7 +76,7 @@ const leaveGridTheme = themeQuartz.withParams({
 @Component({
   selector: 'app-dashboard-leave-table',
   standalone: true,
-  imports: [CommonModule, DatePipe, TitleCasePipe, FormsModule, AgGridAngular],
+  imports: [CommonModule, DatePipe, TitleCasePipe, FormsModule, AgGridAngular, LeaveProgressModalComponent],
   templateUrl: './dashboard-leave-table.component.html',
   styleUrls: ['./dashboard-leave-table.component.css']
 })
@@ -93,9 +96,11 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   @Input() showStatusFilter = true;
   @Input() showActions = false;
   @Input() compactView = false;
+  @Input() viewerRole: 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | '' = '';
 
   @Output() approveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() rejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
+  @Output() partialStatusRequested = new EventEmitter<{ leave: AdminLeaveTableRow; decisions: DateDecision[]; rejectionReason?: string }>();
 
   searchTerm = '';
   selectedRole = 'ALL';
@@ -109,9 +114,16 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   rejectionReason = '';
   rejectionSubmitted = false;
 
+  // Partial approval state
+  partialLeave: AdminLeaveTableRow | null = null;
+  partialDecisions: Record<string, 'APPROVED' | 'REJECTED'> = {};
+  partialRejectionReason = '';
+  partialSubmitted = false;
+
   gridMounted = false;
   readonly agTheme = leaveGridTheme;
   popupLeave: AdminLeaveTableRow | null = null;
+  progressLeave: AdminLeaveTableRow | null = null;
 
   readonly defaultColDef: ColDef<AdminLeaveTableRow> = {
     sortable: true,
@@ -196,11 +208,18 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
         minWidth: 130,
         flex: 1,
         cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) => {
-          const cls = (value ?? '').toLowerCase();
-          const icons: Record<string, string> = { pending: 'fa-clock', approved: 'fa-circle-check', rejected: 'fa-circle-xmark' };
+          const raw = (value ?? '') as string;
+          const cls = raw === 'MANAGER_APPROVED' ? 'manager-approved' : raw.toLowerCase();
+          const icons: Record<string, string> = {
+            pending: 'fa-clock',
+            'manager-approved': 'fa-hourglass-half',
+            approved: 'fa-circle-check',
+            rejected: 'fa-circle-xmark'
+          };
+          const label = raw === 'MANAGER_APPROVED' ? 'Pending Admin' : this.titleCase(raw);
           return `<span class="ag-status-badge ag-status-${cls}">
             <i class="fas ${icons[cls] ?? 'fa-circle'}"></i>
-            ${this.titleCase(value)}
+            ${label}
           </span>`;
         }
       }
@@ -219,13 +238,21 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
             return '';
           }
 
-          if (data.status !== 'PENDING') {
+          if (data.status !== 'PENDING' && data.status !== 'MANAGER_APPROVED') {
             return '<span class="ag-action-muted">No actions</span>';
           }
 
+          // MANAGER_APPROVED → only ADMIN can give final decision
+          if (data.status === 'MANAGER_APPROVED' && this.viewerRole !== 'ADMIN') {
+            return '<span class="ag-action-muted">Pending admin</span>';
+          }
+
+          const label = data.status === 'MANAGER_APPROVED'
+            ? '<i class="fas fa-shield-halved"></i> Final Decision'
+            : '<i class="fas fa-list-check"></i> Review Dates';
+
           return `<div class="ag-actions-cell">
-            <button type="button" class="ag-action-button approve" data-action="approve">Approve</button>
-            <button type="button" class="ag-action-button reject" data-action="reject">Reject</button>
+            <button type="button" class="ag-action-button partial${data.status === 'MANAGER_APPROVED' ? ' admin-final' : ''}" data-action="partial">${label}</button>
           </div>`;
         },
         onCellClicked: ({ data, event }) => {
@@ -236,12 +263,8 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
           const target = event?.target as HTMLElement | null;
           const action = target?.closest('[data-action]')?.getAttribute('data-action');
 
-          if (action === 'approve') {
-            this.approve(data);
-          }
-
-          if (action === 'reject') {
-            this.openRejectModal(data);
+          if (action === 'partial') {
+            this.openPartialModal(data);
           }
         }
       });
@@ -280,7 +303,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
       this.selectedStatus = this.resolvedInitialStatus;
     }
 
-    if ((changes['allowedStatuses'] || changes['showActions']) && this.gridApi) {
+    if ((changes['allowedStatuses'] || changes['showActions'] || changes['viewerRole']) && this.gridApi) {
       this.gridApi.setGridOption('columnDefs', this.columnDefs);
     }
 
@@ -369,6 +392,60 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
 
   closeRejectModal(): void {
     this.rejectingLeave = null; this.rejectionReason = ''; this.rejectionSubmitted = false;
+  }
+
+  openPartialModal(leave: AdminLeaveTableRow): void {
+    this.partialLeave = leave;
+    this.partialDecisions = {};
+    this.partialRejectionReason = '';
+    this.partialSubmitted = false;
+    // Default all dates to APPROVED
+    for (const d of leave.leaveDates) {
+      this.partialDecisions[this.dateKey(d.date, d.dayType)] = 'APPROVED';
+    }
+  }
+
+  closePartialModal(): void {
+    this.partialLeave = null;
+    this.partialDecisions = {};
+    this.partialRejectionReason = '';
+    this.partialSubmitted = false;
+  }
+
+  togglePartialDecision(date: string, dayType: string): void {
+    const key = this.dateKey(date, dayType);
+    this.partialDecisions[key] = this.partialDecisions[key] === 'APPROVED' ? 'REJECTED' : 'APPROVED';
+  }
+
+  getPartialDecision(date: string, dayType: string): 'APPROVED' | 'REJECTED' {
+    return this.partialDecisions[this.dateKey(date, dayType)] ?? 'APPROVED';
+  }
+
+  get hasAnyRejected(): boolean {
+    return Object.values(this.partialDecisions).some(v => v === 'REJECTED');
+  }
+
+  confirmPartial(): void {
+    this.partialSubmitted = true;
+    if (!this.partialLeave) return;
+    if (this.hasAnyRejected && !this.partialRejectionReason.trim()) return;
+
+    const decisions: DateDecision[] = this.partialLeave.leaveDates.map(d => ({
+      date: d.date,
+      dayType: d.dayType,
+      status: this.getPartialDecision(d.date, d.dayType)
+    }));
+
+    this.partialStatusRequested.emit({
+      leave: this.partialLeave,
+      decisions,
+      rejectionReason: this.hasAnyRejected ? this.partialRejectionReason.trim() : undefined
+    });
+    this.closePartialModal();
+  }
+
+  private dateKey(date: string, dayType: string): string {
+    return `${date}|${dayType ?? 'FULL'}`;
   }
 
   onFilterChange(): void { this.currentPage = 1; }

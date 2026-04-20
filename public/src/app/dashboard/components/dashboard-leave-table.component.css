@@ -160,7 +160,6 @@
   overflow-x: auto;
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 12px;
-  overflow: hidden;
 }
 
 .table-inner {
@@ -411,9 +410,22 @@
   color: #b42318;
 }
 
+.status-manager-approved {
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  background: rgba(251, 191, 36, 0.15);
+  color: #b45309;
+}
+
 .approved-by-note {
   color: #64748b;
   font-size: 0.76rem;
+}
+
+.progress-hint {
+  color: #0f8b8d;
+  font-size: 0.72rem;
+  opacity: 0.7;
+  margin-top: 2px;
 }
 
 .rejection-note {
@@ -722,6 +734,12 @@
   color: #0f766e;
 }
 
+:host ::ng-deep .leave-ag-grid .ag-status-manager-approved {
+  color: #b45309;
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
 :host ::ng-deep .leave-ag-grid .ag-status-rejected {
   color: #b42318;
 }
@@ -913,3 +931,88 @@
   font-weight: 600;
   text-align: center;
 }
+
+/* ── Partial approval button ── */
+.partial-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #7c3aed;
+  background: #f5f3ff;
+  color: #7c3aed;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.partial-btn:hover { background: #ede9fe; }
+
+/* Admin final decision button — amber/teal to distinguish from manager review */
+.partial-btn-admin {
+  border-color: #0f8b8d;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+.partial-btn-admin:hover { background: #ccfbf1; }
+
+/* AG Grid partial button */
+.ag-action-button.partial {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #c4b5fd;
+}
+.ag-action-button.partial:hover { background: #ede9fe; }
+
+/* AG Grid admin final decision button */
+.ag-action-button.partial.admin-final {
+  background: #f0fdfa;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+}
+.ag-action-button.partial.admin-final:hover { background: #ccfbf1; }
+
+/* ── Partial modal ── */
+.partial-modal-card { max-width: 520px; }
+
+.partial-dates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.partial-date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  transition: border-color 0.15s, background 0.15s;
+}
+.partial-date-row.partial-approved { border-color: #bbf7d0; background: #f0fdf4; }
+.partial-date-row.partial-rejected { border-color: #fecaca; background: #fef2f2; }
+
+.partial-date-icon { font-size: 1.1rem; }
+.partial-date-label { font-size: 0.88rem; font-weight: 700; color: #0f172a; flex: 1; }
+.partial-session-label { font-size: 0.75rem; color: #64748b; }
+
+.partial-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.partial-toggle-btn.is-approved { background: #dcfce7; color: #15803d; }
+.partial-toggle-btn.is-approved:hover { background: #bbf7d0; }
+.partial-toggle-btn.is-rejected { background: #fee2e2; color: #dc2626; }
+.partial-toggle-btn.is-rejected:hover { background: #fecaca; }

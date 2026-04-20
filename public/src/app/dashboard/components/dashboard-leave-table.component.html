@@ -59,8 +59,8 @@
         [columnDefs]="columnDefs"
         [defaultColDef]="defaultColDef"
         [pagination]="true"
-        [paginationPageSize]="10"
-        [paginationPageSizeSelector]="[10, 20, 50]"
+        [paginationPageSize]="7"
+        [paginationPageSizeSelector]="[7, 15, 30]"
         [suppressCellFocus]="true"
         [domLayout]="'autoHeight'"
         (gridReady)="onGridReady($event)">
@@ -107,7 +107,7 @@
         </div>
 
         <div class="table-body">
-          <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions">
+          <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions" (click)="progressLeave = leave" style="cursor:pointer;" title="Click to view leave progress">
             <div class="user-cell">
               <strong>{{ leave.fullName }}</strong>
               <span>{{ leave.emailId }}</span>
@@ -134,24 +134,29 @@
             <div class="status-cell">
               <span class="status-badge"
                 [class.status-pending]="leave.status === 'PENDING'"
+                [class.status-manager-approved]="leave.status === 'MANAGER_APPROVED'"
                 [class.status-approved]="leave.status === 'APPROVED'"
                 [class.status-rejected]="leave.status === 'REJECTED'">
                 <i class="fas"
                   [class.fa-clock]="leave.status === 'PENDING'"
+                  [class.fa-hourglass-half]="leave.status === 'MANAGER_APPROVED'"
                   [class.fa-circle-check]="leave.status === 'APPROVED'"
                   [class.fa-circle-xmark]="leave.status === 'REJECTED'"></i>
-                {{ leave.status | titlecase }}
+                {{ leave.status === 'MANAGER_APPROVED' ? 'Pending Admin' : (leave.status | titlecase) }}
               </span>
-              <small *ngIf="leave.approvedBy" class="approved-by-note">by {{ leave.approvedBy }}</small>
+              <small *ngIf="leave.managerApprovedBy" class="approved-by-note">Manager: {{ leave.managerApprovedBy }}</small>
+              <small *ngIf="leave.approvedBy && leave.status !== 'MANAGER_APPROVED'" class="approved-by-note">by {{ leave.approvedBy }}</small>
+              <small class="progress-hint"><i class="fas fa-chart-line"></i> View progress</small>
             </div>
             <div *ngIf="showActions" class="action-cell">
-              <button *ngIf="leave.status === 'PENDING'" type="button" class="approve-btn" (click)="approve(leave)" title="Approve leave">
-                <i class="fas fa-check"></i> Approve
+              <button *ngIf="leave.status === 'PENDING'" type="button" class="partial-btn" (click)="openPartialModal(leave)" title="Review individual dates">
+                <i class="fas fa-list-check"></i> Review Dates
               </button>
-              <button *ngIf="leave.status === 'PENDING'" type="button" class="reject-btn" (click)="openRejectModal(leave)" title="Reject leave">
-                <i class="fas fa-xmark"></i> Reject
+              <button *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole === 'ADMIN'" type="button" class="partial-btn partial-btn-admin" (click)="openPartialModal(leave)" title="Give final admin decision">
+                <i class="fas fa-shield-halved"></i> Final Decision
               </button>
-              <span *ngIf="leave.status !== 'PENDING'" class="action-done">—</span>
+              <span *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole !== 'ADMIN'" class="action-done">Pending admin</span>
+              <span *ngIf="leave.status !== 'PENDING' && leave.status !== 'MANAGER_APPROVED'" class="action-done">—</span>
             </div>
           </div>
         </div>
@@ -214,6 +219,61 @@
     </div>
   </div>
 </div>
+
+<!-- Partial approval modal -->
+<div *ngIf="partialLeave" class="reject-modal-backdrop" (click)="closePartialModal()">
+  <div class="reject-modal-card partial-modal-card" (click)="$event.stopPropagation()">
+    <div class="reject-modal-header">
+      <div>
+        <h3>{{ partialLeave.status === 'MANAGER_APPROVED' ? 'Admin final decision' : 'Review leave dates' }}</h3>
+        <p>{{ partialLeave.status === 'MANAGER_APPROVED' ? 'Give your final approval or rejection for each date.' : 'Toggle each date to approve or reject individually.' }}</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closePartialModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="reject-modal-body">
+      <p class="reject-employee">
+        <strong>{{ partialLeave.fullName }}</strong> — {{ partialLeave.leaveType }}
+      </p>
+      <div class="partial-dates-list">
+        <div *ngFor="let d of partialLeave.leaveDates" class="partial-date-row"
+          [class.partial-approved]="getPartialDecision(d.date, d.dayType) === 'APPROVED'"
+          [class.partial-rejected]="getPartialDecision(d.date, d.dayType) === 'REJECTED'">
+          <span class="partial-date-icon">{{ d.dayType === 'MORNING_HALF' ? '🌅' : d.dayType === 'AFTERNOON_HALF' ? '🌇' : '📅' }}</span>
+          <span class="partial-date-label">{{ fmtDatePublic(d.date) }}</span>
+          <span class="partial-session-label">{{ d.dayType === 'MORNING_HALF' ? 'Morning' : d.dayType === 'AFTERNOON_HALF' ? 'Afternoon' : 'Full day' }}</span>
+          <button type="button" class="partial-toggle-btn"
+            [class.is-approved]="getPartialDecision(d.date, d.dayType) === 'APPROVED'"
+            [class.is-rejected]="getPartialDecision(d.date, d.dayType) === 'REJECTED'"
+            (click)="togglePartialDecision(d.date, d.dayType)">
+            <i class="fas" [class.fa-circle-check]="getPartialDecision(d.date, d.dayType) === 'APPROVED'" [class.fa-circle-xmark]="getPartialDecision(d.date, d.dayType) === 'REJECTED'"></i>
+            {{ getPartialDecision(d.date, d.dayType) === 'APPROVED' ? 'Approved' : 'Rejected' }}
+          </button>
+        </div>
+      </div>
+      <label *ngIf="hasAnyRejected" class="reject-field" style="margin-top:14px;">
+        <span>Rejection reason <span class="required-mark">*</span></span>
+        <textarea
+          [(ngModel)]="partialRejectionReason"
+          [class.input-invalid]="partialSubmitted && !partialRejectionReason.trim()"
+          placeholder="Explain why these dates are being rejected"
+          rows="3"
+          maxlength="500"></textarea>
+        <small *ngIf="partialSubmitted && !partialRejectionReason.trim()">Rejection reason is required</small>
+      </label>
+    </div>
+    <div class="reject-modal-actions">
+      <button type="button" class="secondary-btn" (click)="closePartialModal()">Cancel</button>
+      <button type="button" class="reject-confirm-btn" (click)="confirmPartial()">Confirm decisions</button>
+    </div>
+  </div>
+</div>
+
+<!-- Leave Progress Modal -->
+<app-leave-progress-modal
+  *ngIf="progressLeave"
+  [leave]="progressLeave"
+  (closed)="progressLeave = null">
+</app-leave-progress-modal>
 
 <!-- Dates popup -->
 <div *ngIf="popupLeave" class="dates-popup-backdrop" (click)="popupLeave = null">

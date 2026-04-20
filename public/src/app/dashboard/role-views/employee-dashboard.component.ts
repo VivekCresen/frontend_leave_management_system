@@ -7,6 +7,7 @@ import { LeaveFormSubmitEvent } from '../components/dashboard-leave-form.compone
 import { AdminLeaveTableRow } from '../components/dashboard-leave-table.component';
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, NotifyUser, Holiday } from '../../services/leave.service';
+import { CalendarBase } from '../components/calendar-base';
 
 type EmpCalendarDay = {
   date: Date;
@@ -29,7 +30,7 @@ type EmpCalendarDay = {
   templateUrl: './employee-dashboard.component.html',
   styleUrls: ['./employee-dashboard.component.css']
 })
-export class EmployeeDashboardComponent implements OnChanges {
+export class EmployeeDashboardComponent extends CalendarBase implements OnChanges {
   @Input({ required: true }) pageId!: DashboardPageId;
   @Input({ required: true }) user!: LoginResponse;
   @Input() dashboard: UserDashboardResponse | null = null;
@@ -52,6 +53,11 @@ export class EmployeeDashboardComponent implements OnChanges {
   readonly requestsPageSize = 5;
 
   get stats(): DashboardStatCard[] {
+    const approvedDays = this.approvedLeaves.reduce((sum, l) => sum + (l.durationDays ?? 0), 0);
+    const approvedDaysFmt = Number.isInteger(approvedDays)
+      ? String(approvedDays)
+      : approvedDays.toFixed(1);
+
     return [
       {
         label: 'Profile role',
@@ -74,17 +80,17 @@ export class EmployeeDashboardComponent implements OnChanges {
       {
         label: 'Pending requests',
         value: this.pendingLeaves.length,
-        note: 'Awaiting approval.',
+        note: 'Awaiting manager or admin approval.',
         tone: 'orange',
         icon: 'fa-clock',
         route: ['/dashboard', 'requests'],
         actionLabel: 'View requests'
       },
       {
-        label: 'Total requests',
-        value: this.myLeaves.length,
-        note: 'All submitted requests.',
-        tone: 'slate',
+        label: 'Approved leave days',
+        value: approvedDaysFmt,
+        note: 'Total days approved this year.',
+        tone: 'teal',
         icon: 'fa-calendar-check',
         route: ['/dashboard', 'history'],
         actionLabel: 'View history'
@@ -93,7 +99,7 @@ export class EmployeeDashboardComponent implements OnChanges {
   }
 
   get pendingLeaves(): AdminLeaveTableRow[] {
-    return this.myLeaves.filter((l) => l.status === 'PENDING');
+    return this.myLeaves.filter((l) => l.status === 'PENDING' || l.status === 'MANAGER_APPROVED');
   }
 
   get paginatedPendingLeaves(): AdminLeaveTableRow[] {
@@ -155,12 +161,8 @@ export class EmployeeDashboardComponent implements OnChanges {
   }
 
   // ── Calendar state ──────────────────────────────────────
-  calendarYear = new Date().getFullYear();
-  calendarMonth = new Date().getMonth();
   calendarWeeks: EmpCalendarDay[][] = [];
   selectedDay: EmpCalendarDay | null = null;
-  readonly weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  jumpDate = '';   // bound to <input type="month">
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['myLeaves'] || changes['holidays']) {
@@ -177,9 +179,8 @@ export class EmployeeDashboardComponent implements OnChanges {
     this.currentRequestsPage = page;
   }
 
-  get calendarMonthLabel(): string {
-    return new Date(this.calendarYear, this.calendarMonth, 1)
-      .toLocaleString('default', { month: 'long', year: 'numeric' });
+  selectDay(day: EmpCalendarDay): void {
+    this.selectedDay = (day.leaves.length > 0 || day.holidays.length > 0) ? day : null;
   }
 
   get leavesThisMonth(): number {
@@ -204,39 +205,7 @@ export class EmployeeDashboardComponent implements OnChanges {
       .sort((left, right) => left.date.localeCompare(right.date));
   }
 
-  prevMonth(): void {
-    if (this.calendarMonth === 0) { this.calendarMonth = 11; this.calendarYear--; }
-    else { this.calendarMonth--; }
-    this.buildCalendar();
-  }
-
-  nextMonth(): void {
-    if (this.calendarMonth === 11) { this.calendarMonth = 0; this.calendarYear++; }
-    else { this.calendarMonth++; }
-    this.buildCalendar();
-  }
-
-  goToToday(): void {
-    const now = new Date();
-    this.calendarYear = now.getFullYear();
-    this.calendarMonth = now.getMonth();
-    this.jumpDate = this.toMonthValue(this.calendarYear, this.calendarMonth);
-    this.buildCalendar();
-  }
-
-  onJumpDateChange(value: string): void {
-    if (!value) return;
-    const [y, m] = value.split('-').map(Number);
-    this.calendarYear = y;
-    this.calendarMonth = m - 1;
-    this.buildCalendar();
-  }
-
-  selectDay(day: EmpCalendarDay): void {
-    this.selectedDay = (day.leaves.length > 0 || day.holidays.length > 0) ? day : null;
-  }
-
-  private buildCalendar(): void {
+  protected buildCalendar(): void {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const firstDay = new Date(this.calendarYear, this.calendarMonth, 1);
     const lastDay  = new Date(this.calendarYear, this.calendarMonth + 1, 0);
@@ -279,9 +248,5 @@ export class EmployeeDashboardComponent implements OnChanges {
     this.calendarWeeks = weeks;
     this.selectedDay = null;
     this.jumpDate = this.toMonthValue(this.calendarYear, this.calendarMonth);
-  }
-
-  private toMonthValue(year: number, month: number): string {
-    return `${year}-${String(month + 1).padStart(2, '0')}`;
   }
 }

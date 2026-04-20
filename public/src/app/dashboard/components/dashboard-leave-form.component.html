@@ -269,6 +269,7 @@
     <div class="calendar-picker-legend">
       <span><i class="fas fa-square-full legend-open"></i> Working day</span>
       <span><i class="fas fa-square-full legend-selected"></i> Selected</span>
+      <span><i class="fas fa-square-full legend-booked"></i> Already booked</span>
       <span><i class="fas fa-square-full legend-blocked"></i> Weekend / holiday</span>
     </div>
 
@@ -285,14 +286,16 @@
         [class.today]="day.isToday"
         [class.past]="day.isPast"
         [class.selected]="!!day.selectedSession"
+        [class.booked]="day.isBooked"
         [class.blocked]="day.isPast || day.isWeekend || day.isHoliday"
-        [disabled]="day.isPast || day.isWeekend || day.isHoliday"
+        [disabled]="day.isPast || day.isWeekend || day.isHoliday || day.isBooked"
         (click)="toggleCalendarDaySelection(day.dateKey)">
         <strong>{{ day.dayNumber }}</strong>
         <small *ngIf="day.selectedSession">{{ getSessionLabel(day.selectedSession) }}</small>
-        <small *ngIf="!day.selectedSession && day.isPast">Past date</small>
-        <small *ngIf="!day.selectedSession && day.isHoliday">{{ day.holidayName }}</small>
-        <small *ngIf="!day.selectedSession && !day.isHoliday && day.isWeekend">Weekend</small>
+        <small *ngIf="!day.selectedSession && day.isBooked">Booked</small>
+        <small *ngIf="!day.selectedSession && !day.isBooked && day.isPast">Past date</small>
+        <small *ngIf="!day.selectedSession && !day.isBooked && day.isHoliday">{{ day.holidayName }}</small>
+        <small *ngIf="!day.selectedSession && !day.isBooked && !day.isHoliday && day.isWeekend">Weekend</small>
       </button>
     </div>
 

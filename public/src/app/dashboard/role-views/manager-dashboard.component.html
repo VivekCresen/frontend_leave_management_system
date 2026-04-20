@@ -55,6 +55,27 @@
         </div>
       </div>
 
+      <!-- Pending summary banner -->
+      <div class="pending-summary-banner" *ngIf="pendingLeaves.length > 0">
+        <div class="pending-summary-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="pending-summary-content">
+          <strong>{{ pendingLeaves.length }} pending request{{ pendingLeaves.length !== 1 ? 's' : '' }} awaiting your decision</strong>
+          <span>The table below is pre-filtered to show pending requests. Use the status filter to view all requests.</span>
+        </div>
+      </div>
+
+      <div class="pending-summary-banner pending-summary-empty" *ngIf="pendingLeaves.length === 0 && managerLeaves.length > 0">
+        <div class="pending-summary-icon pending-summary-icon--ok">
+          <i class="fas fa-circle-check"></i>
+        </div>
+        <div class="pending-summary-content">
+          <strong>All caught up</strong>
+          <span>No pending requests right now. Use the status filter to review approved or rejected requests.</span>
+        </div>
+      </div>
+
       <app-dashboard-leave-table
         [leaves]="managerLeaves"
         title="Team leave requests"
@@ -63,11 +84,12 @@
         emptyMessage="Leave requests from your team will appear here."
         [compactView]="true"
         [showActions]="true"
-        [allowedStatuses]="['PENDING']"
+        [viewerRole]="'MANAGER'"
         [initialStatus]="'PENDING'"
-        [showStatusFilter]="false"
+        [showStatusFilter]="true"
         (approveRequested)="leaveApproveRequested.emit($event)"
-        (rejectRequested)="leaveRejectRequested.emit($event)">
+        (rejectRequested)="leaveRejectRequested.emit($event)"
+        (partialStatusRequested)="leavePartialStatusRequested.emit($event)">
       </app-dashboard-leave-table>
     </section>
 

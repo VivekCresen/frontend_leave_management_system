@@ -846,6 +846,7 @@
 
 .legend-open { color: #cbd5e1; }
 .legend-selected { color: #0f8b8d; }
+.legend-booked { color: #f97316; }
 .legend-blocked { color: #f59e0b; }
 
 .calendar-grid {
@@ -910,6 +911,13 @@
 .calendar-day-button.blocked {
   background: rgba(248, 250, 252, 0.9);
   color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.calendar-day-button.booked {
+  background: rgba(249, 115, 22, 0.08);
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #c2410c;
   cursor: not-allowed;
 }
 

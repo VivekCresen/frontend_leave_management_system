@@ -699,6 +699,9 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .cal-surface {
@@ -919,6 +922,9 @@
 .cal-detail-list {
   display: grid;
   gap: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .cal-detail-item {
@@ -988,4 +994,54 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+
+/* Pending summary banner */
+.pending-summary-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.pending-summary-banner.pending-summary-empty {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.pending-summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(251, 191, 36, 0.2);
+  color: #d97706;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.pending-summary-icon--ok {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.pending-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pending-summary-content strong {
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.pending-summary-content span {
+  font-size: 0.8rem;
+  color: #64748b;
 }

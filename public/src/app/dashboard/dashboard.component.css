@@ -1,6 +1,7 @@
 .dashboard-shell {
   --sidebar-width: 290px;
   --sidebar-collapsed-width: 94px;
+  min-height: 100vh;
   height: 100vh;
   position: relative;
   display: grid;
@@ -34,7 +35,7 @@
   min-width: 0;
   height: 100%;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .dashboard-mobile-bar,

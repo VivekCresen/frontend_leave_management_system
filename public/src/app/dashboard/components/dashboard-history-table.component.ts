@@ -20,10 +20,12 @@ import {
   ICellRendererParams,
   ModuleRegistry,
   PaginationModule,
+  RowClickedEvent,
   themeQuartz,
   ValueFormatterParams
 } from 'ag-grid-community';
 import { AdminLeaveTableRow } from './dashboard-leave-table.component';
+import { LeaveProgressModalComponent } from './leave-progress-modal.component';
 import { LeaveType } from '../../services/leave.service';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
@@ -52,36 +54,8 @@ const historyTheme = themeQuartz.withParams({
 @Component({
   selector: 'app-dashboard-history-table',
   standalone: true,
-  imports: [CommonModule, AgGridAngular],
+  imports: [CommonModule, AgGridAngular, LeaveProgressModalComponent],
   template: `
-<!-- Balance Cards Row — full width, outside table card -->
-<div *ngIf="leaveBalances.length > 0" class="balance-row">
-  <div *ngFor="let b of leaveBalances" class="balance-card" [class.balance-exhausted]="b.remaining === 0" [class.balance-warn]="b.pct >= 75 && b.pct < 100">
-    <div class="balance-top">
-      <div class="balance-icon-wrap">
-        <i class="fas fa-calendar-days"></i>
-      </div>
-      <div class="balance-info">
-        <span class="balance-name">{{ b.name }}</span>
-        <span class="balance-remaining" [class.balance-zero]="b.remaining === 0" [class.balance-warn-text]="b.pct >= 75 && b.pct < 100">
-          {{ b.remaining % 1 === 0 ? b.remaining : b.remaining.toFixed(1) }} day{{ b.remaining !== 1 ? 's' : '' }} left
-        </span>
-      </div>
-    </div>
-    <div class="balance-bar-track">
-      <div class="balance-bar-fill"
-        [style.width.%]="b.pct"
-        [class.bar-warn]="b.pct >= 75 && b.pct < 100"
-        [class.bar-full]="b.pct === 100">
-      </div>
-    </div>
-    <div class="balance-bottom">
-      <span>{{ b.usedDays % 1 === 0 ? b.usedDays : b.usedDays.toFixed(1) }} used</span>
-      <span>{{ b.maxDays }} total</span>
-    </div>
-  </div>
-</div>
-
 <!-- Table Card -->
 <section class="table-card">
   <div class="table-heading">
@@ -90,7 +64,12 @@ const historyTheme = themeQuartz.withParams({
       <h3>{{ title }}</h3>
       <p>{{ description }}</p>
     </div>
-    <span class="count-pill">{{ leaves.length }} record{{ leaves.length !== 1 ? 's' : '' }}</span>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+      <span class="count-pill">{{ leaves.length }} record{{ leaves.length !== 1 ? 's' : '' }}</span>
+      <span *ngIf="leaves.length > 0" style="font-size:0.72rem;color:#0f8b8d;font-weight:600;opacity:0.8;">
+        <i class="fas fa-hand-pointer" style="font-size:0.65rem;"></i> Click any row to view progress
+      </span>
+    </div>
   </div>
 
   <div *ngIf="leaves.length === 0" class="empty-state">
@@ -110,10 +89,18 @@ const historyTheme = themeQuartz.withParams({
       [paginationPageSizeSelector]="[10, 20, 50]"
       [suppressCellFocus]="true"
       [domLayout]="'autoHeight'"
-      (gridReady)="onGridReady($event)">
+      (gridReady)="onGridReady($event)"
+      (rowClicked)="onRowClicked($event)">
     </ag-grid-angular>
   </div>
 </section>
+
+<!-- Progress modal -->
+<app-leave-progress-modal
+  *ngIf="progressLeave"
+  [leave]="progressLeave"
+  (closed)="progressLeave = null">
+</app-leave-progress-modal>
 
 <!-- Dates popup -->
 <div *ngIf="popupLeave" class="dates-popup-backdrop" (click)="popupLeave = null">
@@ -596,16 +583,28 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   gridMounted = false;
   readonly agTheme = historyTheme;
   popupLeave: AdminLeaveTableRow | null = null;
+  progressLeave: AdminLeaveTableRow | null = null;
 
   get leaveBalances(): { name: string; maxDays: number; usedDays: number; remaining: number; pct: number }[] {
-    return this.leaveTypes.map((lt) => {
-      const usedDays = this.leaves
-        .filter((l) => l.status === 'APPROVED' && l.leaveType.trim().toLowerCase() === lt.leaveName.trim().toLowerCase())
-        .reduce((sum, l) => sum + (l.durationDays ?? 0), 0);
-      const remaining = Math.max(0, lt.maxDays - usedDays);
-      const pct = lt.maxDays > 0 ? Math.min(100, Math.round((usedDays / lt.maxDays) * 100)) : 0;
-      return { name: lt.leaveName, maxDays: lt.maxDays, usedDays: Math.round(usedDays * 2) / 2, remaining: Math.round(remaining * 2) / 2, pct };
-    });
+    return this.leaveTypes
+      .map((lt) => {
+        const usedDays = this.leaves
+          .filter((l) => {
+            if (l.status !== 'APPROVED') return false;
+            const t = l.leaveType?.trim().toLowerCase() ?? '';
+            // match against both display name and unique name
+            return t === lt.leaveName?.trim().toLowerCase()
+                || t === lt.leaveUniqueName?.trim().toLowerCase();
+          })
+          .reduce((sum, l) => sum + (l.durationDays ?? 0), 0);
+
+        const used      = Math.round(usedDays * 2) / 2;
+        const remaining = Math.max(0, Math.round((lt.maxDays - used) * 2) / 2);
+        const pct       = lt.maxDays > 0 ? Math.min(100, Math.round((used / lt.maxDays) * 100)) : 0;
+
+        return { name: lt.leaveName, maxDays: lt.maxDays, usedDays: used, remaining, pct };
+      })
+      .filter((b) => b.maxDays > 0);
   }
 
   readonly defaultColDef: ColDef<AdminLeaveTableRow> = {
@@ -689,16 +688,22 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
         minWidth: 130,
         flex: 1,
         cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) => {
-          const cls = (value ?? '').toLowerCase();
+          const raw = (value ?? '') as string;
+          const cls = raw === 'MANAGER_APPROVED' ? 'manager-approved' : raw.toLowerCase();
           const icons: Record<string, string> = {
             pending: 'fa-clock',
+            'manager-approved': 'fa-hourglass-half',
             approved: 'fa-circle-check',
             rejected: 'fa-circle-xmark'
           };
           const icon = icons[cls] ?? 'fa-circle';
+          const label = raw === 'MANAGER_APPROVED' ? 'Pending Admin' : this.titleCase(raw);
           return `<span class="ag-status-badge ag-status-${cls}">
                     <i class="fas ${icon}"></i>
-                    ${this.titleCase(value)}
+                    ${label}
+                  </span>
+                  <br><span style="font-size:0.7rem;color:#0f8b8d;opacity:0.7;cursor:pointer;">
+                    <i class="fas fa-chart-line" style="font-size:0.65rem;"></i> View progress
                   </span>`;
         }
       },
@@ -764,6 +769,13 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
 
   onGridReady(event: GridReadyEvent<AdminLeaveTableRow>): void {
     this.gridApi = event.api;
+  }
+
+  onRowClicked(event: RowClickedEvent<AdminLeaveTableRow>): void {
+    // Don't open progress modal if user clicked a button inside the cell
+    const target = event.event?.target as HTMLElement | null;
+    if (target?.closest('button')) return;
+    if (event.data) this.progressLeave = event.data;
   }
 
   fmtDatePublic(value: string | number[] | unknown): string {

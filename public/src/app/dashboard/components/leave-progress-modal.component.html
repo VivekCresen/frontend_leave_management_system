@@ -1,0 +1,50 @@
+<div class="progress-modal-backdrop" (click)="closed.emit()">
+  <div class="progress-modal-card" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="progress-modal-header">
+      <div class="progress-modal-title-group">
+        <p class="progress-modal-eyebrow">{{ leave.leaveType }}</p>
+        <h3 class="progress-modal-title">Leave Progress</h3>
+        <p class="progress-modal-sub">{{ leave.fullName }} &nbsp;·&nbsp; {{ leave.durationDays }} day{{ leave.durationDays !== 1 ? 's' : '' }}</p>
+      </div>
+      <button type="button" class="progress-modal-close" (click)="closed.emit()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" [style.width.%]="progressPercent" [style.background]="statusColor"></div>
+    </div>
+    <p class="progress-bar-label">{{ progressPercent }}% complete</p>
+
+    <!-- Steps -->
+    <div class="progress-steps">
+      <div *ngFor="let step of steps; let i = index; let last = last" class="progress-step-row">
+        <div class="step-icon-col">
+          <div class="step-icon" [class.step-done]="step.status === 'done'" [class.step-active]="step.status === 'active'" [class.step-rejected]="step.status === 'rejected'" [class.step-pending]="step.status === 'pending'">
+            <i class="fas" [class]="'fas ' + step.icon"></i>
+          </div>
+          <div *ngIf="!last" class="step-connector" [class.connector-done]="step.status === 'done'"></div>
+        </div>
+        <div class="step-content">
+          <strong class="step-label" [class.label-done]="step.status === 'done'" [class.label-active]="step.status === 'active'" [class.label-rejected]="step.status === 'rejected'">{{ step.label }}</strong>
+          <span class="step-sublabel">{{ step.sublabel }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rejection reason -->
+    <div *ngIf="leave.status === 'REJECTED' && leave.rejectionReason" class="rejection-banner">
+      <i class="fas fa-circle-xmark"></i>
+      <span>{{ leave.rejectionReason }}</span>
+    </div>
+
+    <!-- Date range -->
+    <div class="progress-dates">
+      <span>{{ leave.fromDate | date: 'dd MMM yyyy' }}</span>
+      <span class="dates-arrow">→</span>
+      <span>{{ leave.toDate | date: 'dd MMM yyyy' }}</span>
+    </div>
+
+  </div>
+</div>

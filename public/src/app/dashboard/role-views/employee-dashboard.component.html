@@ -179,7 +179,7 @@
               <div class="cal-dots">
                 <span *ngFor="let l of day.leaves.slice(0, 3)" class="cal-dot emp-leave-dot-sm"
                   [class.approved-dot]="l.status === 'APPROVED'"
-                  [class.pending-dot]="l.status === 'PENDING'"></span>
+                  [class.pending-dot]="l.status === 'PENDING' || l.status === 'MANAGER_APPROVED'"></span>
                 <span *ngIf="day.leaves.length > 3" class="cal-dot-more">+{{ day.leaves.length - 3 }}</span>
               </div>
             </div>
@@ -214,9 +214,9 @@
                   </div>
                   <span class="status-badge"
                     [class.status-approved]="leave.status === 'APPROVED'"
-                    [class.status-pending]="leave.status === 'PENDING'"
+                    [class.status-pending]="leave.status === 'PENDING' || leave.status === 'MANAGER_APPROVED'"
                     [class.status-rejected]="leave.status === 'REJECTED'">
-                    {{ leave.status | titlecase }}
+                    {{ leave.status === 'MANAGER_APPROVED' ? 'Pending Admin' : (leave.status | titlecase) }}
                   </span>
                 </div>
               </div>

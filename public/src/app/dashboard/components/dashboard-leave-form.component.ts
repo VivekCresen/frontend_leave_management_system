@@ -30,6 +30,7 @@ type SelectionCalendarDay = {
   isPast: boolean;
   isWeekend: boolean;
   isHoliday: boolean;
+  isBooked: boolean;
   holidayName: string | null;
   selectedSession: LeaveDaySession | null;
 };
@@ -59,6 +60,7 @@ export class DashboardLeaveFormComponent implements OnChanges {
   @Input() userGender: string | null = null;
   @Input() myLeaves: AdminLeaveTableRow[] = [];
   @Input() holidays: Holiday[] = [];
+  @Input() bookedDates: string[] = [];
   @Input() notifyUsers: NotifyUser[] = [];
   @Input() notifyUsersLoading = false;
   @Input() isSaving = false;
@@ -322,6 +324,7 @@ export class DashboardLeaveFormComponent implements OnChanges {
         isPast: new Date(cursor).getTime() < today.getTime(),
         isWeekend: cursor.getDay() === 0 || cursor.getDay() === 6,
         isHoliday: !!holiday,
+        isBooked: this.bookedDates.includes(dateKey),
         holidayName: holiday?.name ?? null,
         selectedSession: this.selectedDaySessions[dateKey] ?? null
       });
@@ -512,7 +515,8 @@ export class DashboardLeaveFormComponent implements OnChanges {
     return date.getTime() < today.getTime()
       || day === 0
       || day === 6
-      || this.holidays.some((holiday) => holiday.date === dateKey);
+      || this.holidays.some((holiday) => holiday.date === dateKey)
+      || this.bookedDates.includes(dateKey);
   }
 
   private isWorkingDay(date: Date): boolean {

@@ -12,6 +12,7 @@ import { LeaveFormSubmitEvent } from '../components/dashboard-leave-form.compone
 import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, Holiday } from '../../services/leave.service';
+import { CalendarBase } from '../components/calendar-base';
 
 export type CalendarDay = {
   date: Date;
@@ -37,7 +38,7 @@ export type CalendarDay = {
   templateUrl: './manager-dashboard.component.html',
   styleUrls: ['./manager-dashboard.component.css']
 })
-export class ManagerDashboardComponent implements OnChanges {
+export class ManagerDashboardComponent extends CalendarBase implements OnChanges {
   @Input({ required: true }) pageId!: DashboardPageId;
   @Input({ required: true }) user!: LoginResponse;
   @Input() dashboard: UserDashboardResponse | null = null;
@@ -63,15 +64,12 @@ export class ManagerDashboardComponent implements OnChanges {
   @Output() cancelLeaveFormRequested = new EventEmitter<void>();
   @Output() leaveApproveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() leaveRejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
+  @Output() leavePartialStatusRequested = new EventEmitter<{ leave: AdminLeaveTableRow; decisions: import('../../services/leave.service').DateDecision[]; rejectionReason?: string }>();
   @Output() editLeaveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() deleteLeaveRequested = new EventEmitter<AdminLeaveTableRow>();
 
-  calendarYear = new Date().getFullYear();
-  calendarMonth = new Date().getMonth();
   calendarWeeks: CalendarDay[][] = [];
   selectedDay: CalendarDay | null = null;
-  readonly weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  jumpDate = '';
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['managerLeaves'] || changes['myLeaves'] || changes['holidays']) {
@@ -79,44 +77,11 @@ export class ManagerDashboardComponent implements OnChanges {
     }
   }
 
-  get calendarMonthLabel(): string {
-    return new Date(this.calendarYear, this.calendarMonth, 1)
-      .toLocaleString('default', { month: 'long', year: 'numeric' });
-  }
-
-  prevMonth(): void {
-    if (this.calendarMonth === 0) { this.calendarMonth = 11; this.calendarYear--; }
-    else { this.calendarMonth--; }
-    this.buildCalendar();
-  }
-
-  nextMonth(): void {
-    if (this.calendarMonth === 11) { this.calendarMonth = 0; this.calendarYear++; }
-    else { this.calendarMonth++; }
-    this.buildCalendar();
-  }
-
-  goToToday(): void {
-    const now = new Date();
-    this.calendarYear = now.getFullYear();
-    this.calendarMonth = now.getMonth();
-    this.jumpDate = this.toMonthValue(this.calendarYear, this.calendarMonth);
-    this.buildCalendar();
-  }
-
-  onJumpDateChange(value: string): void {
-    if (!value) return;
-    const [y, m] = value.split('-').map(Number);
-    this.calendarYear = y;
-    this.calendarMonth = m - 1;
-    this.buildCalendar();
-  }
-
   selectDay(day: CalendarDay): void {
     this.selectedDay = day.leaves.length > 0 ? day : null;
   }
 
-  private buildCalendar(): void {
+  protected buildCalendar(): void {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDay = new Date(this.calendarYear, this.calendarMonth, 1);
@@ -236,9 +201,5 @@ export class ManagerDashboardComponent implements OnChanges {
   getInitials(name: string): string {
     const parts = (name || 'U').trim().split(/\s+/);
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U';
-  }
-
-  private toMonthValue(year: number, month: number): string {
-    return `${year}-${String(month + 1).padStart(2, '0')}`;
   }
 }
