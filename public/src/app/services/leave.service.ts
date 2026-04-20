@@ -13,8 +13,8 @@ export interface LeaveType {
 }
 
 export interface LeaveDate {
-  date: string;       // ISO date string e.g. "2026-04-22"
-  dayType: string;    // FULL | MORNING_HALF | AFTERNOON_HALF
+  date: string;       
+  dayType: string;    
 }
 
 export interface LeaveRecord {
@@ -31,6 +31,7 @@ export interface LeaveRecord {
   editable: boolean;
   status: string | null;
   approvedBy: string | null;
+  managerApprovedBy: string | null;
   rejectionReason: string | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -39,7 +40,19 @@ export interface LeaveRecord {
 
 export interface UpdateLeaveStatusPayload {
   actorUsername: string;
+  status: 'APPROVED' | 'REJECTED' | 'MANAGER_APPROVED';
+  rejectionReason?: string;
+}
+
+export interface DateDecision {
+  date: string;
+  dayType: string;
   status: 'APPROVED' | 'REJECTED';
+}
+
+export interface PartialLeaveStatusPayload {
+  actorUsername: string;
+  dateDecisions: DateDecision[];
   rejectionReason?: string;
 }
 
@@ -122,9 +135,11 @@ export interface LeaveService {
   updateLeave(leaveId: number, payload: UpdateLeavePayload): Observable<LeaveRecord>;
   deleteLeave(leaveId: number): Observable<void>;
   updateLeaveStatus(leaveId: number, payload: UpdateLeaveStatusPayload): Observable<LeaveRecord>;
+  applyPartialStatus(leaveId: number, payload: PartialLeaveStatusPayload): Observable<LeaveRecord>;
   createLeaveType(payload: CreateLeaveTypePayload): Observable<LeaveType>;
   updateLeaveType(leaveTypeId: number, payload: CreateLeaveTypePayload): Observable<LeaveType>;
   deleteLeaveType(leaveTypeId: number): Observable<void>;
+  getBookedDates(username: string): Observable<string[]>;
 }
 
 export const LEAVE_SERVICE = new InjectionToken<LeaveService>('LEAVE_SERVICE');

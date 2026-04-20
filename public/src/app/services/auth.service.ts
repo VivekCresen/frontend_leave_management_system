@@ -67,6 +67,11 @@ export interface ApiErrorResponse {
   errors?: Record<string, string>;
 }
 
+export interface ImportUsersResult {
+  message: string;
+  imported: number;
+}
+
 export interface AuthService {
   readonly currentUser: Signal<LoginResponse | null>;
   login(payload: LoginRequest): Observable<LoginResponse>;
@@ -79,6 +84,8 @@ export interface AuthService {
   resetPassword(email: string, otp: string, newPassword: string): Observable<LoginResponse>;
   setCurrentUser(user: LoginResponse): void;
   clearCurrentUser(): void;
+  downloadImportTemplate(): Observable<Blob>;
+  importUsersFromExcel(file: File): Observable<ImportUsersResult>;
 }
 
 export const AUTH_SERVICE = new InjectionToken<AuthService>('AUTH_SERVICE');

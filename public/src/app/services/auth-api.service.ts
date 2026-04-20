@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   AuthService,
+  ImportUsersResult,
   LoginRequest,
   LoginResponse,
   ManagedUser,
@@ -10,12 +11,13 @@ import {
   UserDashboardResponse,
   UserManagementPayload
 } from './auth.service';
+import { resolveApiUrl } from '../shared/api-url.util';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthApiService implements AuthService {
-  private readonly apiUrl = this.resolveApiUrl();
+  private readonly apiUrl = resolveApiUrl('__LEAVE_APP_API_URL__', 'leave-app-api-url', ':8081/api/users');
   private readonly storageKey = 'leave-app-user';
   private readonly currentUserState = signal<LoginResponse | null>(this.readStoredUser());
 
@@ -88,8 +90,40 @@ export class AuthApiService implements AuthService {
     });
   }
 
-  setCurrentUser(user: LoginResponse): void {
-    const normalizedUser = this.normalizeUser(user);
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/import/template`, { responseType: 'blob' });
+  }
+
+  importUsersFromExcel(file: File): Observable<ImportUsersResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('actorUsername', this.actorUsernameOrThrow());
+    // Must use responseType: 'blob' so Angular never tries to JSON-parse
+    // a binary Excel error response. On success we parse the blob as JSON manually.
+    return new Observable(observer => {
+      this.http.post(`${this.apiUrl}/import`, formData, {
+        responseType: 'blob',
+        observe: 'response'
+      }).subscribe({
+        next: async (response) => {
+          try {
+            const text = await response.body!.text();
+            const json = JSON.parse(text) as ImportUsersResult;
+            observer.next(json);
+            observer.complete();
+          } catch {
+            observer.error({ status: 0, error: { message: 'Unexpected response format.' } });
+          }
+        },
+        error: (err) => {
+          // Pass the blob through so the component can trigger download
+          observer.error({ status: err.status, error: err.error, headers: err.headers });
+        }
+      });
+    });
+  }
+
+  setCurrentUser(user: LoginResponse): void {    const normalizedUser = this.normalizeUser(user);
     this.currentUserState.set(normalizedUser);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(this.storageKey, JSON.stringify(normalizedUser));
@@ -123,42 +157,6 @@ export class AuthApiService implements AuthService {
 
   private normalizeEmail(value: string): string {
     return value.trim().toLowerCase();
-  }
-
-  private resolveApiUrl(): string {
-    const configuredApiUrl = this.readConfiguredApiUrl();
-    if (configuredApiUrl) {
-      return configuredApiUrl;
-    }
-
-    const location = globalThis.location;
-    if (!location?.hostname) {
-      return 'http://localhost:8081/api/users';
-    }
-
-    const protocol = location.protocol === 'https:' ? 'https:' : 'http:';
-    return `${protocol}//${location.hostname}:8081/api/users`;
-  }
-
-  private readConfiguredApiUrl(): string | null {
-    const windowConfig = (globalThis as typeof globalThis & { __LEAVE_APP_API_URL__?: string }).__LEAVE_APP_API_URL__;
-    if (windowConfig?.trim()) {
-      return this.normalizeApiUrl(windowConfig);
-    }
-
-    const metaTagValue = globalThis.document
-      ?.querySelector('meta[name="leave-app-api-url"]')
-      ?.getAttribute('content');
-
-    if (!metaTagValue?.trim()) {
-      return null;
-    }
-
-    return this.normalizeApiUrl(metaTagValue);
-  }
-
-  private normalizeApiUrl(value: string): string {
-    return value.trim().replace(/\/+$/, '');
   }
 
   private actorUsernameOrThrow(): string {

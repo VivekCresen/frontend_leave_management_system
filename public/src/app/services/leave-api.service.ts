@@ -2,14 +2,15 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CreateHolidayPayload, CreateLeavePayload, CreateLeaveTypePayload, Holiday, LeaveRecord, LeaveService, LeaveType, NotifyUser, UpdateLeavePayload, UpdateLeaveStatusPayload } from './leave.service';
+import { CreateHolidayPayload, CreateLeavePayload, CreateLeaveTypePayload, Holiday, LeaveRecord, LeaveService, LeaveType, NotifyUser, PartialLeaveStatusPayload, UpdateLeavePayload, UpdateLeaveStatusPayload } from './leave.service';
+import { resolveApiUrl } from '../shared/api-url.util';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LeaveApiService implements LeaveService {
-  private readonly apiUrl = this.resolveApiUrl();
-  private readonly holidayUrl = this.resolveHolidayUrl();
+  private readonly apiUrl = resolveApiUrl('__LEAVE_APP_LEAVE_API_URL__', 'leave-app-leave-api-url', ':8082/api/leaves');
+  private readonly holidayUrl = this.apiUrl.replace(/\/api\/leaves.*$/, '/api/holidays');
 
   constructor(private readonly http: HttpClient) {}
 
@@ -91,69 +92,40 @@ export class LeaveApiService implements LeaveService {
     });
   }
 
-  createLeaveType(payload: CreateLeaveTypePayload): Observable<LeaveType> {
-    return this.http.post<LeaveType>(`${this.apiUrl}/types`, {
-      leaveName: payload.leaveName.trim(),
-      leaveUniqueName: payload.leaveUniqueName.trim(),
-      description: payload.description.trim(),
-      maxDays: payload.maxDays,
-      genderRestriction: payload.genderRestriction || null
+  applyPartialStatus(leaveId: number, payload: PartialLeaveStatusPayload): Observable<LeaveRecord> {
+    return this.http.put<LeaveRecord>(`${this.apiUrl}/${leaveId}/partial-status`, {
+      actorUsername: payload.actorUsername,
+      dateDecisions: payload.dateDecisions,
+      rejectionReason: payload.rejectionReason ?? null
     });
   }
 
+  createLeaveType(payload: CreateLeaveTypePayload): Observable<LeaveType> {
+    return this.http.post<LeaveType>(`${this.apiUrl}/types`, this.buildLeaveTypeBody(payload));
+  }
+
   updateLeaveType(leaveTypeId: number, payload: CreateLeaveTypePayload): Observable<LeaveType> {
-    return this.http.put<LeaveType>(`${this.apiUrl}/types/${leaveTypeId}`, {
+    return this.http.put<LeaveType>(`${this.apiUrl}/types/${leaveTypeId}`, this.buildLeaveTypeBody(payload));
+  }
+
+  private buildLeaveTypeBody(payload: CreateLeaveTypePayload) {
+    return {
       leaveName: payload.leaveName.trim(),
       leaveUniqueName: payload.leaveUniqueName.trim(),
       description: payload.description.trim(),
       maxDays: payload.maxDays,
       genderRestriction: payload.genderRestriction || null
-    });
+    };
   }
 
   deleteLeaveType(leaveTypeId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/types/${leaveTypeId}`);
   }
 
-  private resolveApiUrl(): string {
-    const configuredApiUrl = this.readConfiguredApiUrl();
-    if (configuredApiUrl) {
-      return configuredApiUrl;
-    }
-
-    const location = globalThis.location;
-    if (!location?.hostname) {
-      return 'http://localhost:8082/api/leaves';
-    }
-
-    const protocol = location.protocol === 'https:' ? 'https:' : 'http:';
-    return `${protocol}//${location.hostname}:8082/api/leaves`;
+  getBookedDates(username: string): Observable<string[]> {
+    return this.http.get<string[]>(
+      `${this.apiUrl}/booked-dates/${encodeURIComponent(username)}`
+    );
   }
 
-  private resolveHolidayUrl(): string {
-    const base = this.resolveApiUrl().replace(/\/api\/leaves.*$/, '');
-    return `${base}/api/holidays`;
-  }
-
-  private readConfiguredApiUrl(): string | null {
-    const windowConfig = (globalThis as typeof globalThis & { __LEAVE_APP_LEAVE_API_URL__?: string })
-      .__LEAVE_APP_LEAVE_API_URL__;
-    if (windowConfig?.trim()) {
-      return this.normalizeApiUrl(windowConfig);
-    }
-
-    const metaTagValue = globalThis.document
-      ?.querySelector('meta[name="leave-app-leave-api-url"]')
-      ?.getAttribute('content');
-
-    if (!metaTagValue?.trim()) {
-      return null;
-    }
-
-    return this.normalizeApiUrl(metaTagValue);
-  }
-
-  private normalizeApiUrl(value: string): string {
-    return value.trim().replace(/\/+$/, '');
-  }
 }
