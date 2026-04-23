@@ -46,7 +46,31 @@ export class LeaveProgressModalComponent {
   @Output() closed = new EventEmitter<void>();
 
   get workflowEntries(): WorkflowEntryView[] {
-    return this.getTrailSource().map((entry) => this.toWorkflowEntry(entry));
+    const rawTrail = this.getTrailSource();
+    
+    const visibleTrail = rawTrail.filter((entry) => 
+      !['PROCESS_STARTED', 'APPROVER_RESOLVED'].includes(entry.event.trim().toUpperCase())
+    );
+
+    const entries = visibleTrail.map((entry) => this.toWorkflowEntry(entry));
+
+    if (this.leave.status === 'PENDING') {
+       entries.push(this.toWorkflowEntry({
+           event: 'PENDING_MANAGER',
+           actor: this.findAssignedApprover(rawTrail, 'manager'),
+           timestamp: '',
+           note: ''
+       }));
+    } else if (this.leave.status === 'MANAGER_APPROVED') {
+       entries.push(this.toWorkflowEntry({
+           event: 'PENDING_ADMIN',
+           actor: this.findAssignedApprover(rawTrail, 'admin'),
+           timestamp: '',
+           note: ''
+       }));
+    }
+
+    return entries;
   }
 
   get currentStatusLabel(): string {
@@ -59,7 +83,7 @@ export class LeaveProgressModalComponent {
 
   formatTimestamp(value: string | null | undefined): string {
     if (!value) {
-      return 'Time not available';
+      return 'Pending';
     }
 
     const date = new Date(value);
@@ -99,7 +123,6 @@ export class LeaveProgressModalComponent {
       return parsed
         .map((entry) => this.normalizeTrailEntry(entry))
         .filter((entry): entry is LeaveAuditTrailEntry => entry !== null)
-        .filter((entry) => !['PROCESS_STARTED', 'APPROVER_RESOLVED'].includes(entry.event.trim().toUpperCase()))
         .sort((left, right) => this.getTimeValue(left.timestamp) - this.getTimeValue(right.timestamp));
     } catch {
       return [];
@@ -201,6 +224,14 @@ export class LeaveProgressModalComponent {
       return note.includes('manager') ? 'Manager Rejection' : 'Final Rejection';
     }
 
+    if (event === 'PENDING_MANAGER') {
+      return 'Pending Manager Review';
+    }
+
+    if (event === 'PENDING_ADMIN') {
+      return 'Pending Admin Approval';
+    }
+
     return this.titleCase(event.replace(/_/g, ' '));
   }
 
@@ -244,6 +275,10 @@ export class LeaveProgressModalComponent {
   private getEntryStatus(entry: LeaveAuditTrailEntry): string {
     const event = entry.event.trim().toUpperCase();
     const note = entry.note.toLowerCase();
+
+    if (event === 'PENDING_MANAGER' || event === 'PENDING_ADMIN') {
+      return 'Pending';
+    }
 
     if (event === 'SUBMITTED') {
       return 'Submitted';
@@ -372,6 +407,14 @@ export class LeaveProgressModalComponent {
   }
 
   private getDefaultSummary(event: string, actorName: string, statusLabel: string, reason: string): string {
+    if (event === 'PENDING_MANAGER') {
+      return `is pending to review the leave request.`;
+    }
+
+    if (event === 'PENDING_ADMIN') {
+      return `is pending to give final approval.`;
+    }
+
     switch (event) {
       case 'SUBMITTED':
         return `submitted this leave request for review.`;
@@ -409,19 +452,20 @@ export class LeaveProgressModalComponent {
     return match?.[1]?.trim() || '';
   }
 
-  private findAssignedApproverName(stage: 'manager' | 'admin'): string {
-    const assignments = this.getTrailSource().filter((entry) => entry.event.trim().toUpperCase() === 'APPROVER_RESOLVED');
+  private findAssignedApprover(trail: LeaveAuditTrailEntry[], stage: 'manager' | 'admin'): string {
+    const assignments = trail.filter((entry) => entry.event.trim().toUpperCase() === 'APPROVER_RESOLVED');
     if (!assignments.length) {
-      return '';
+      return stage === 'manager' ? 'Manager' : 'Admin';
     }
 
-    const names = assignments
-      .map((entry) => this.extractAssignedApprover(entry.note) || entry.actor)
-      .map((entry) => this.formatDisplayName(entry))
+    const unformattedNames = assignments
+      .map((entry) => this.extractAssignedApprover(entry.note) || entry.actor);
+    const names = unformattedNames
+      .map((name) => this.formatDisplayName(name))
       .filter(Boolean);
 
     if (!names.length) {
-      return '';
+      return stage === 'manager' ? 'Manager' : 'Admin';
     }
 
     return stage === 'manager' ? names[0] : names[names.length - 1];

@@ -171,7 +171,18 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
         cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
           if (!data) return '';
           const dates = data.leaveDates ?? [];
-          if (dates.length === 0) return '<span style="color:#94a3b8;">—</span>';
+          if (dates.length === 0) {
+            if (data.fromDate && data.toDate) {
+              const start = this.fmtDate(data.fromDate);
+              const end = this.fmtDate(data.toDate);
+              const text = start === end ? start : `${start} - ${end}`;
+              const dur = data.durationDays || 0;
+              const totalFmt = Number.isInteger(dur) ? `${dur}` : dur.toFixed(1);
+              const summary = `<br><span style="color:#94a3b8;font-size:0.7rem;">${totalFmt} day${dur !== 1 ? 's' : ''}</span>`;
+              return `<span style="font-size:0.82rem;font-weight:700;color:#0f172a;">📅 ${text}</span>${summary}`;
+            }
+            return '<span style="color:#94a3b8;">—</span>';
+          }
 
           const sessionLabel = (dt: string) =>
             dt === 'MORNING_HALF' ? 'Morning' : dt === 'AFTERNOON_HALF' ? 'Afternoon' : 'Full day';
