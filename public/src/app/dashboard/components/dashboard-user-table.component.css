@@ -324,6 +324,10 @@
 
 :host ::ng-deep .user-ag-grid .ag-action-btn {
   min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 11px;
   border-radius: 8px;
   font-size: 0.78rem;
@@ -331,6 +335,11 @@
   cursor: pointer;
   transition: all 0.18s ease;
   line-height: 1;
+}
+
+:host ::ng-deep .user-ag-grid .ag-action-btn:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 :host ::ng-deep .user-ag-grid .ag-action-btn.edit {
@@ -546,12 +555,22 @@
 .edit-button,
 .delete-button {
   min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border-radius: 10px;
   padding: 0 12px;
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.edit-button:disabled,
+.delete-button:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 .edit-button {

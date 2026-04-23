@@ -15,11 +15,13 @@
     </a>
 
     <ng-template #staticCard>
-      <div class="stat-card-top">
-        <p>{{ card.label }}</p>
+      <div class="stat-card-static">
+        <div class="stat-card-top">
+          <p>{{ card.label }}</p>
+        </div>
+        <strong>{{ card.value }}</strong>
+        <span>{{ card.note }}</span>
       </div>
-      <strong>{{ card.value }}</strong>
-      <span>{{ card.note }}</span>
     </ng-template>
   </article>
 </section>

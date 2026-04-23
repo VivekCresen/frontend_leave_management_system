@@ -301,6 +301,7 @@
   height: 18px;
 }
 
+
 @media (max-width: 640px) {
   .login-page {
     padding: 16px;

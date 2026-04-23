@@ -7,7 +7,6 @@
     <span class="count-pill">{{ visibleCountLabel }}</span>
   </div>
 
-  <!-- Filters -->
   <div class="table-tools">
     <label class="tool-search">
       <i class="fas fa-magnifying-glass"></i>
@@ -107,7 +106,7 @@
         </div>
 
         <div class="table-body">
-          <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions" (click)="progressLeave = leave" style="cursor:pointer;" title="Click to view leave progress">
+          <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions">
             <div class="user-cell">
               <strong>{{ leave.fullName }}</strong>
               <span>{{ leave.emailId }}</span>
@@ -145,18 +144,25 @@
                 {{ leave.status === 'MANAGER_APPROVED' ? 'Pending Admin' : (leave.status | titlecase) }}
               </span>
               <small *ngIf="leave.managerApprovedBy" class="approved-by-note">Manager: {{ leave.managerApprovedBy }}</small>
-              <small *ngIf="leave.approvedBy && leave.status !== 'MANAGER_APPROVED'" class="approved-by-note">by {{ leave.approvedBy }}</small>
+              <small *ngIf="leave.managerRejectedBy" class="approved-by-note">Manager rejected: {{ leave.managerRejectedBy }}</small>
+              <small *ngIf="leave.adminApprovedBy && leave.status !== 'MANAGER_APPROVED'" class="approved-by-note">Admin approved: {{ leave.adminApprovedBy }}</small>
+              <small *ngIf="leave.adminRejectedBy" class="approved-by-note">Admin rejected: {{ leave.adminRejectedBy }}</small>
               <small class="progress-hint"><i class="fas fa-chart-line"></i> View progress</small>
             </div>
             <div *ngIf="showActions" class="action-cell">
-              <button *ngIf="leave.status === 'PENDING'" type="button" class="partial-btn" (click)="openPartialModal(leave)" title="Review individual dates">
-                <i class="fas fa-list-check"></i> Review Dates
+              <button type="button" class="track-btn" (click)="progressLeave = leave" title="View leave progress">
+                <i class="fas fa-chart-line"></i>
+                <span>Leave Progress</span>
               </button>
-              <button *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole === 'ADMIN'" type="button" class="partial-btn partial-btn-admin" (click)="openPartialModal(leave)" title="Give final admin decision">
-                <i class="fas fa-shield-halved"></i> Final Decision
+              <button *ngIf="leave.status === 'PENDING'" type="button" class="partial-btn" [class.is-loading]="processingLeaveId === leave.id" [disabled]="processingLeaveId === leave.id" (click)="openPartialModal(leave)" title="Review individual dates">
+                <i *ngIf="processingLeaveId !== leave.id" class="fas fa-list-check"></i>
+                <span>{{ processingLeaveId === leave.id ? 'Processing...' : 'Review Dates' }}</span>
+              </button>
+              <button *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole === 'ADMIN'" type="button" class="partial-btn partial-btn-admin" [class.is-loading]="processingLeaveId === leave.id" [disabled]="processingLeaveId === leave.id" (click)="openPartialModal(leave)" title="Give final admin decision">
+                <i *ngIf="processingLeaveId !== leave.id" class="fas fa-shield-halved"></i>
+                <span>{{ processingLeaveId === leave.id ? 'Processing...' : 'Final Decision' }}</span>
               </button>
               <span *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole !== 'ADMIN'" class="action-done">Pending admin</span>
-              <span *ngIf="leave.status !== 'PENDING' && leave.status !== 'MANAGER_APPROVED'" class="action-done">—</span>
             </div>
           </div>
         </div>
@@ -234,6 +240,22 @@
       <p class="reject-employee">
         <strong>{{ partialLeave.fullName }}</strong> — {{ partialLeave.leaveType }}
       </p>
+      <div class="partial-bulk-actions">
+        <button
+          type="button"
+          class="partial-bulk-btn approve-all-btn"
+          [disabled]="hasMixedPartialDecisions || areAllPartialApproved"
+          (click)="setAllPartialDecisions('APPROVED')">
+          Approve all
+        </button>
+        <button
+          type="button"
+          class="partial-bulk-btn reject-all-btn"
+          [disabled]="hasMixedPartialDecisions || areAllPartialRejected"
+          (click)="setAllPartialDecisions('REJECTED')">
+          Reject all
+        </button>
+      </div>
       <div class="partial-dates-list">
         <div *ngFor="let d of partialLeave.leaveDates" class="partial-date-row"
           [class.partial-approved]="getPartialDecision(d.date, d.dayType) === 'APPROVED'"
@@ -263,7 +285,9 @@
     </div>
     <div class="reject-modal-actions">
       <button type="button" class="secondary-btn" (click)="closePartialModal()">Cancel</button>
-      <button type="button" class="reject-confirm-btn" (click)="confirmPartial()">Confirm decisions</button>
+      <button type="button" class="reject-confirm-btn" [class.is-loading]="partialLeave && processingLeaveId === partialLeave.id" [disabled]="partialLeave && processingLeaveId === partialLeave.id" (click)="confirmPartial()">
+        <span>{{ partialLeave && processingLeaveId === partialLeave.id ? 'Applying...' : 'Confirm decisions' }}</span>
+      </button>
     </div>
   </div>
 </div>

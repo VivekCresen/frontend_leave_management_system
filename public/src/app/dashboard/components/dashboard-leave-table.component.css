@@ -441,6 +441,25 @@
   align-items: center;
 }
 
+.track-btn {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  border: 1px solid rgba(15, 139, 141, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 139, 141, 0.1);
+  color: #0f766e;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.track-btn:hover {
+  background: rgba(15, 139, 141, 0.18);
+}
+
 .approve-btn,
 .reject-btn {
   min-height: 32px;
@@ -612,6 +631,19 @@
   color: #fff;
 }
 
+.partial-btn:disabled,
+.reject-confirm-btn:disabled,
+:host ::ng-deep .leave-ag-grid .ag-action-button:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.partial-btn.is-loading,
+.reject-confirm-btn.is-loading,
+:host ::ng-deep .leave-ag-grid .ag-action-button.is-loading {
+  pointer-events: none;
+}
+
 /* ── AG Grid shell ── */
 .ag-shell {
   margin-top: 10px;
@@ -756,6 +788,7 @@
 
 :host ::ng-deep .leave-ag-grid .ag-actions-cell {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -769,6 +802,16 @@
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-action-button.track {
+  border-color: rgba(15, 139, 141, 0.28);
+  background: rgba(15, 139, 141, 0.1);
+  color: #0f766e;
+}
+
+:host ::ng-deep .leave-ag-grid .ag-action-button.track:hover {
+  background: rgba(15, 139, 141, 0.18);
 }
 
 :host ::ng-deep .leave-ag-grid .ag-action-button.approve {
@@ -975,6 +1018,40 @@
 
 /* ── Partial modal ── */
 .partial-modal-card { max-width: 520px; }
+
+.partial-bulk-actions {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.partial-bulk-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.approve-all-btn {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.reject-all-btn {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.partial-bulk-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
 
 .partial-dates-list {
   display: flex;

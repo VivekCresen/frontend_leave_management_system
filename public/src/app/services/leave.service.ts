@@ -32,6 +32,13 @@ export interface LeaveRecord {
   status: string | null;
   approvedBy: string | null;
   managerApprovedBy: string | null;
+  managerRejectedBy: string | null;
+  managerApprovedAt: string | null;
+  managerRejectedAt: string | null;
+  adminApprovedBy: string | null;
+  adminRejectedBy: string | null;
+  adminApprovedAt: string | null;
+  adminRejectedAt: string | null;
   rejectionReason: string | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -41,6 +48,12 @@ export interface LeaveRecord {
 export interface UpdateLeaveStatusPayload {
   actorUsername: string;
   status: 'APPROVED' | 'REJECTED' | 'MANAGER_APPROVED';
+  rejectionReason?: string;
+}
+
+export interface MailLeaveDecisionPayload {
+  actorUsername: string;
+  decision: 'APPROVED' | 'REJECTED';
   rejectionReason?: string;
 }
 
@@ -135,6 +148,7 @@ export interface LeaveService {
   updateLeave(leaveId: number, payload: UpdateLeavePayload): Observable<LeaveRecord>;
   deleteLeave(leaveId: number): Observable<void>;
   updateLeaveStatus(leaveId: number, payload: UpdateLeaveStatusPayload): Observable<LeaveRecord>;
+  reviewLeaveFromMail(leaveId: number, payload: MailLeaveDecisionPayload): Observable<LeaveRecord>;
   applyPartialStatus(leaveId: number, payload: PartialLeaveStatusPayload): Observable<LeaveRecord>;
   createLeaveType(payload: CreateLeaveTypePayload): Observable<LeaveType>;
   updateLeaveType(leaveTypeId: number, payload: CreateLeaveTypePayload): Observable<LeaveType>;

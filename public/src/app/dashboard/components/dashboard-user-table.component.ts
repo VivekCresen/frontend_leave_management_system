@@ -70,6 +70,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   @Input() useAgGrid = false;
   @Input() initialRole = '';
   @Input() initialStatus = '';
+  @Input() deletingUserId: number | null = null;
 
   @Output() editRequested = new EventEmitter<ManagedUser>();
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
@@ -151,11 +152,12 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
         flex: 0.9,
         cellRenderer: ({ data }: ICellRendererParams<ManagedUser>) => {
           if (!data) return '';
+          const deleting = this.deletingUserId === data.id;
           const edit = data.canEdit
-            ? `<button class="ag-action-btn edit" data-id="${data.id}">Edit</button>`
+            ? `<button class="ag-action-btn edit" data-id="${data.id}" ${deleting ? 'disabled' : ''}>Edit</button>`
             : '';
           const del = data.canDelete
-            ? `<button class="ag-action-btn delete" data-id="${data.id}">Delete</button>`
+            ? `<button class="ag-action-btn delete${deleting ? ' is-loading' : ''}" data-id="${data.id}" ${deleting ? 'disabled' : ''}>${deleting ? 'Deleting' : 'Delete'}</button>`
             : '';
           return edit || del
             ? `<div class="ag-action-cell">${edit}${del}</div>`
@@ -243,8 +245,9 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['users'] && this.gridApi) {
+    if ((changes['users'] || changes['deletingUserId']) && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.filteredUsers);
+      this.gridApi.setGridOption('columnDefs', this.agColumnDefsWithActions);
     }
   }
 
@@ -259,6 +262,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
     const id = Number(btn.dataset['id']);
     const user = this.users.find((u) => u.id === id);
     if (!user) return;
+    if (this.deletingUserId === user.id) return;
     if (btn.classList.contains('edit')) this.editRequested.emit(user);
     if (btn.classList.contains('delete')) this.deleteRequested.emit(user);
   }

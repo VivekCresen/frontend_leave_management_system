@@ -388,6 +388,10 @@
 .primary-button,
 .secondary-button {
   min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border-radius: 14px;
   padding: 0 18px;
   font-size: 0.94rem;
@@ -413,6 +417,7 @@
   opacity: 0.72;
   cursor: not-allowed;
 }
+
 
 .badge {
   min-height: 40px;

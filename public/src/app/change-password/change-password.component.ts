@@ -13,6 +13,7 @@ import {
   getStrictPasswordError
 } from '../shared/password-policy';
 import { ToastService } from '../services/toast.service';
+import { LoaderService } from '../shared/services/loader.service';
 
 @Component({
   selector: 'app-change-password',
@@ -45,7 +46,8 @@ export class ChangePasswordComponent {
   constructor(
     authService: AuthApiService,
     private readonly router: Router,
-    private readonly toastService: ToastService
+    private readonly toastService: ToastService,
+    private readonly loaderService: LoaderService
   ) {
     this.authService = authService;
     const user = this.authService.currentUser();
@@ -77,6 +79,7 @@ export class ChangePasswordComponent {
     }
 
     this.isLoading = true;
+    this.loaderService.show();
     this.authService.requestResetOtp(this.userEmail).subscribe({
       next: (response) => {
         this.isLoading = false;
@@ -88,6 +91,7 @@ export class ChangePasswordComponent {
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || this.firstFieldError() || 'Unable to send OTP right now.';
         this.toastService.error(this.errorMessage);
@@ -131,6 +135,7 @@ export class ChangePasswordComponent {
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || this.firstFieldError() || 'Unable to change password.';
         this.toastService.error(this.errorMessage);
@@ -149,6 +154,7 @@ export class ChangePasswordComponent {
     }
 
     this.isLoading = true;
+    this.loaderService.show();
     this.authService.requestResetOtp(this.userEmail).subscribe({
       next: (response) => {
         this.isLoading = false;
@@ -158,6 +164,7 @@ export class ChangePasswordComponent {
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || this.firstFieldError() || 'Unable to send OTP right now.';
         this.toastService.error(this.errorMessage);

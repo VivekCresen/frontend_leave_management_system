@@ -21,6 +21,7 @@
         [useAgGrid]="true"
         [compactCard]="true"
         [expandToFill]="true"
+        [deletingUserId]="deletingUserId"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
     </section>
@@ -76,6 +77,7 @@
         [compactCard]="true"
         [initialRole]="filterRole"
         [initialStatus]="filterStatus"
+        [deletingUserId]="deletingUserId"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
 
@@ -186,6 +188,7 @@
             [compactView]="true"
             [showActions]="true"
             [viewerRole]="'ADMIN'"
+            [processingLeaveId]="processingLeaveId"
             (approveRequested)="leaveApproveRequested.emit($event)"
             (rejectRequested)="leaveRejectRequested.emit($event)"
             (partialStatusRequested)="leavePartialStatusRequested.emit($event)"
@@ -229,8 +232,10 @@
                   <span *ngIf="leaveType.genderRestriction" class="leave-type-gender-badge">
                     {{ leaveType.genderRestriction === 'MALE' ? '♂ Male only' : '♀ Female only' }}
                   </span>
-                  <button type="button" class="edit-button" (click)="openEditLeaveTypeModal(leaveType)">Edit</button>
-                  <button type="button" class="delete-button" (click)="requestDeleteLeaveType(leaveType)">Delete</button>
+                  <button type="button" class="edit-button" (click)="openEditLeaveTypeModal(leaveType)" [disabled]="deletingLeaveTypeId === leaveType.id">Edit</button>
+                  <button type="button" class="delete-button" [class.is-loading]="deletingLeaveTypeId === leaveType.id" (click)="requestDeleteLeaveType(leaveType)" [disabled]="deletingLeaveTypeId === leaveType.id">
+                    <span>{{ deletingLeaveTypeId === leaveType.id ? 'Deleting...' : 'Delete' }}</span>
+                  </button>
                 </div>
               </div>
               <p class="leave-type-description">{{ leaveType.description || 'No description provided for this leave type yet.' }}</p>
@@ -274,8 +279,10 @@
                     <i class="fas fa-calendar-star"></i>
                     Holiday
                   </span>
-                  <button type="button" class="edit-button" (click)="openEditHolidayModal(h)">Edit</button>
-                  <button type="button" class="delete-button" (click)="holidayDeleteRequested.emit(h.id)">Delete</button>
+                  <button type="button" class="edit-button" (click)="openEditHolidayModal(h)" [disabled]="deletingHolidayId === h.id">Edit</button>
+                  <button type="button" class="delete-button" [class.is-loading]="deletingHolidayId === h.id" (click)="holidayDeleteRequested.emit(h.id)" [disabled]="deletingHolidayId === h.id">
+                    <span>{{ deletingHolidayId === h.id ? 'Deleting...' : 'Delete' }}</span>
+                  </button>
                 </div>
               </div>
               <p class="leave-type-description">{{ h.description || 'No description provided.' }}</p>
@@ -294,7 +301,7 @@
                 <h3>{{ editingHoliday ? 'Update holiday' : 'Create public holiday' }}</h3>
                 <p>This holiday will be visible to all employees on their calendars.</p>
               </div>
-              <button type="button" class="close-button leave-type-close-button" (click)="closeHolidayModal()" aria-label="Close">
+              <button type="button" class="close-button leave-type-close-button" (click)="closeHolidayModal()" [disabled]="isHolidaySaving" aria-label="Close">
                 <i class="fas fa-xmark"></i>
               </button>
             </div>
@@ -319,9 +326,9 @@
                   placeholder="Brief description of the holiday" rows="3" maxlength="255"></textarea>
               </label>
               <div class="leave-form-actions">
-                <button type="button" class="secondary-toolbar-button" (click)="closeHolidayModal()">Cancel</button>
-                <button type="submit" class="primary-toolbar-button">
-                  {{ editingHoliday ? 'Update' : 'Create' }}
+                <button type="button" class="secondary-toolbar-button" (click)="closeHolidayModal()" [disabled]="isHolidaySaving">Cancel</button>
+                <button type="submit" class="primary-toolbar-button" [class.is-loading]="isHolidaySaving" [disabled]="isHolidaySaving">
+                  <span>{{ isHolidaySaving ? 'Saving...' : editingHoliday ? 'Update' : 'Create' }}</span>
                 </button>
               </div>
             </form>

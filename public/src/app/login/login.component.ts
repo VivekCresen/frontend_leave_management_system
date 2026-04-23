@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { AuthApiService } from '../services/auth-api.service';
 import { ApiErrorResponse } from '../services/auth.service';
+import { LeaveApiService } from '../services/leave-api.service';
 import { ToastService } from '../services/toast.service';
+import { LoaderService } from '../shared/services/loader.service';
 
 @Component({
   selector: 'app-login',
@@ -14,7 +16,7 @@ import { ToastService } from '../services/toast.service';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   readonly usernameMaxLength = 100;
   readonly passwordMaxLength = 255;
   private readonly authService: AuthApiService;
@@ -29,10 +31,28 @@ export class LoginComponent {
 
   constructor(
     authService: AuthApiService,
+    private readonly route: ActivatedRoute,
     private readonly router: Router,
-    private readonly toastService: ToastService
+    private readonly leaveService: LeaveApiService,
+    private readonly toastService: ToastService,
+    private readonly loaderService: LoaderService
   ) {
     this.authService = authService;
+  }
+
+  ngOnInit(): void {
+    const currentUser = this.authService.currentUser();
+    if (!currentUser?.username || !this.hasMailDecisionParams()) {
+      return;
+    }
+
+    if (!this.currentUserMatchesMailRole(currentUser.role)) {
+      this.authService.clearCurrentUser();
+      this.toastService.info('Please login with the correct role to complete this mail action.');
+      return;
+    }
+
+    this.completeMailDecisionAfterLogin(currentUser.username);
   }
 
   onSubmit(form: NgForm): void {
@@ -63,8 +83,7 @@ export class LoginComponent {
 
         this.isSubmitting = false;
         this.authService.setCurrentUser(response);
-        this.toastService.success('Login successful');
-        this.router.navigate(['/dashboard']);
+        this.completeMailDecisionAfterLogin(response.username);
       },
       error: (err: { error?: ApiErrorResponse & { error?: string } }) => {
         this.isSubmitting = false;
@@ -143,5 +162,101 @@ export class LoginComponent {
   private clearValidationErrors(): void {
     this.errorMessage = '';
     this.fieldErrors = {};
+  }
+
+  private completeMailDecisionAfterLogin(actorUsername: string): void {
+    const leaveId = Number(this.route.snapshot.queryParamMap.get('mailLeaveId'));
+    const decision = this.route.snapshot.queryParamMap.get('mailDecision');
+    if (!leaveId || (decision !== 'APPROVED' && decision !== 'REJECTED')) {
+      this.toastService.success('Login successful');
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    const rejectionReason = decision === 'REJECTED'
+      ? window.prompt('Please enter rejection reason', 'Rejected from email approval link.') ?? ''
+      : undefined;
+
+    this.isSubmitting = true;
+
+    this.leaveService.reviewLeaveFromMail(leaveId, {
+      actorUsername,
+      decision,
+      rejectionReason
+    }).subscribe({
+      next: () => {
+        this.isSubmitting = false;
+        this.toastService.success(`Leave ${decision.toLowerCase()} successfully`);
+        this.router.navigate(['/dashboard', 'approvals']);
+      },
+      error: (err: { error?: { details?: string[]; message?: string; error?: string } }) => {
+        this.isSubmitting = false;
+        const details = err.error?.details ?? [];
+        this.errorMessage = this.formatMailDecisionErrorMessage(
+          details[0] || err.error?.message || err.error?.error || 'Leave action failed.'
+        );
+        this.toastService.error(this.errorMessage);
+        this.router.navigate(['/dashboard', 'approvals']);
+      }
+    });
+  }
+
+  private hasMailDecisionParams(): boolean {
+    const leaveId = Number(this.route.snapshot.queryParamMap.get('mailLeaveId'));
+    const decision = this.route.snapshot.queryParamMap.get('mailDecision');
+    return Boolean(leaveId) && (decision === 'APPROVED' || decision === 'REJECTED');
+  }
+
+  private currentUserMatchesMailRole(currentRole: string | undefined): boolean {
+    const expectedRole = this.route.snapshot.queryParamMap.get('mailRole');
+    const normalizedRole = (currentRole ?? '').trim().toUpperCase();
+
+    if (!expectedRole || expectedRole === 'MANAGER_OR_ADMIN') {
+      return normalizedRole === 'MANAGER' || normalizedRole === 'ADMIN';
+    }
+
+    return normalizedRole === expectedRole.trim().toUpperCase();
+  }
+
+  private formatMailDecisionErrorMessage(message: string): string {
+    const normalized = message.trim();
+
+    if (/already\s+APPROVED\s+and cannot be changed from email/i.test(normalized)) {
+      return 'This leave request was already approved.';
+    }
+
+    if (/already\s+REJECTED\s+and cannot be changed from email/i.test(normalized)) {
+      return 'This leave request was already rejected.';
+    }
+
+    if (/already\s+MANAGER_APPROVED\s+and cannot be changed from email/i.test(normalized)) {
+      return 'This leave request already moved to admin review.';
+    }
+
+    if (/already\s+\w+\s+and cannot be changed from email/i.test(normalized)) {
+      return 'This leave request was already updated.';
+    }
+
+    if (/Only an ADMIN can give final approval or rejection/i.test(normalized)) {
+      return 'Please sign in with an admin account to complete this action.';
+    }
+
+    if (/Only a MANAGER or ADMIN can approve or reject/i.test(normalized)) {
+      return 'Please sign in with a manager or admin account to complete this action.';
+    }
+
+    if (/assigned to .* not /i.test(normalized)) {
+      return 'This leave request is assigned to a different approver.';
+    }
+
+    if (/Please login before approving or rejecting leave/i.test(normalized)) {
+      return 'Please log in first to complete this action.';
+    }
+
+    if (/Inactive users cannot approve or reject leave/i.test(normalized)) {
+      return 'Your account is inactive. Please contact an administrator.';
+    }
+
+    return normalized;
   }
 }

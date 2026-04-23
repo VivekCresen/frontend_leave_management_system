@@ -650,6 +650,15 @@
 }
 .notify-loading i { color: #0f8b8d; }
 
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+
 .calendar-select-header {
   display: flex;
   align-items: flex-start;

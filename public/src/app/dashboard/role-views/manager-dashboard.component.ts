@@ -45,6 +45,9 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
   @Input() editingUser: ManagedUser | null = null;
   @Input() isSaving = false;
   @Input() isUserFormOpen = false;
+  @Input() deletingUserId: number | null = null;
+  @Input() processingLeaveId: number | null = null;
+  @Input() deletingLeaveId: number | null = null;
   @Input() fieldErrors: Record<string, string> = {};
   @Input() leaveTypes: LeaveType[] = [];
   @Input() isLeaveFormOpen = false;
@@ -196,6 +199,36 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
     return Array.from(map.entries())
       .map(([type, count]) => ({ type, count, pct: Math.round((count / total) * 100) }))
       .sort((a, b) => b.count - a.count);
+  }
+
+  get leaveBalanceCards(): DashboardStatCard[] {
+    if (!this.leaveTypes || this.leaveTypes.length === 0) {
+      return [];
+    }
+    const userGender = this.dashboard?.actor?.gender?.toUpperCase() || '';
+    const relevantTypes = this.leaveTypes.filter(lt => {
+      if (!lt.genderRestriction) return true;
+      if (!userGender) return true;
+      return lt.genderRestriction.toUpperCase() === userGender;
+    });
+
+    const myApproved = this.myLeaves.filter(l => l.status === 'APPROVED');
+    return relevantTypes.map((leaveType) => {
+      const takenDays = myApproved
+        .filter((l) => l.leaveTypeId === leaveType.id || l.leaveType === leaveType.leaveName)
+        .reduce((sum, l) => sum + (l.durationDays ?? 0), 0);
+      const remaining = Math.max(0, leaveType.maxDays - takenDays);
+      const remainingFmt = Number.isInteger(remaining) ? String(remaining) : remaining.toFixed(1);
+      const usedFmt = Number.isInteger(takenDays) ? String(takenDays) : takenDays.toFixed(1);
+
+      return {
+        label: leaveType.leaveName,
+        value: `${remainingFmt} available`,
+        note: `Used ${usedFmt} of ${leaveType.maxDays} days`,
+        tone: remaining > 0 ? 'teal' : 'orange',
+        icon: 'fa-calendar-minus'
+      };
+    });
   }
 
   getInitials(name: string): string {

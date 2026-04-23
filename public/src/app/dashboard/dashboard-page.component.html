@@ -90,29 +90,17 @@
         <label class="profile-field">
           <span>Username</span>
           <input
-            #profileUsername="ngModel"
-            [(ngModel)]="profileModel.username"
-            [class.input-invalid]="!!getProfileControlError(profileUsername, 'username', 'Username is required')"
-            [maxlength]="usernameMaxLength"
-            name="profileUsername"
-            placeholder="Choose a username"
-            required
+            [value]="dashboard?.actor?.username || user.username"
+            readonly
             type="text" />
-          <small>{{ getProfileControlError(profileUsername, 'username', 'Username is required') || ' ' }}</small>
         </label>
 
         <label class="profile-field">
           <span>Email</span>
           <input
-            #profileEmail="ngModel"
-            [(ngModel)]="profileModel.email"
-            [class.input-invalid]="!!getProfileControlError(profileEmail, 'email', 'Email is required')"
-            maxlength="200"
-            name="profileEmail"
-            placeholder="Enter email address"
-            required
+            [value]="dashboard?.actor?.email || user.email"
+            readonly
             type="email" />
-          <small>{{ getProfileControlError(profileEmail, 'email', 'Email is required') || ' ' }}</small>
         </label>
 
         <label class="profile-field">
@@ -145,8 +133,8 @@
           <button type="button" class="secondary-button" (click)="resetProfileForm()" [disabled]="isProfileSaving">
             Reset
           </button>
-          <button type="submit" class="primary-button" [disabled]="isProfileSaving">
-            {{ isProfileSaving ? 'Saving...' : 'Save profile' }}
+          <button type="submit" class="primary-button" [class.is-loading]="isProfileSaving" [disabled]="isProfileSaving">
+            <span>{{ isProfileSaving ? 'Saving...' : 'Save profile' }}</span>
           </button>
         </div>
       </form>
@@ -197,7 +185,13 @@
       [isSaving]="isSaving"
       [isLeaveTypesLoading]="isLeaveTypesLoading"
       [isUserFormOpen]="isUserFormOpen"
+      [deletingHolidayId]="deletingHolidayId"
+      [deletingLeaveTypeId]="deletingLeaveTypeId"
+      [deletingUserId]="deletingUserId"
+      [isHolidaySaving]="isHolidaySaving"
       [lastLeaveTypeCreatedAt]="lastLeaveTypeCreatedAt"
+      [lastHolidaySavedAt]="lastHolidaySavedAt"
+      [processingLeaveId]="processingLeaveId"
       [leaveTypeFieldErrors]="leaveTypeFieldErrors"
       [leaves]="leaves"
       [leaveTypes]="leaveTypes"
@@ -227,9 +221,12 @@
       [fieldErrors]="fieldErrors"
       [isSaving]="isSaving"
       [isUserFormOpen]="isUserFormOpen"
+      [deletingUserId]="deletingUserId"
       [leaveTypes]="leaveTypes"
       [isLeaveFormOpen]="isLeaveFormOpen"
       [isLeaveSaving]="isLeaveSaving"
+      [processingLeaveId]="processingLeaveId"
+      [deletingLeaveId]="deletingLeaveId"
       [leaveFieldErrors]="leaveFieldErrors"
       [managerLeaves]="managerLeaves"
       [myLeaves]="myLeaves"
@@ -256,6 +253,7 @@
       [leaveTypes]="leaveTypes"
       [isLeaveFormOpen]="isLeaveFormOpen"
       [isSaving]="isLeaveSaving"
+      [deletingLeaveId]="deletingLeaveId"
       [leaveFieldErrors]="leaveFieldErrors"
       [myLeaves]="myLeaves"
       [notifyUsers]="notifyUsers"

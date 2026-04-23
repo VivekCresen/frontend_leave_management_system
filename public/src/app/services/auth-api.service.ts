@@ -65,6 +65,14 @@ export class AuthApiService implements AuthService {
     });
   }
 
+  updateProfile(userId: number, fullName: string, gender: string): Observable<ManagedUser> {
+    return this.http.patch<ManagedUser>(`${this.apiUrl}/${userId}/profile`, {
+      actorUsername: this.actorUsernameOrThrow(),
+      fullName: fullName.trim(),
+      gender: gender.trim()
+    });
+  }
+
   deleteUser(userId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${userId}?actorUsername=${encodeURIComponent(this.actorUsernameOrThrow())}`);
   }
@@ -123,7 +131,8 @@ export class AuthApiService implements AuthService {
     });
   }
 
-  setCurrentUser(user: LoginResponse): void {    const normalizedUser = this.normalizeUser(user);
+  setCurrentUser(user: LoginResponse): void {
+    const normalizedUser = this.normalizeUser(user);
     this.currentUserState.set(normalizedUser);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(this.storageKey, JSON.stringify(normalizedUser));
@@ -169,13 +178,47 @@ export class AuthApiService implements AuthService {
   }
 
   private normalizeUser(user: Partial<LoginResponse>): LoginResponse {
+    const tokenClaims = this.decodeTokenClaims(user.token);
+    const tokenUsername = this.stringClaim(tokenClaims?.['sub']);
+    const tokenEmail = this.stringClaim(tokenClaims?.['email']);
+    const tokenRole = this.stringClaim(tokenClaims?.['role']);
+    const tokenActive = this.booleanClaim(tokenClaims?.['active']);
+
     return {
-      username: user.username ?? '',
-      email: user.email ?? '',
-      role: user.role ?? '',
-      active: user.active !== false,
+      username: user.username ?? tokenUsername,
+      email: user.email ?? tokenEmail,
+      role: user.role ?? tokenRole,
+      active: user.active ?? tokenActive ?? true,
       token: user.token ?? '',
       message: user.message ?? ''
     };
+  }
+
+  private decodeTokenClaims(token: string | undefined): Record<string, unknown> | null {
+    if (!token) {
+      return null;
+    }
+
+    const parts = token.split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+
+    try {
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const normalized = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+      const decoded = atob(normalized);
+      return JSON.parse(decoded) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  private stringClaim(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+  }
+
+  private booleanClaim(value: unknown): boolean | null {
+    return typeof value === 'boolean' ? value : null;
   }
 }

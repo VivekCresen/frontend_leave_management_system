@@ -153,6 +153,11 @@
   box-shadow: 0 18px 40px -30px rgba(249, 115, 22, 0.34);
 }
 
+.primary-toolbar-button.is-loading,
+.delete-button.is-loading {
+  pointer-events: none;
+}
+
 .secondary-toolbar-button {
   min-height: 46px;
   display: inline-flex;
@@ -664,12 +669,22 @@
 .leave-type-card-actions .edit-button,
 .leave-type-card-actions .delete-button {
   min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 12px;
   border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.leave-type-card-actions .edit-button:disabled,
+.leave-type-card-actions .delete-button:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 .leave-type-card-actions .edit-button {

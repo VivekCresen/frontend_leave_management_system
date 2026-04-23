@@ -1,18 +1,43 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { AdminLeaveTableRow } from './dashboard-leave-table.component';
 
-export type LeaveProgressStep = {
-  label: string;
-  sublabel: string;
-  status: 'done' | 'active' | 'pending' | 'rejected';
+type LeaveAuditTrailEntry = {
+  event: string;
+  actor: string;
+  timestamp: string;
+  note: string;
+};
+
+type WorkflowTone = 'success' | 'danger' | 'warning' | 'neutral';
+
+type WorkflowEntryView = {
+  title: string;
+  actorLabel: string;
+  actorName: string;
+  statusLabel: string;
+  tone: WorkflowTone;
   icon: string;
+  summary: string;
+  reason: string;
+  timestamp: string;
+};
+
+type ReviewStageView = {
+  title: string;
+  caption: string;
+  reviewer: string;
+  reviewerLabel: string;
+  status: string;
+  tone: WorkflowTone;
+  detail: string;
+  reason: string;
 };
 
 @Component({
   selector: 'app-leave-progress-modal',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule],
   templateUrl: './leave-progress-modal.component.html',
   styleUrls: ['./leave-progress-modal.component.css']
 })
@@ -20,71 +45,493 @@ export class LeaveProgressModalComponent {
   @Input({ required: true }) leave!: AdminLeaveTableRow;
   @Output() closed = new EventEmitter<void>();
 
-  get steps(): LeaveProgressStep[] {
-    const s = this.leave.status;
-    const isRejected = s === 'REJECTED';
-    const isManagerApproved = s === 'MANAGER_APPROVED' || s === 'APPROVED';
-    const isAdminApproved = s === 'APPROVED';
+  get workflowEntries(): WorkflowEntryView[] {
+    return this.getTrailSource().map((entry) => this.toWorkflowEntry(entry));
+  }
 
-    // Determine where rejection happened (manager or admin level)
-    const rejectedAtManager = isRejected && !this.leave.managerApprovedBy;
-    const rejectedAtAdmin = isRejected && !!this.leave.managerApprovedBy;
+  get currentStatusLabel(): string {
+    return this.formatStatusLabel(this.leave.status);
+  }
 
-    return [
+  get currentStatusTone(): WorkflowTone {
+    return this.getStatusToneFromValue(this.leave.status);
+  }
+
+  formatTimestamp(value: string | null | undefined): string {
+    if (!value) {
+      return 'Time not available';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  }
+
+  closeModal(): void {
+    this.closed.emit();
+  }
+
+  private getTrailSource(): LeaveAuditTrailEntry[] {
+    const parsed = this.parsedTrail;
+    return parsed.length ? parsed : this.fallbackTrail;
+  }
+
+  private get parsedTrail(): LeaveAuditTrailEntry[] {
+    if (!this.leave.trail?.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(this.leave.trail);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .map((entry) => this.normalizeTrailEntry(entry))
+        .filter((entry): entry is LeaveAuditTrailEntry => entry !== null)
+        .filter((entry) => !['PROCESS_STARTED', 'APPROVER_RESOLVED'].includes(entry.event.trim().toUpperCase()))
+        .sort((left, right) => this.getTimeValue(left.timestamp) - this.getTimeValue(right.timestamp));
+    } catch {
+      return [];
+    }
+  }
+
+  private get fallbackTrail(): LeaveAuditTrailEntry[] {
+    const items: LeaveAuditTrailEntry[] = [
       {
-        label: 'Submitted',
-        sublabel: 'Leave request created',
-        status: 'done',
-        icon: 'fa-paper-plane'
-      },
-      {
-        label: 'Manager Review',
-        sublabel: isManagerApproved
-          ? `Approved by ${this.leave.managerApprovedBy ?? this.leave.approvedBy ?? 'Manager'}`
-          : rejectedAtManager
-          ? `Rejected — ${this.leave.rejectionReason ?? 'No reason given'}`
-          : 'Awaiting manager approval',
-        status: isManagerApproved ? 'done' : rejectedAtManager ? 'rejected' : 'active',
-        icon: isManagerApproved ? 'fa-circle-check' : rejectedAtManager ? 'fa-circle-xmark' : 'fa-user-tie'
-      },
-      {
-        label: 'Admin Review',
-        sublabel: isAdminApproved
-          ? `Approved by ${this.leave.approvedBy ?? 'Admin'}`
-          : rejectedAtAdmin
-          ? `Rejected — ${this.leave.rejectionReason ?? 'No reason given'}`
-          : isManagerApproved
-          ? 'Awaiting admin final approval'
-          : 'Pending manager approval first',
-        status: isAdminApproved ? 'done' : rejectedAtAdmin ? 'rejected' : isManagerApproved ? 'active' : 'pending',
-        icon: isAdminApproved ? 'fa-circle-check' : rejectedAtAdmin ? 'fa-circle-xmark' : 'fa-user-shield'
-      },
-      {
-        label: isRejected ? 'Rejected' : isAdminApproved ? 'Approved' : 'Final Decision',
-        sublabel: isRejected
-          ? (this.leave.rejectionReason ?? 'Request was rejected')
-          : isAdminApproved
-          ? 'Leave is fully approved'
-          : 'Awaiting final decision',
-        status: isAdminApproved ? 'done' : isRejected ? 'rejected' : 'pending',
-        icon: isAdminApproved ? 'fa-calendar-check' : isRejected ? 'fa-ban' : 'fa-hourglass-half'
+        event: 'SUBMITTED',
+        actor: this.leave.fullName || 'Employee',
+        timestamp: this.leave.createdAt || '',
+        note: `Leave request submitted by ${this.leave.fullName || 'Employee'}`
       }
     ];
+
+    if (this.leave.managerApprovedBy) {
+      items.push({
+        event: 'MANAGER_APPROVED',
+        actor: this.leave.managerApprovedBy,
+        timestamp: this.leave.managerApprovedAt || '',
+        note: `Approved by manager ${this.leave.managerApprovedBy}. Pending admin final approval.`
+      });
+    }
+
+    if (this.leave.managerRejectedBy) {
+      items.push({
+        event: 'REJECTED',
+        actor: this.leave.managerRejectedBy,
+        timestamp: this.leave.managerRejectedAt || '',
+        note: `Rejected by ${this.leave.managerRejectedBy}.${this.leave.rejectionReason ? ` Reason: ${this.leave.rejectionReason}` : ''}`
+      });
+    }
+
+    if (this.leave.adminApprovedBy) {
+      items.push({
+        event: 'APPROVED',
+        actor: this.leave.adminApprovedBy,
+        timestamp: this.leave.adminApprovedAt || '',
+        note: `Final approval by admin ${this.leave.adminApprovedBy}`
+      });
+    }
+
+    if (this.leave.adminRejectedBy) {
+      items.push({
+        event: 'REJECTED',
+        actor: this.leave.adminRejectedBy,
+        timestamp: this.leave.adminRejectedAt || '',
+        note: `Rejected by ${this.leave.adminRejectedBy}.${this.leave.rejectionReason ? ` Reason: ${this.leave.rejectionReason}` : ''}`
+      });
+    }
+
+    return items;
   }
 
-  get progressPercent(): number {
-    const s = this.leave.status;
-    if (s === 'APPROVED') return 100;
-    if (s === 'MANAGER_APPROVED') return 66;
-    if (s === 'REJECTED') return this.leave.managerApprovedBy ? 66 : 33;
-    return 10; // PENDING
+  private toWorkflowEntry(entry: LeaveAuditTrailEntry): WorkflowEntryView {
+    const statusLabel = this.getEntryStatus(entry);
+    const actorName = this.getReviewerName(entry);
+    const reason = this.extractReason(entry);
+
+    return {
+      title: this.getEntryTitle(entry),
+      actorLabel: this.getActorLabel(entry),
+      actorName,
+      statusLabel,
+      tone: this.getStatusTone(entry),
+      icon: this.getEntryIcon(entry),
+      summary: this.humanizeNote(entry, actorName, statusLabel, reason),
+      reason,
+      timestamp: entry.timestamp
+    };
   }
 
-  get statusColor(): string {
-    const s = this.leave.status;
-    if (s === 'APPROVED') return '#0f8b8d';
-    if (s === 'REJECTED') return '#dc2626';
-    if (s === 'MANAGER_APPROVED') return '#f59e0b';
-    return '#64748b';
+  private getEntryTitle(entry: LeaveAuditTrailEntry): string {
+    const event = entry.event.trim().toUpperCase();
+    const note = entry.note.toLowerCase();
+
+    if (event === 'SUBMITTED') {
+      return 'Leave Requested';
+    }
+
+    if (event === 'PROCESS_STARTED') {
+      return 'Workflow Started';
+    }
+
+    if (event === 'APPROVER_RESOLVED') {
+      return 'Approver Assigned';
+    }
+
+    if (event === 'MANAGER_APPROVED' || note.includes('manager ')) {
+      return 'Manager Review';
+    }
+
+    if (event === 'APPROVED') {
+      return 'Final Approval';
+    }
+
+    if (event === 'REJECTED') {
+      return note.includes('manager') ? 'Manager Rejection' : 'Final Rejection';
+    }
+
+    return this.titleCase(event.replace(/_/g, ' '));
+  }
+
+  private getActorLabel(entry: LeaveAuditTrailEntry): string {
+    const event = entry.event.trim().toUpperCase();
+
+    if (event === 'SUBMITTED') {
+      return 'Requested by';
+    }
+
+    if (event === 'APPROVER_RESOLVED') {
+      return 'Assigned to';
+    }
+
+    if (event === 'MANAGER_APPROVED') {
+      return 'Reviewed by';
+    }
+
+    if (event === 'APPROVED') {
+      return 'Approved by';
+    }
+
+    if (event === 'REJECTED') {
+      return 'Rejected by';
+    }
+
+    return 'Updated by';
+  }
+
+  private getReviewerName(entry: LeaveAuditTrailEntry): string {
+    const event = entry.event.trim().toUpperCase();
+    const fromNote = this.extractActorFromNote(entry.note);
+
+    if (event === 'SUBMITTED') {
+      return this.formatDisplayName(fromNote || entry.actor) || this.leave.fullName || 'Employee';
+    }
+
+    return this.formatDisplayName(fromNote || entry.actor) || entry.actor || 'System';
+  }
+
+  private getEntryStatus(entry: LeaveAuditTrailEntry): string {
+    const event = entry.event.trim().toUpperCase();
+    const note = entry.note.toLowerCase();
+
+    if (event === 'SUBMITTED') {
+      return 'Submitted';
+    }
+
+    if (event === 'PROCESS_STARTED') {
+      return 'Started';
+    }
+
+    if (event === 'APPROVER_RESOLVED') {
+      return 'Assigned';
+    }
+
+    if (event === 'MANAGER_APPROVED') {
+      return 'Approved by Manager';
+    }
+
+    if (event === 'APPROVED') {
+      return 'Approved';
+    }
+
+    if (event === 'REJECTED' || note.includes('reject')) {
+      return 'Rejected';
+    }
+
+    if (note.includes('pending')) {
+      return 'Pending';
+    }
+
+    return this.formatStatusLabel(event);
+  }
+
+  private getStatusTone(entry: LeaveAuditTrailEntry): WorkflowTone {
+    return this.getStatusToneFromValue(this.getEntryStatus(entry));
+  }
+
+  private getStatusToneFromValue(value: string | null | undefined): WorkflowTone {
+    const normalized = (value || '').trim().toLowerCase();
+
+    if (normalized.includes('reject')) {
+      return 'danger';
+    }
+
+    if (normalized.includes('approved')) {
+      return 'success';
+    }
+
+    if (normalized.includes('pending') || normalized.includes('assigned') || normalized.includes('manager approved')) {
+      return 'warning';
+    }
+
+    return 'neutral';
+  }
+
+  private getEntryIcon(entry: LeaveAuditTrailEntry): string {
+    const tone = this.getStatusTone(entry);
+
+    if (tone === 'success') {
+      return 'fa-circle-check';
+    }
+
+    if (tone === 'danger') {
+      return 'fa-circle-xmark';
+    }
+
+    if (tone === 'warning') {
+      return 'fa-clock';
+    }
+
+    const event = entry.event.trim().toUpperCase();
+    if (event === 'SUBMITTED') {
+      return 'fa-paper-plane';
+    }
+
+    if (event === 'PROCESS_STARTED') {
+      return 'fa-diagram-project';
+    }
+
+    return 'fa-circle-info';
+  }
+
+  private humanizeNote(entry: LeaveAuditTrailEntry, actorName: string, statusLabel: string, reason: string): string {
+    const note = entry.note?.trim();
+    const lowerNote = note.toLowerCase();
+    const event = entry.event.trim().toUpperCase();
+
+    if (!note) {
+      return this.getDefaultSummary(event, actorName, statusLabel, reason);
+    }
+
+    if (lowerNote.includes('flowable approval process started')) {
+      return 'started the approval workflow. The request is now moving through the review steps.';
+    }
+
+    if (lowerNote.includes('assigned to approver:')) {
+      return `has been assigned to review this leave request.`;
+    }
+
+    if (lowerNote.startsWith('leave request submitted by')) {
+      return `submitted this leave request for review.`;
+    }
+
+    if (lowerNote.startsWith('approved by manager')) {
+      return `approved the leave request and it is now waiting for final admin approval.`;
+    }
+
+    if (lowerNote.startsWith('manager ') && lowerNote.includes(' approved ')) {
+      const match = note.match(/Manager .*? approved (.*)$/i);
+      return match ? `approved ${match[1]}` : `approved the request.`;
+    }
+
+    if (lowerNote.startsWith('final approval by admin')) {
+      return `gave the final approval for this leave request.`;
+    }
+
+    if (lowerNote.startsWith('admin final decision:')) {
+      const match = note.match(/Admin final decision: (.*)$/i);
+      return match ? `made the final decision: ${match[1]}` : `completed the final decision.`;
+    }
+
+    if (lowerNote.startsWith('rejected by')) {
+      return `rejected this leave request.`;
+    }
+
+    return this.toSentenceCase(note);
+  }
+
+  private getDefaultSummary(event: string, actorName: string, statusLabel: string, reason: string): string {
+    switch (event) {
+      case 'SUBMITTED':
+        return `submitted this leave request for review.`;
+      case 'PROCESS_STARTED':
+        return 'started the approval workflow.';
+      case 'APPROVER_RESOLVED':
+        return `has been assigned to review this request.`;
+      case 'MANAGER_APPROVED':
+        return `approved the leave request and passed it to the admin stage.`;
+      case 'APPROVED':
+        return `gave the final approval for this leave request.`;
+      case 'REJECTED':
+        return `rejected this leave request.`;
+      default:
+        return `updated the status to ${statusLabel.toLowerCase()}.`;
+    }
+  }
+
+  private extractReason(entry: LeaveAuditTrailEntry): string {
+    const note = entry.note?.trim();
+    if (!note) {
+      return this.getStatusTone(entry) === 'danger' ? this.leave.rejectionReason || '' : '';
+    }
+
+    const reasonMatch = note.match(/reason:\s*(.+)$/i);
+    if (reasonMatch?.[1]) {
+      return reasonMatch[1].trim();
+    }
+
+    return this.getStatusTone(entry) === 'danger' ? this.leave.rejectionReason || '' : '';
+  }
+
+  private extractAssignedApprover(note: string): string {
+    const match = note.match(/assigned to approver:\s*(.+)$/i);
+    return match?.[1]?.trim() || '';
+  }
+
+  private findAssignedApproverName(stage: 'manager' | 'admin'): string {
+    const assignments = this.getTrailSource().filter((entry) => entry.event.trim().toUpperCase() === 'APPROVER_RESOLVED');
+    if (!assignments.length) {
+      return '';
+    }
+
+    const names = assignments
+      .map((entry) => this.extractAssignedApprover(entry.note) || entry.actor)
+      .map((entry) => this.formatDisplayName(entry))
+      .filter(Boolean);
+
+    if (!names.length) {
+      return '';
+    }
+
+    return stage === 'manager' ? names[0] : names[names.length - 1];
+  }
+
+  private extractActorFromNote(note: string): string {
+    const patterns = [
+      /leave request submitted by\s+(.+)$/i,
+      /approved by manager\s+(.+?)(?:\.|$)/i,
+      /final approval by admin\s+(.+)$/i,
+      /rejected by\s+(.+?)(?:\.|$)/i,
+      /manager\s+(.+?)\s+approved/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = note.match(pattern);
+      if (match?.[1]) {
+        return match[1].trim();
+      }
+    }
+
+    return '';
+  }
+
+  private normalizeTrailEntry(entry: unknown): LeaveAuditTrailEntry | null {
+    if (!entry || typeof entry !== 'object') {
+      return null;
+    }
+
+    const source = entry as Record<string, unknown>;
+    return {
+      event: this.stringValue(source['event']) || 'UNKNOWN',
+      actor: this.stringValue(source['actor']) || 'System',
+      timestamp: this.stringValue(source['timestamp']) || '',
+      note: this.stringValue(source['note']) || ''
+    };
+  }
+
+  private stringValue(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  private getTimeValue(value: string): number {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+  }
+
+  private formatStatusLabel(value: string | null | undefined): string {
+    const normalized = (value || '').trim().toUpperCase();
+
+    if (!normalized) {
+      return 'Unknown';
+    }
+
+    if (normalized === 'MANAGER_APPROVED') {
+      return 'Pending Admin Approval';
+    }
+
+    return this.titleCase(normalized.replace(/_/g, ' '));
+  }
+
+  private formatDisplayName(value: string | null | undefined): string {
+    const normalized = value?.trim();
+
+    if (!normalized) {
+      return '';
+    }
+
+    const resolvedName = this.leave.userDirectory?.[normalized.toLowerCase()];
+    if (resolvedName?.trim()) {
+      return resolvedName.trim();
+    }
+
+    const cleaned = normalized
+      .replace(/[._-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const titleCased = cleaned
+      .split(' ')
+      .filter((part) => !/^\d+$/.test(part)) // Remove trailing numbers like in "vivek 1"
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+
+    return titleCased || normalized;
+  }
+
+  private displayNameOrFallback(value: string | null | undefined): string {
+    return this.formatDisplayName(value) || '';
+  }
+
+  private titleCase(value: string | null | undefined): string {
+    if (!value) {
+      return 'Unknown';
+    }
+
+    return value
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  private toSentenceCase(value: string): string {
+    if (!value) {
+      return '';
+    }
+
+    return value.charAt(0).toUpperCase() + value.slice(1);
   }
 }

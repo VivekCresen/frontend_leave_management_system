@@ -29,6 +29,7 @@
         [showTableTools]="true"
         [useAgGrid]="true"
         [compactCard]="true"
+        [deletingUserId]="deletingUserId"
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
 
@@ -87,6 +88,7 @@
         [viewerRole]="'MANAGER'"
         [initialStatus]="'PENDING'"
         [showStatusFilter]="true"
+        [processingLeaveId]="processingLeaveId"
         (approveRequested)="leaveApproveRequested.emit($event)"
         (rejectRequested)="leaveRejectRequested.emit($event)"
         (partialStatusRequested)="leavePartialStatusRequested.emit($event)">
@@ -188,18 +190,17 @@
       <div class="management-toolbar">
         <div>
           <h3>My leave history</h3>
-          <p class="body-copy">Your personal leave requests and their current status.</p>
+          <p class="body-copy">Your personal leave history and available balances.</p>
         </div>
         <div class="toolbar-actions">
-          <button
-            *ngIf="!isLeaveFormOpen"
-            type="button"
-            class="primary-toolbar-button"
-            (click)="openLeaveFormRequested.emit()">
+          <button type="button" class="primary-toolbar-button" (click)="openLeaveFormRequested.emit()">
             <i class="fas fa-plus"></i>
-            <span>New request</span>
+            <span>Request leave</span>
           </button>
         </div>
+      </div>
+      <div style="margin-bottom: 2rem;">
+        <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
       </div>
 
       <app-dashboard-history-table
@@ -208,6 +209,7 @@
         title="My leave requests"
         description="All leave requests you have submitted."
         [showRequestActions]="true"
+        [deletingLeaveId]="deletingLeaveId"
         (editRequested)="editLeaveRequested.emit($event)"
         (deleteRequested)="deleteLeaveRequested.emit($event)">
       </app-dashboard-history-table>

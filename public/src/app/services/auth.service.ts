@@ -78,6 +78,7 @@ export interface AuthService {
   getDashboard(): Observable<UserDashboardResponse>;
   createUser(payload: UserManagementPayload): Observable<ManagedUser>;
   updateUser(userId: number, payload: UserManagementPayload): Observable<ManagedUser>;
+  updateProfile(userId: number, fullName: string, gender: string): Observable<ManagedUser>;
   deleteUser(userId: number): Observable<void>;
   requestResetOtp(email: string): Observable<MessageResponse>;
   verifyOtp(email: string, otp: string): Observable<MessageResponse>;

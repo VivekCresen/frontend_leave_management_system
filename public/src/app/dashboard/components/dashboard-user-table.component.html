@@ -126,8 +126,10 @@
             <span class="meta-text">{{ user.createdBy || 'System' }}</span>
             <span class="meta-text">{{ user.lastLogin ? (user.lastLogin | date: 'dd MMM yyyy, h:mm a') : 'Never' }}</span>
             <div *ngIf="showActions" class="action-cell">
-              <button *ngIf="user.canEdit" type="button" class="edit-button" (click)="editRequested.emit(user)">Edit</button>
-              <button *ngIf="user.canDelete" type="button" class="delete-button" (click)="deleteRequested.emit(user)">Delete</button>
+              <button *ngIf="user.canEdit" type="button" class="edit-button" (click)="editRequested.emit(user)" [disabled]="deletingUserId === user.id">Edit</button>
+              <button *ngIf="user.canDelete" type="button" class="delete-button" [class.is-loading]="deletingUserId === user.id" (click)="deleteRequested.emit(user)" [disabled]="deletingUserId === user.id">
+                <span>{{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}</span>
+              </button>
               <span *ngIf="!user.canEdit && !user.canDelete" class="read-only">View only</span>
             </div>
           </div>

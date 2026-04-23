@@ -95,6 +95,7 @@
         [leaves]="pendingLeaves"
         [leaveTypes]="leaveTypes"
         [showRequestActions]="true"
+        [deletingLeaveId]="deletingLeaveId"
         [title]="'Pending requests'"
         [description]="'Your leave requests awaiting approval. Edit or delete before they are reviewed.'"
         (editRequested)="editLeaveRequested.emit($event)"
@@ -104,10 +105,14 @@
 
     <!-- HISTORY -->
     <section *ngSwitchCase="'history'" class="management-grid">
+      <div style="margin-bottom: 2rem;">
+        <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
+      </div>
       <app-dashboard-history-table
         [leaves]="myLeaves"
         [leaveTypes]="leaveTypes"
         [showRequestActions]="true"
+        [deletingLeaveId]="deletingLeaveId"
         (editRequested)="editLeaveRequested.emit($event)"
         (deleteRequested)="deleteLeaveRequested.emit($event)">
       </app-dashboard-history-table>

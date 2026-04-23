@@ -15,6 +15,7 @@ import {
   getStrictPasswordError
 } from '../shared/password-policy';
 import { ToastService } from '../services/toast.service';
+import { LoaderService } from '../shared/services/loader.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -50,7 +51,8 @@ export class ForgotPasswordComponent {
   constructor(
     authService: AuthApiService,
     private readonly router: Router,
-    private readonly toastService: ToastService
+    private readonly toastService: ToastService,
+    private readonly loaderService: LoaderService
   ) {
     this.authService = authService;
   }
@@ -70,6 +72,7 @@ export class ForgotPasswordComponent {
     this.authService.requestResetOtp(this.email).subscribe({
       next: (response) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.currentStep = 2;
         this.stepTwoSubmitted = false;
         this.fieldErrors = {};
@@ -78,6 +81,7 @@ export class ForgotPasswordComponent {
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || this.firstFieldError() || 'Unable to send OTP right now.';
         this.toastService.error(this.errorMessage);
@@ -98,9 +102,11 @@ export class ForgotPasswordComponent {
     }
 
     this.isLoading = true;
+    this.loaderService.show();
     this.authService.verifyOtp(this.email, this.otp).subscribe({
       next: (response) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = {};
         this.successMessage = response.message;
         this.toastService.success(response.message);
@@ -109,6 +115,7 @@ export class ForgotPasswordComponent {
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || this.firstFieldError() || 'Unable to verify OTP.';
         this.toastService.error(this.errorMessage);
@@ -141,10 +148,12 @@ export class ForgotPasswordComponent {
     }
 
     this.isLoading = true;
+    this.loaderService.show();
     const encodedPassword = btoa(this.newPassword);
     this.authService.resetPassword(this.email, this.otp, encodedPassword).subscribe({
       next: () => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = {};
         this.clearSensitiveFields();
         this.authService.clearCurrentUser();
@@ -154,6 +163,7 @@ export class ForgotPasswordComponent {
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || this.firstFieldError() || 'Unable to reset password right now.';
         this.toastService.error(this.errorMessage);
@@ -177,12 +187,14 @@ export class ForgotPasswordComponent {
     this.authService.requestResetOtp(this.email).subscribe({
       next: (response) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = {};
         this.successMessage = response.message;
         this.toastService.success(response.message);
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
+        this.loaderService.hide();
         this.fieldErrors = err.error?.errors ?? {};
         this.errorMessage = err.error?.message || this.firstFieldError() || 'Unable to send OTP right now.';
         this.toastService.error(this.errorMessage);

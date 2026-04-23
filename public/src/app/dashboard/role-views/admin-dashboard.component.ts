@@ -47,6 +47,12 @@ export class AdminDashboardComponent implements OnChanges {
   @Input() filterStatus = '';
   @Input() holidays: Holiday[] = [];
   @Input() isHolidaysLoading = false;
+  @Input() deletingHolidayId: number | null = null;
+  @Input() deletingLeaveTypeId: number | null = null;
+  @Input() deletingUserId: number | null = null;
+  @Input() isHolidaySaving = false;
+  @Input() lastHolidaySavedAt = 0;
+  @Input() processingLeaveId: number | null = null;
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
@@ -146,6 +152,11 @@ export class AdminDashboardComponent implements OnChanges {
       this.resetLeaveTypeEditor();
       this.isLeaveTypeModalOpen = false;
       this.leaveTab = 'types';
+    }
+
+    if (changes['lastHolidaySavedAt'] && !changes['lastHolidaySavedAt'].firstChange) {
+      this.closeHolidayModal();
+      this.leaveTab = 'holidays';
     }
   }
 
@@ -304,6 +315,10 @@ export class AdminDashboardComponent implements OnChanges {
   }
 
   closeHolidayModal(): void {
+    if (this.isHolidaySaving) {
+      return;
+    }
+
     this.isHolidayModalOpen = false;
     this.editingHoliday = null;
     this.holidayModel = this.createHolidayModel();
@@ -323,7 +338,6 @@ export class AdminDashboardComponent implements OnChanges {
     } else {
       this.holidayCreateRequested.emit(payload);
     }
-    this.closeHolidayModal();
   }
 
   private createHolidayModel() {

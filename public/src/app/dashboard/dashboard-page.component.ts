@@ -3,7 +3,8 @@ import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { from } from 'rxjs';
-import { concatMap, toArray } from 'rxjs/operators';import { AuthApiService } from '../services/auth-api.service';
+import { concatMap, toArray } from 'rxjs/operators';
+import { AuthApiService } from '../services/auth-api.service';
 import { LeaveApiService } from '../services/leave-api.service';
 import {
   ApiErrorResponse,
@@ -84,6 +85,13 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   holidays: Holiday[] = [];
   bookedDates: string[] = [];
   isHolidaysLoading = false;
+  deletingUserId: number | null = null;
+  processingLeaveId: number | null = null;
+  deletingLeaveId: number | null = null;
+  deletingLeaveTypeId: number | null = null;
+  deletingHolidayId: number | null = null;
+  isHolidaySaving = false;
+  lastHolidaySavedAt = 0;
 
   constructor(
     authService: AuthApiService,
@@ -247,14 +255,14 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     this.profileSubmitted = true;
     this.normalizeProfileModel();
 
-    if (form.invalid || !!this.getProfileUsernameMessage()) {
+    if (form.invalid) {
       return;
     }
 
     this.isProfileSaving = true;
     this.profileFieldErrors = {};
 
-    this.authService.updateUser(actor.id, this.buildProfilePayload(actor)).subscribe({
+    this.authService.updateProfile(actor.id, this.profileModel.fullName, this.profileModel.gender).subscribe({
       next: (updatedUser) => {
         this.isProfileSaving = false;
         this.isProfileModalOpen = false;
@@ -326,8 +334,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       return;
     }
 
+    this.deletingUserId = user.id;
     this.authService.deleteUser(user.id).subscribe({
       next: () => {
+        this.deletingUserId = null;
         if (this.editingUser?.id === user.id) {
           this.editingUser = null;
         }
@@ -335,6 +345,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.loadDashboard();
       },
       error: (err: { error?: ApiErrorResponse }) => {
+        this.deletingUserId = null;
         this.toastService.error(err.error?.message || 'Unable to delete the selected user.');
       }
     });
@@ -375,6 +386,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   handlePartialLeaveStatus(event: { leave: AdminLeaveTableRow; decisions: import('../services/leave.service').DateDecision[]; rejectionReason?: string }): void {
+    this.processingLeaveId = event.leave.id;
     const payload: PartialLeaveStatusPayload = {
       actorUsername: this.user.username,
       dateDecisions: event.decisions,
@@ -382,6 +394,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     };
     this.leaveService.applyPartialStatus(event.leave.id, payload).subscribe({
       next: (updated) => {
+        this.processingLeaveId = null;
         this.updateLeaveInList(updated);
         const approvedCount = event.decisions.filter(d => d.status === 'APPROVED').length;
         const rejectedCount = event.decisions.filter(d => d.status === 'REJECTED').length;
@@ -394,6 +407,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         }
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.processingLeaveId = null;
         this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to apply partial status.'));
       }
     });
@@ -406,8 +420,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       ...(rejectionReason ? { rejectionReason } : {})
     };
 
+    this.processingLeaveId = leaveId;
     this.leaveService.updateLeaveStatus(leaveId, payload).subscribe({
       next: (updated) => {
+        this.processingLeaveId = null;
         this.updateLeaveInList(updated);
         if (status === 'MANAGER_APPROVED') {
           this.toastService.success('Leave approved — sent to admin for final approval');
@@ -416,6 +432,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         }
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.processingLeaveId = null;
         const action = status === 'APPROVED' || status === 'MANAGER_APPROVED' ? 'approve' : 'reject';
         this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, `Unable to ${action} leave request.`));
       }
@@ -511,8 +528,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       return;
     }
 
+    this.deletingLeaveId = leave.id;
     this.leaveService.deleteLeave(leave.id).subscribe({
       next: () => {
+        this.deletingLeaveId = null;
         if (this.editingLeave?.id === leave.id) {
           this.cancelLeaveForm();
         }
@@ -520,6 +539,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.loadDashboard();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.deletingLeaveId = null;
         this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to delete leave request right now.'));
       }
     });
@@ -604,12 +624,15 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       return;
     }
 
+    this.deletingLeaveTypeId = leaveType.id;
     this.leaveService.deleteLeaveType(leaveType.id).subscribe({
       next: () => {
+        this.deletingLeaveTypeId = null;
         this.leaveTypes = this.leaveTypes.filter((existingLeaveType) => existingLeaveType.id !== leaveType.id);
         this.toastService.success('Leave type deleted successfully');
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.deletingLeaveTypeId = null;
         this.toastService.error(this.buildLeaveTypeErrorMessage(
           err.error,
           err.error?.status === 404
@@ -719,28 +742,60 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   handleCreateHoliday(payload: CreateHolidayPayload): void {
+    this.isHolidaySaving = true;
     this.leaveService.createHoliday({ ...payload, createdBy: this.user.username }).subscribe({
-      next: (h) => { this.holidays = [...this.holidays, h].sort((a, b) => a.date.localeCompare(b.date)); this.toastService.success('Holiday created'); },
-      error: (err: { error?: LeaveApiErrorResponse }) => this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to create holiday.'))
+      next: (h) => {
+        this.isHolidaySaving = false;
+        this.lastHolidaySavedAt = Date.now();
+        this.holidays = [...this.holidays, h].sort((a, b) => a.date.localeCompare(b.date));
+        this.toastService.success('Holiday created');
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isHolidaySaving = false;
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to create holiday.'));
+      }
     });
   }
 
   handleUpdateHoliday(event: { id: number; payload: CreateHolidayPayload }): void {
+    this.isHolidaySaving = true;
     this.leaveService.updateHoliday(event.id, event.payload).subscribe({
-      next: (h) => { this.holidays = this.holidays.map((x) => x.id === h.id ? h : x); this.toastService.success('Holiday updated'); },
-      error: (err: { error?: LeaveApiErrorResponse }) => this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to update holiday.'))
+      next: (h) => {
+        this.isHolidaySaving = false;
+        this.lastHolidaySavedAt = Date.now();
+        this.holidays = this.holidays.map((x) => x.id === h.id ? h : x);
+        this.toastService.success('Holiday updated');
+      },
+      error: (err: { error?: LeaveApiErrorResponse }) => {
+        this.isHolidaySaving = false;
+        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to update holiday.'));
+      }
     });
   }
 
   handleDeleteHoliday(id: number): void {
     if (!confirm('Delete this holiday?')) return;
+    this.deletingHolidayId = id;
     this.leaveService.deleteHoliday(id).subscribe({
-      next: () => { this.holidays = this.holidays.filter((h) => h.id !== id); this.toastService.success('Holiday deleted'); },
-      error: () => this.toastService.error('Unable to delete holiday.')
+      next: () => {
+        this.deletingHolidayId = null;
+        this.holidays = this.holidays.filter((h) => h.id !== id);
+        this.toastService.success('Holiday deleted');
+      },
+      error: () => {
+        this.deletingHolidayId = null;
+        this.toastService.error('Unable to delete holiday.');
+      }
     });
   }
 
-  private mapLeaveToRow(leave: import('../services/leave.service').LeaveRecord, role: string, fallbackName?: string, fallbackEmail?: string): AdminLeaveTableRow {
+  private mapLeaveToRow(
+    leave: import('../services/leave.service').LeaveRecord,
+    role: string,
+    fallbackName?: string,
+    fallbackEmail?: string,
+    userDirectory: Record<string, string> = {}
+  ): AdminLeaveTableRow {
     const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
     const sortedDates = dates.map(d => this.toDateString(d.date)).sort();
     return {
@@ -756,12 +811,21 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       toDate: sortedDates[sortedDates.length - 1] ?? '',
       reason: leave.reason?.trim() || '',
       comments: leave.comments?.trim() || '',
+      trail: leave.trail ?? null,
       createdAt: leave.createdAt,
       durationDays: this.calculateDurationDays(dates),
       status: leave.status ?? 'PENDING',
       approvedBy: leave.approvedBy ?? null,
       managerApprovedBy: leave.managerApprovedBy ?? null,
+      managerRejectedBy: leave.managerRejectedBy ?? null,
+      managerApprovedAt: leave.managerApprovedAt ?? null,
+      managerRejectedAt: leave.managerRejectedAt ?? null,
+      adminApprovedBy: leave.adminApprovedBy ?? null,
+      adminRejectedBy: leave.adminRejectedBy ?? null,
+      adminApprovedAt: leave.adminApprovedAt ?? null,
+      adminRejectedAt: leave.adminRejectedAt ?? null,
       rejectionReason: leave.rejectionReason ?? null,
+      userDirectory,
       notifyUserIds: leave.notifyUserIds ?? [],
       editable: leave.editable ?? false
     };
@@ -769,6 +833,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
 
   private loadManagerLeaves(response: UserDashboardResponse): void {
     this.isLeavesLoading = true;
+    const userDirectory = this.buildUserDirectory(response);
 
     this.leaveService.getLeavesByManagerUsername(this.user.username).subscribe({
       next: (leaves) => {
@@ -776,7 +841,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.managerLeaves = leaves
           .map((leave) => {
             const role = response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE';
-            return this.mapLeaveToRow(leave, role);
+            return this.mapLeaveToRow(leave, role, undefined, undefined, userDirectory);
           })
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
@@ -789,12 +854,19 @@ export class DashboardPageComponent implements OnInit, OnChanges {
 
   private loadMyLeaves(response: UserDashboardResponse): void {
     this.isLeavesLoading = true;
+    const userDirectory = this.buildUserDirectory(response);
 
     this.leaveService.getLeavesByUsername(this.user.username).subscribe({
       next: (leaves) => {
         this.isLeavesLoading = false;
         this.myLeaves = leaves
-          .map((leave) => this.mapLeaveToRow(leave, 'EMPLOYEE', response.actor?.fullName || 'Me', response.actor?.email || ''))
+          .map((leave) => this.mapLeaveToRow(
+            leave,
+            'EMPLOYEE',
+            response.actor?.fullName || 'Me',
+            response.actor?.email || '',
+            userDirectory
+          ))
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -808,7 +880,21 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   private updateLeaveInList(updated: import('../services/leave.service').LeaveRecord): void {
     const patch = (row: AdminLeaveTableRow): AdminLeaveTableRow =>
       row.id === updated.id
-        ? { ...row, status: updated.status ?? 'PENDING', approvedBy: updated.approvedBy ?? null, rejectionReason: updated.rejectionReason ?? null }
+        ? {
+            ...row,
+            status: updated.status ?? 'PENDING',
+            trail: updated.trail ?? row.trail,
+            approvedBy: updated.approvedBy ?? null,
+            managerApprovedBy: updated.managerApprovedBy ?? null,
+            managerRejectedBy: updated.managerRejectedBy ?? null,
+            managerApprovedAt: updated.managerApprovedAt ?? null,
+            managerRejectedAt: updated.managerRejectedAt ?? null,
+            adminApprovedBy: updated.adminApprovedBy ?? null,
+            adminRejectedBy: updated.adminRejectedBy ?? null,
+            adminApprovedAt: updated.adminApprovedAt ?? null,
+            adminRejectedAt: updated.adminRejectedAt ?? null,
+            rejectionReason: updated.rejectionReason ?? null
+          }
         : row;
 
     this.leaves = this.leaves.map(patch);
@@ -818,6 +904,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
 
   private loadLeaves(response: UserDashboardResponse): void {
     this.isLeavesLoading = true;
+    const userDirectory = this.buildUserDirectory(response);
 
     this.leaveService.getLeaves().subscribe({
       next: (leaves) => {
@@ -832,7 +919,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           .map((leave) => {
             const role = roleByUserId.get(leave.userId);
             if (!role) return null;
-            return this.mapLeaveToRow(leave, role);
+            return this.mapLeaveToRow(leave, role, undefined, undefined, userDirectory);
           })
           .filter((leave): leave is AdminLeaveTableRow => leave !== null)
           .sort((left, right) => new Date(right.fromDate).getTime() - new Date(left.fromDate).getTime());
@@ -851,6 +938,15 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     }
 
     this.editingUser = response.users.find((user) => user.id === this.editingUser?.id) ?? null;
+  }
+
+  private buildUserDirectory(response: UserDashboardResponse): Record<string, string> {
+    const entries = [response.actor, ...(response.users ?? [])]
+      .filter((user): user is ManagedUser => !!user)
+      .map((user) => [user.username?.trim().toLowerCase(), user.fullName?.trim()] as const)
+      .filter((entry): entry is readonly [string, string] => !!entry[0] && !!entry[1]);
+
+    return Object.fromEntries(entries);
   }
 
   private createProfileModel() {

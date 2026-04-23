@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { AuthApiService } from '../services/auth-api.service';
 import { AuthService } from '../services/auth.service';
+import { LeaveApiService } from '../services/leave-api.service';
 import { ToastService } from '../services/toast.service';
 import { NgForm } from '@angular/forms';
 
@@ -11,10 +12,12 @@ describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
   let authService: jasmine.SpyObj<AuthService>;
+  let leaveService: jasmine.SpyObj<LeaveApiService>;
   let toastService: jasmine.SpyObj<ToastService>;
 
   beforeEach(async () => {
     authService = jasmine.createSpyObj<AuthService>('AuthService', ['login', 'setCurrentUser']);
+    leaveService = jasmine.createSpyObj<LeaveApiService>('LeaveApiService', ['reviewLeaveFromMail']);
     toastService = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error', 'info']);
 
     await TestBed.configureTestingModule({
@@ -22,6 +25,7 @@ describe('LoginComponent', () => {
       providers: [
         provideRouter([]),
         { provide: AuthApiService, useValue: authService },
+        { provide: LeaveApiService, useValue: leaveService },
         { provide: ToastService, useValue: toastService }
       ]
     })

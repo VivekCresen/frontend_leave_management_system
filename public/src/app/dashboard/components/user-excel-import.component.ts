@@ -29,6 +29,7 @@ export class UserExcelImportComponent {
   lcrStep: LcrStep = 'load';
   selectedFile: File | null = null;
   isDragging = false;
+  isDownloading = false;
   importedCount = 0;
   errorMessage = '';
   rowErrors: RowError[] = [];
@@ -47,8 +48,12 @@ export class UserExcelImportComponent {
   }
 
   downloadTemplate(): void {
+    if (this.isDownloading) return;
+
+    this.isDownloading = true;
     this.authService.downloadImportTemplate().subscribe({
       next: (blob) => {
+        this.isDownloading = false;
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -57,7 +62,10 @@ export class UserExcelImportComponent {
         URL.revokeObjectURL(url);
         this.toastService.success('Template downloaded');
       },
-      error: () => this.toastService.error('Failed to download template')
+      error: () => {
+        this.isDownloading = false;
+        this.toastService.error('Failed to download template');
+      }
     });
   }
 

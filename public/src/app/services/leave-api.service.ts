@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CreateHolidayPayload, CreateLeavePayload, CreateLeaveTypePayload, Holiday, LeaveRecord, LeaveService, LeaveType, NotifyUser, PartialLeaveStatusPayload, UpdateLeavePayload, UpdateLeaveStatusPayload } from './leave.service';
+import { CreateHolidayPayload, CreateLeavePayload, CreateLeaveTypePayload, Holiday, LeaveRecord, LeaveService, LeaveType, MailLeaveDecisionPayload, NotifyUser, PartialLeaveStatusPayload, UpdateLeavePayload, UpdateLeaveStatusPayload } from './leave.service';
 import { resolveApiUrl } from '../shared/api-url.util';
 
 @Injectable({
@@ -88,6 +88,14 @@ export class LeaveApiService implements LeaveService {
     return this.http.put<LeaveRecord>(`${this.apiUrl}/${leaveId}/status`, {
       actorUsername: payload.actorUsername,
       status: payload.status,
+      rejectionReason: payload.rejectionReason ?? null
+    });
+  }
+
+  reviewLeaveFromMail(leaveId: number, payload: MailLeaveDecisionPayload): Observable<LeaveRecord> {
+    return this.http.post<LeaveRecord>(`${this.apiUrl}/${leaveId}/mail-decision`, {
+      actorUsername: payload.actorUsername,
+      decision: payload.decision,
       rejectionReason: payload.rejectionReason ?? null
     });
   }

@@ -196,8 +196,8 @@
       <button type="button" class="secondary-button" (click)="resetForm()" [disabled]="isSaving">
         Reset
       </button>
-      <button type="submit" class="primary-button" [disabled]="isSaving">
-        {{ isSaving ? 'Saving...' : isEditMode ? 'Update user' : 'Create user' }}
+      <button type="submit" class="primary-button" [class.is-loading]="isSaving" [disabled]="isSaving">
+        <span>{{ isSaving ? 'Saving...' : isEditMode ? 'Update user' : 'Create user' }}</span>
       </button>
     </div>
   </form>

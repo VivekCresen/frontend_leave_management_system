@@ -288,6 +288,10 @@ const historyTheme = themeQuartz.withParams({
       width: 100%;
     }
     :host ::ng-deep .history-ag-grid .ag-action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       border: 1px solid rgba(148, 163, 184, 0.28);
       background: #ffffff;
       color: #0f172a;
@@ -303,6 +307,10 @@ const historyTheme = themeQuartz.withParams({
     :host ::ng-deep .history-ag-grid .ag-action-button.delete {
       color: #b42318;
       border-color: rgba(180, 35, 24, 0.22);
+    }
+    :host ::ng-deep .history-ag-grid .ag-action-button:disabled {
+      opacity: 0.72;
+      cursor: not-allowed;
     }
     :host ::ng-deep .history-ag-grid .ag-action-muted {
       color: #94a3b8;
@@ -576,6 +584,7 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   @Input() title = 'All leave requests';
   @Input() description = 'Your complete leave request history.';
   @Input() showRequestActions = false;
+  @Input() deletingLeaveId: number | null = null;
 
   @Output() editRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() deleteRequested = new EventEmitter<AdminLeaveTableRow>();
@@ -708,6 +717,43 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
         }
       },
       {
+        headerName: 'Manager',
+        minWidth: 180,
+        flex: 1.3,
+        sortable: false,
+        valueGetter: ({ data }) => data?.managerApprovedBy ?? data?.managerRejectedBy ?? '',
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) return '';
+          if (data.managerRejectedBy) {
+            return `<div class="ag-date-cell"><strong style="color:#b42318;">Rejected</strong><span>${this.esc(data.managerRejectedBy)}</span></div>`;
+          }
+          if (data.managerApprovedBy) {
+            return `<div class="ag-date-cell"><strong style="color:#0f766e;">Approved</strong><span>${this.esc(data.managerApprovedBy)}</span></div>`;
+          }
+          return `<span style="color:#94a3b8;">Pending</span>`;
+        }
+      },
+      {
+        headerName: 'Admin',
+        minWidth: 180,
+        flex: 1.3,
+        sortable: false,
+        valueGetter: ({ data }) => data?.adminApprovedBy ?? data?.adminRejectedBy ?? '',
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) return '';
+          if (data.adminRejectedBy) {
+            return `<div class="ag-date-cell"><strong style="color:#b42318;">Rejected</strong><span>${this.esc(data.adminRejectedBy)}</span></div>`;
+          }
+          if (data.adminApprovedBy) {
+            return `<div class="ag-date-cell"><strong style="color:#0f766e;">Approved</strong><span>${this.esc(data.adminApprovedBy)}</span></div>`;
+          }
+          if (data.status === 'REJECTED' && data.managerRejectedBy) {
+            return `<span style="color:#94a3b8;">Not reached</span>`;
+          }
+          return `<span style="color:#94a3b8;">Pending</span>`;
+        }
+      },
+      {
         headerName: 'Actions',
         minWidth: 180,
         flex: 1.2,
@@ -724,9 +770,10 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
             return `<span class="ag-action-muted">No actions</span>`;
           }
 
+          const deleting = this.deletingLeaveId === data.id;
           return `<div class="ag-actions-cell">
-            <button type="button" class="ag-action-button" data-action="edit">Edit</button>
-            <button type="button" class="ag-action-button delete" data-action="delete">Delete</button>
+            <button type="button" class="ag-action-button" data-action="edit" ${deleting ? 'disabled' : ''}>Edit</button>
+            <button type="button" class="ag-action-button delete${deleting ? ' is-loading' : ''}" data-action="delete" ${deleting ? 'disabled' : ''}>${deleting ? 'Deleting' : 'Delete'}</button>
           </div>`;
         },
         onCellClicked: ({ data, event }) => {
@@ -736,6 +783,10 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
 
           const target = event?.target as HTMLElement | null;
           const action = target?.closest('[data-action]')?.getAttribute('data-action');
+
+          if (this.deletingLeaveId === data.id) {
+            return;
+          }
 
           if (action === 'edit') {
             this.editRequested.emit(data);
@@ -758,7 +809,7 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['showRequestActions'] && this.gridApi) {
+    if ((changes['showRequestActions'] || changes['deletingLeaveId']) && this.gridApi) {
       this.gridApi.setGridOption('columnDefs', this.columnDefs);
     }
 

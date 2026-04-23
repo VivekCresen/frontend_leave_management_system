@@ -120,9 +120,9 @@
         <p>Get the formatted Excel file with dropdowns, field rules, and an instructions sheet.</p>
       </div>
     </div>
-    <button type="button" class="import-action-btn" (click)="downloadTemplate()">
-      <i class="fas fa-file-arrow-down"></i>
-      Download template
+    <button type="button" class="import-action-btn" [class.is-loading]="isDownloading" (click)="downloadTemplate()" [disabled]="isDownloading">
+      <i *ngIf="!isDownloading" class="fas fa-file-arrow-down"></i>
+      <span>{{ isDownloading ? 'Downloading...' : 'Download template' }}</span>
     </button>
   </div>
 
@@ -165,8 +165,8 @@
         <i class="fas fa-xmark"></i> Remove
       </button>
       <button type="button" class="upload-btn" (click)="uploadFile()" [disabled]="isUploading">
-        <i class="fas" [class.fa-upload]="!isUploading" [class.fa-spinner]="isUploading" [class.fa-spin]="isUploading"></i>
-        {{ isUploading ? 'Validating & importing...' : 'Import users' }}
+        <i *ngIf="!isUploading" class="fas fa-upload"></i>
+        <span>{{ isUploading ? 'Validating & importing...' : 'Import users' }}</span>
       </button>
     </div>
   </div>

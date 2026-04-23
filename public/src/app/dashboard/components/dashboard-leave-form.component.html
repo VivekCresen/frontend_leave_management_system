@@ -238,8 +238,8 @@
       <button type="button" class="secondary-button" (click)="reset()" [disabled]="isSaving">
         Reset
       </button>
-      <button type="submit" class="primary-button" [disabled]="isSubmitDisabled">
-        {{ submitLabel }}
+      <button type="submit" class="primary-button" [class.is-loading]="isSaving" [disabled]="isSubmitDisabled">
+        <span>{{ submitLabel }}</span>
       </button>
     </div>
   </form>

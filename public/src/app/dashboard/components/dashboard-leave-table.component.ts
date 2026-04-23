@@ -42,12 +42,21 @@ export type AdminLeaveTableRow = {
   toDate: string;     // derived: latest date in leaveDates
   reason: string;
   comments: string;
+  trail: string | null;
   createdAt: string | null;
   durationDays: number;
   status: string;
   approvedBy: string | null;
   managerApprovedBy: string | null;
+  managerRejectedBy: string | null;
+  managerApprovedAt: string | null;
+  managerRejectedAt: string | null;
+  adminApprovedBy: string | null;
+  adminRejectedBy: string | null;
+  adminApprovedAt: string | null;
+  adminRejectedAt: string | null;
   rejectionReason: string | null;
+  userDirectory: Record<string, string>;
   notifyUserIds: number[];
   editable: boolean;
 };
@@ -97,6 +106,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   @Input() showActions = false;
   @Input() compactView = false;
   @Input() viewerRole: 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | '' = '';
+  @Input() processingLeaveId: number | null = null;
 
   @Output() approveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() rejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
@@ -228,8 +238,8 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
     if (this.showActions) {
       columns.push({
         headerName: 'Actions',
-        minWidth: 180,
-        flex: 1.2,
+        minWidth: 230,
+        flex: 1.6,
         sortable: false,
         resizable: false,
         suppressHeaderMenuButton: true,
@@ -238,22 +248,27 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
             return '';
           }
 
-          if (data.status !== 'PENDING' && data.status !== 'MANAGER_APPROVED') {
-            return '<span class="ag-action-muted">No actions</span>';
+          const actions = [
+            `<button type="button" class="ag-action-button track" data-action="track">
+              <i class="fas fa-chart-line"></i> Leave Progress
+            </button>`
+          ];
+
+          if (data.status === 'PENDING' || (data.status === 'MANAGER_APPROVED' && this.viewerRole === 'ADMIN')) {
+            const label = data.status === 'MANAGER_APPROVED'
+              ? '<i class="fas fa-shield-halved"></i> Final Decision'
+              : '<i class="fas fa-list-check"></i> Review Dates';
+            const processing = this.processingLeaveId === data.id;
+            const buttonContent = processing ? 'Processing' : label;
+
+            actions.push(
+              `<button type="button" class="ag-action-button partial${data.status === 'MANAGER_APPROVED' ? ' admin-final' : ''}${processing ? ' is-loading' : ''}" data-action="partial" ${processing ? 'disabled' : ''}>${buttonContent}</button>`
+            );
+          } else if (data.status === 'MANAGER_APPROVED' && this.viewerRole !== 'ADMIN') {
+            actions.push('<span class="ag-action-muted">Pending admin</span>');
           }
 
-          // MANAGER_APPROVED → only ADMIN can give final decision
-          if (data.status === 'MANAGER_APPROVED' && this.viewerRole !== 'ADMIN') {
-            return '<span class="ag-action-muted">Pending admin</span>';
-          }
-
-          const label = data.status === 'MANAGER_APPROVED'
-            ? '<i class="fas fa-shield-halved"></i> Final Decision'
-            : '<i class="fas fa-list-check"></i> Review Dates';
-
-          return `<div class="ag-actions-cell">
-            <button type="button" class="ag-action-button partial${data.status === 'MANAGER_APPROVED' ? ' admin-final' : ''}" data-action="partial">${label}</button>
-          </div>`;
+          return `<div class="ag-actions-cell">${actions.join('')}</div>`;
         },
         onCellClicked: ({ data, event }) => {
           if (!data) {
@@ -263,7 +278,11 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
           const target = event?.target as HTMLElement | null;
           const action = target?.closest('[data-action]')?.getAttribute('data-action');
 
-          if (action === 'partial') {
+          if (action === 'track') {
+            this.progressLeave = data;
+          }
+
+          if (action === 'partial' && this.processingLeaveId !== data.id) {
             this.openPartialModal(data);
           }
         }
@@ -303,7 +322,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
       this.selectedStatus = this.resolvedInitialStatus;
     }
 
-    if ((changes['allowedStatuses'] || changes['showActions'] || changes['viewerRole']) && this.gridApi) {
+    if ((changes['allowedStatuses'] || changes['showActions'] || changes['viewerRole'] || changes['processingLeaveId']) && this.gridApi) {
       this.gridApi.setGridOption('columnDefs', this.columnDefs);
     }
 
@@ -417,8 +436,29 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
     this.partialDecisions[key] = this.partialDecisions[key] === 'APPROVED' ? 'REJECTED' : 'APPROVED';
   }
 
+  setAllPartialDecisions(status: 'APPROVED' | 'REJECTED'): void {
+    if (!this.partialLeave || this.hasMixedPartialDecisions) return;
+    for (const d of this.partialLeave.leaveDates) {
+      this.partialDecisions[this.dateKey(d.date, d.dayType)] = status;
+    }
+  }
+
   getPartialDecision(date: string, dayType: string): 'APPROVED' | 'REJECTED' {
     return this.partialDecisions[this.dateKey(date, dayType)] ?? 'APPROVED';
+  }
+
+  get areAllPartialApproved(): boolean {
+    return !!this.partialLeave
+      && this.partialLeave.leaveDates.every(d => this.getPartialDecision(d.date, d.dayType) === 'APPROVED');
+  }
+
+  get areAllPartialRejected(): boolean {
+    return !!this.partialLeave
+      && this.partialLeave.leaveDates.every(d => this.getPartialDecision(d.date, d.dayType) === 'REJECTED');
+  }
+
+  get hasMixedPartialDecisions(): boolean {
+    return this.hasAnyRejected && !this.areAllPartialRejected;
   }
 
   get hasAnyRejected(): boolean {
@@ -428,6 +468,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   confirmPartial(): void {
     this.partialSubmitted = true;
     if (!this.partialLeave) return;
+    if (this.processingLeaveId === this.partialLeave.id) return;
     if (this.hasAnyRejected && !this.partialRejectionReason.trim()) return;
 
     const decisions: DateDecision[] = this.partialLeave.leaveDates.map(d => ({

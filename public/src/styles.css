@@ -45,3 +45,15 @@ app-root {
 body {
   color: var(--app-light-text);
 }
+
+
+
+.is-loading {
+  pointer-events: none;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
