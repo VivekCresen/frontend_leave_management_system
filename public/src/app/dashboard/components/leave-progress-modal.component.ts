@@ -361,13 +361,22 @@ export class LeaveProgressModalComponent {
   }
 
   private humanizeNote(entry: LeaveAuditTrailEntry, actorName: string, statusLabel: string, reason: string): string {
-    const note = entry.note?.trim();
+    let note = entry.note?.trim();
+    if (!note) {
+      return this.getDefaultSummary(entry.event.trim().toUpperCase(), actorName, statusLabel, reason);
+    }
+
+    const reasonIndex = note.toLowerCase().lastIndexOf('reason:');
+    if (reasonIndex > -1) {
+      let preReason = note.substring(0, reasonIndex).trim();
+      if (preReason.endsWith('.')) {
+        preReason = preReason.substring(0, preReason.length - 1).trim();
+      }
+      note = preReason;
+    }
+
     const lowerNote = note.toLowerCase();
     const event = entry.event.trim().toUpperCase();
-
-    if (!note) {
-      return this.getDefaultSummary(event, actorName, statusLabel, reason);
-    }
 
     if (lowerNote.includes('flowable approval process started')) {
       return 'started the approval workflow. The request is now moving through the review steps.';
@@ -386,7 +395,7 @@ export class LeaveProgressModalComponent {
     }
 
     if (lowerNote.startsWith('manager ') && lowerNote.includes(' approved ')) {
-      const match = note.match(/Manager .*? approved (.*)$/i);
+      const match = note.match(/approved (.*)$/i);
       return match ? `approved ${match[1]}` : `approved the request.`;
     }
 
@@ -401,6 +410,10 @@ export class LeaveProgressModalComponent {
 
     if (lowerNote.startsWith('rejected by')) {
       return `rejected this leave request.`;
+    }
+
+    if (lowerNote.startsWith('all dates rejected')) {
+      return `rejected all requested dates.`;
     }
 
     return this.toSentenceCase(note);
