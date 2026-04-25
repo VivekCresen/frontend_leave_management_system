@@ -16,7 +16,7 @@
 
         <div class="brand-copy">
           <p class="brand-label">Cresen Solutions</p>
-          <h1>{{ user.role | titlecase }} Panel</h1>
+          <h1>{{ user.role | titlecase }} {{ 'sidebar.panel' | translate }}</h1>
           
         </div>
       </div>
@@ -25,7 +25,7 @@
         type="button"
         class="sidebar-toggle"
         (click)="toggleSidebar()"
-        [attr.aria-label]="sidebarToggleLabel"
+        [attr.aria-label]="'sidebar.' + sidebarToggleLabel | translate"
         [attr.aria-expanded]="isMobileViewport ? isMobileSidebarOpen : !isSidebarCollapsed"
         aria-controls="dashboard-sidebar">
         <i
@@ -45,15 +45,15 @@
         class="menu-item"
         [routerLink]="['/dashboard', item.path]"
         routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
+        [routerLinkActiveOptions]="{ exact: item.path === 'overview' }"
         [attr.aria-label]="item.label"
         [attr.title]="item.label"
         (click)="handleMenuNavigation()">
         <span class="menu-icon">
-          <i class="fas" [class]="item.icon"></i>
+          <i class="fas" [ngClass]="item.icon"></i>
         </span>
         <span class="menu-copy">
-          <strong>{{ item.label }}</strong>
+          <strong>{{ 'sidebar.' + (item.path === 'users' ? 'userManagement' : item.path === 'leaves' ? 'leaveOperations' : item.path === 'team' ? 'teamMembers' : item.path === 'approvals' ? 'approvals' : item.path === 'reports' ? 'reports' : item.path === 'settings' ? 'settings' : item.path === 'calendar' && user.role === 'MANAGER' ? 'teamCalendar' : item.path === 'calendar' ? 'calendar' : item.path === 'history' && user.role === 'MANAGER' ? 'myLeaveHistory' : item.path === 'history' ? 'history' : item.path === 'profile' ? 'myProfile' : item.path === 'requests' ? 'leaveRequests' : 'overview') | translate }}</strong>
         </span>
       </a>
     </nav>
@@ -68,11 +68,11 @@
         type="button"
         class="mobile-sidebar-toggle"
         (click)="toggleSidebar()"
-        [attr.aria-label]="sidebarToggleLabel"
+        [attr.aria-label]="'sidebar.' + sidebarToggleLabel | translate"
         [attr.aria-expanded]="isMobileSidebarOpen"
         aria-controls="dashboard-sidebar">
         <i class="fas" [class.fa-bars]="!isMobileSidebarOpen" [class.fa-xmark]="isMobileSidebarOpen"></i>
-        <span>{{ isMobileSidebarOpen ? 'Close menu' : 'Open menu' }}</span>
+        <span>{{ 'sidebar.' + (isMobileSidebarOpen ? 'closeSidebar' : 'openSidebar') | translate }}</span>
       </button>
 
       <div class="mobile-user-pill">

@@ -6,7 +6,6 @@ import { LoaderService } from './shared/services/loader.service';
 export const loaderInterceptor: HttpInterceptorFn = (req, next) => {
   const loaderService = inject(LoaderService);
   
-  // Don't show loader for background polling if any or GET requests (like sidebar navigation)
   if (req.method === 'GET' || req.headers.has('X-Skip-Loader')) {
     return next(req);
   }

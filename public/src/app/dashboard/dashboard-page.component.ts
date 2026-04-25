@@ -6,6 +6,7 @@ import { from } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
 import { AuthApiService } from '../services/auth-api.service';
 import { LeaveApiService } from '../services/leave-api.service';
+import { DashboardCacheService } from '../services/dashboard-cache.service';
 import {
   ApiErrorResponse,
   LoginResponse,
@@ -25,6 +26,8 @@ import { ManagerDashboardComponent } from './role-views/manager-dashboard.compon
 import { DashboardUserSubmitEvent } from './components/dashboard-user-form.component';
 import { AdminLeaveTableRow } from './components/dashboard-leave-table.component';
 import { DashboardLeaveFormComponent, LeaveFormSubmitEvent } from './components/dashboard-leave-form.component';
+import { TranslatePipe } from '../i18n/translate.pipe';
+import { TranslateService, Language } from '../i18n/translate.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -35,7 +38,8 @@ import { DashboardLeaveFormComponent, LeaveFormSubmitEvent } from './components/
     AdminDashboardComponent,
     ManagerDashboardComponent,
     EmployeeDashboardComponent,
-    DashboardLeaveFormComponent
+    DashboardLeaveFormComponent,
+    TranslatePipe
   ],
   templateUrl: './dashboard-page.component.html',
   styleUrls: ['./dashboard-page.component.css']
@@ -96,6 +100,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   constructor(
     authService: AuthApiService,
     leaveService: LeaveApiService,
+    public translateService: TranslateService,
+    private readonly dashboardCache: DashboardCacheService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly toastService: ToastService
@@ -109,12 +115,32 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       this.filterRole = params['role'] ?? '';
       this.filterStatus = params['status'] ?? '';
     });
-    this.loadDashboard();
+
+    // Restore from cache instantly — no spinner, no API call
+    const cached = this.dashboardCache.get(this.user.username);
+    if (cached) {
+      this.restoreFromCache(cached);
+      // If stale, silently refresh in background
+      if (this.dashboardCache.isStale(this.user.username)) {
+        this.loadDashboard(true);
+      }
+    } else {
+      this.loadDashboard();
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['user'] && !changes['user'].firstChange) {
-      this.loadDashboard();
+      const prev: LoginResponse = changes['user'].previousValue;
+      const curr: LoginResponse = changes['user'].currentValue;
+      const identityChanged =
+        prev?.username !== curr?.username ||
+        prev?.role !== curr?.role ||
+        prev?.active !== curr?.active;
+      if (identityChanged) {
+        this.dashboardCache.invalidate();
+        this.loadDashboard();
+      }
     }
 
     if (changes['user'] && !this.isProfileModalOpen) {
@@ -127,41 +153,39 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   get pageHeading(): string {
-    return (
-      {
-        overview: 'Overview',
-        users: 'User Management',
-        roles: 'Roles And Access',
-        leaves: 'Leave Operations',
-        reports: 'Reports',
-        settings: 'Settings',
-        team: 'Team Members',
-        approvals: 'Approvals',
-        calendar: 'Calendar',
-        profile: 'My Profile',
-        requests: 'Leave Requests',
-        history: 'History'
-      } satisfies Record<DashboardPageId, string>
-    )[this.pageId];
+    const keys: Record<DashboardPageId, string> = {
+      overview: 'pageHeaders.overview',
+      users: 'pageHeaders.users',
+      roles: 'pageHeaders.roles',
+      leaves: 'pageHeaders.leaves',
+      reports: 'pageHeaders.reports',
+      settings: 'pageHeaders.settings',
+      team: 'pageHeaders.team',
+      approvals: 'pageHeaders.approvals',
+      calendar: 'pageHeaders.calendar',
+      profile: 'pageHeaders.profile',
+      requests: 'pageHeaders.requests',
+      history: 'pageHeaders.history'
+    };
+    return this.translateService.getTranslation(keys[this.pageId]);
   }
 
   get pageDescription(): string {
-    return (
-      {
-        overview: 'Dashboard summary',
-        users: 'Manage user accounts.',
-        roles: 'Review access structure.',
-        leaves: 'Leave operations workspace.',
-        reports: 'View account summary.',
-        settings: 'Manage account controls.',
-        team: 'Manage team accounts.',
-        approvals: 'Approval workspace.',
-        calendar: 'Calendar workspace.',
-        profile: 'View profile details.',
-        requests: 'Request workspace.',
-        history: 'View request history.'
-      } satisfies Record<DashboardPageId, string>
-    )[this.pageId];
+    const keys: Record<DashboardPageId, string> = {
+      overview: 'pageHeaders.overviewDesc',
+      users: 'pageHeaders.usersDesc',
+      roles: 'pageHeaders.rolesDesc',
+      leaves: 'pageHeaders.leavesDesc',
+      reports: 'pageHeaders.reportsDesc',
+      settings: 'pageHeaders.settingsDesc',
+      team: 'pageHeaders.teamDesc',
+      approvals: 'pageHeaders.approvalsDesc',
+      calendar: 'pageHeaders.calendarDesc',
+      profile: 'pageHeaders.profileDesc',
+      requests: 'pageHeaders.requestsDesc',
+      history: 'pageHeaders.historyDesc'
+    };
+    return this.translateService.getTranslation(keys[this.pageId]);
   }
 
   get profileDisplayName(): string {
@@ -198,6 +222,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   refresh(): void {
+    this.dashboardCache.invalidate();
     this.loadDashboard();
   }
 
@@ -276,6 +301,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           active: updatedUser.active
         });
         this.toastService.success('Profile updated successfully');
+        this.dashboardCache.invalidate();
         this.loadDashboard();
       },
       error: (err: { error?: ApiErrorResponse }) => {
@@ -318,6 +344,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.editingUser = null;
         this.isUserFormOpen = false;
         this.toastService.success(event.userId ? 'User updated successfully' : 'User created successfully');
+        this.dashboardCache.invalidate();
         this.loadDashboard();
       },
       error: (err: { error?: ApiErrorResponse }) => {
@@ -342,6 +369,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           this.editingUser = null;
         }
         this.toastService.success('User deleted successfully');
+        this.dashboardCache.invalidate();
         this.loadDashboard();
       },
       error: (err: { error?: ApiErrorResponse }) => {
@@ -497,6 +525,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           ? `${payloads.length} leave requests submitted successfully`
           : 'Leave request submitted successfully';
         this.toastService.success(msg);
+        this.dashboardCache.invalidate();
         this.loadDashboard();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -536,6 +565,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           this.cancelLeaveForm();
         }
         this.toastService.success('Leave request deleted successfully');
+        this.dashboardCache.invalidate();
         this.loadDashboard();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -572,6 +602,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.isLeaveFormOpen = false;
         this.editingLeave = null;
         this.toastService.success('Leave request updated successfully');
+        this.dashboardCache.invalidate();
         this.loadDashboard();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -678,8 +709,10 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     return null;
   }
 
-  protected loadDashboard(): void {
-    this.isLoading = true;
+  protected loadDashboard(silent = false): void {
+    if (!silent) {
+      this.isLoading = true;
+    }
     this.errorMessage = '';
 
     this.authService.getDashboard().subscribe({
@@ -691,52 +724,90 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           this.syncProfileModel();
         }
         if (this.normalizedRole === 'ADMIN') {
-          this.loadLeaves(response);
+          this.loadLeaves(response, silent);
         }
         if (this.normalizedRole === 'MANAGER') {
-          this.loadManagerLeaves(response);
+          this.loadManagerLeaves(response, silent);
         }
         if (this.normalizedRole === 'EMPLOYEE') {
-          this.loadMyLeaves(response);
-          // Pre-load notify users so the requests page shows them immediately
+          this.loadMyLeaves(response, silent);
           this.leaveService.getNotifyUsers(this.user.username).subscribe({
             next: (users) => { this.notifyUsers = users; },
             error: () => { this.notifyUsers = []; }
           });
         }
-        // Load leave types for all roles (needed for create leave form)
-        this.loadLeaveTypes();
-        this.loadHolidays();
+        this.loadLeaveTypes(silent);
+        this.loadHolidays(silent);
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isLoading = false;
-        this.dashboard = null;
-        this.errorMessage = err.error?.message || 'Unable to load dashboard data.';
-        this.toastService.error(this.errorMessage);
+        if (!silent) {
+          this.dashboard = null;
+          this.errorMessage = err.error?.message || 'Unable to load dashboard data.';
+          this.toastService.error(this.errorMessage);
+        }
       }
     });
   }
 
-  private loadLeaveTypes(): void {
-    this.isLeaveTypesLoading = true;
+  private restoreFromCache(cached: import('../services/dashboard-cache.service').DashboardCacheEntry): void {
+    this.dashboard = cached.dashboard;
+    this.leaveTypes = cached.leaveTypes;
+    this.holidays = cached.holidays;
+    this.leaves = cached.leaves;
+    this.managerLeaves = cached.managerLeaves;
+    this.myLeaves = cached.myLeaves;
+    if (!this.isProfileModalOpen) {
+      this.syncProfileModel();
+    }
+    if (this.normalizedRole === 'EMPLOYEE') {
+      this.leaveService.getNotifyUsers(this.user.username).subscribe({
+        next: (users) => { this.notifyUsers = users; },
+        error: () => { this.notifyUsers = []; }
+      });
+    }
+  }
+
+  private writeCacheWhenReady(): void {
+    // Write to cache once all async loads have settled
+    // We use a short debounce so all parallel loads complete first
+    setTimeout(() => {
+      if (this.dashboard) {
+        this.dashboardCache.set({
+          username: this.user.username,
+          dashboard: this.dashboard,
+          leaveTypes: this.leaveTypes,
+          holidays: this.holidays,
+          leaves: this.leaves,
+          managerLeaves: this.managerLeaves,
+          myLeaves: this.myLeaves,
+          cachedAt: Date.now()
+        });
+      }
+    }, 800);
+  }
+
+  private loadLeaveTypes(silent = false): void {
+    if (!silent) this.isLeaveTypesLoading = true;
 
     this.leaveService.getLeaveTypes().subscribe({
       next: (leaveTypes) => {
         this.isLeaveTypesLoading = false;
         this.leaveTypes = leaveTypes;
+        this.writeCacheWhenReady();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.isLeaveTypesLoading = false;
         this.leaveTypes = [];
-        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave types right now.'));
+        if (!silent) this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave types right now.'));
       }
     });
   }
 
-  private loadHolidays(): void {
-    this.isHolidaysLoading = true;
+  private loadHolidays(silent = false): void {
+    if (!silent) this.isHolidaysLoading = true;
     this.leaveService.getHolidays().subscribe({
-      next: (h) => { this.holidays = h; this.isHolidaysLoading = false; },
+      next: (h) => { this.holidays = h; this.isHolidaysLoading = false; this.writeCacheWhenReady(); },
       error: () => { this.holidays = []; this.isHolidaysLoading = false; }
     });
   }
@@ -798,6 +869,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   ): AdminLeaveTableRow {
     const dates = (leave.leaveDates ?? []).map(d => ({ ...d, date: this.toDateString(d.date) }));
     const sortedDates = dates.map(d => this.toDateString(d.date)).sort();
+    const normalizedApproval = this.normalizeApprovalActors(leave);
     return {
       id: leave.id,
       userId: leave.userId,
@@ -814,16 +886,16 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       trail: leave.trail ?? null,
       createdAt: leave.createdAt,
       durationDays: this.calculateDurationDays(dates),
-      status: leave.status ?? 'PENDING',
-      approvedBy: leave.approvedBy ?? null,
-      managerApprovedBy: leave.managerApprovedBy ?? null,
-      managerRejectedBy: leave.managerRejectedBy ?? null,
-      managerApprovedAt: leave.managerApprovedAt ?? null,
-      managerRejectedAt: leave.managerRejectedAt ?? null,
-      adminApprovedBy: leave.adminApprovedBy ?? null,
-      adminRejectedBy: leave.adminRejectedBy ?? null,
-      adminApprovedAt: leave.adminApprovedAt ?? null,
-      adminRejectedAt: leave.adminRejectedAt ?? null,
+      status: normalizedApproval.status,
+      approvedBy: normalizedApproval.approvedBy,
+      managerApprovedBy: normalizedApproval.managerApprovedBy,
+      managerRejectedBy: normalizedApproval.managerRejectedBy,
+      managerApprovedAt: normalizedApproval.managerApprovedAt,
+      managerRejectedAt: normalizedApproval.managerRejectedAt,
+      adminApprovedBy: normalizedApproval.adminApprovedBy,
+      adminRejectedBy: normalizedApproval.adminRejectedBy,
+      adminApprovedAt: normalizedApproval.adminApprovedAt,
+      adminRejectedAt: normalizedApproval.adminRejectedAt,
       rejectionReason: leave.rejectionReason ?? null,
       userDirectory,
       notifyUserIds: leave.notifyUserIds ?? [],
@@ -831,8 +903,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     };
   }
 
-  private loadManagerLeaves(response: UserDashboardResponse): void {
-    this.isLeavesLoading = true;
+  private loadManagerLeaves(response: UserDashboardResponse, silent = false): void {
+    if (!silent) this.isLeavesLoading = true;
     const userDirectory = this.buildUserDirectory(response);
 
     this.leaveService.getLeavesByManagerUsername(this.user.username).subscribe({
@@ -844,16 +916,17 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             return this.mapLeaveToRow(leave, role, undefined, undefined, userDirectory);
           })
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+        this.writeCacheWhenReady();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.isLeavesLoading = false;
-        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave records.'));
+        if (!silent) this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave records.'));
       }
     });
   }
 
-  private loadMyLeaves(response: UserDashboardResponse): void {
-    this.isLeavesLoading = true;
+  private loadMyLeaves(response: UserDashboardResponse, silent = false): void {
+    if (!silent) this.isLeavesLoading = true;
     const userDirectory = this.buildUserDirectory(response);
 
     this.leaveService.getLeavesByUsername(this.user.username).subscribe({
@@ -868,42 +941,116 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             userDirectory
           ))
           .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+        this.writeCacheWhenReady();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.isLeavesLoading = false;
         this.myLeaves = [];
-        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load your leave records.'));
+        if (!silent) this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load your leave records.'));
       }
     });
   }
 
   private updateLeaveInList(updated: import('../services/leave.service').LeaveRecord): void {
-    const patch = (row: AdminLeaveTableRow): AdminLeaveTableRow =>
-      row.id === updated.id
-        ? {
-            ...row,
-            status: updated.status ?? 'PENDING',
-            trail: updated.trail ?? row.trail,
-            approvedBy: updated.approvedBy ?? null,
-            managerApprovedBy: updated.managerApprovedBy ?? null,
-            managerRejectedBy: updated.managerRejectedBy ?? null,
-            managerApprovedAt: updated.managerApprovedAt ?? null,
-            managerRejectedAt: updated.managerRejectedAt ?? null,
-            adminApprovedBy: updated.adminApprovedBy ?? null,
-            adminRejectedBy: updated.adminRejectedBy ?? null,
-            adminApprovedAt: updated.adminApprovedAt ?? null,
-            adminRejectedAt: updated.adminRejectedAt ?? null,
-            rejectionReason: updated.rejectionReason ?? null
-          }
-        : row;
+    const normalizedApproval = this.normalizeApprovalActors(updated);
+    const patch = (row: AdminLeaveTableRow): AdminLeaveTableRow => {
+      if (row.id !== updated.id) {
+        return row;
+      }
+
+      const hasUpdatedDates = (updated.leaveDates ?? []).length > 0;
+      const remapped = this.mapLeaveToRow(
+        {
+          ...updated,
+          leaveDates: hasUpdatedDates ? updated.leaveDates : row.leaveDates
+        },
+        row.role,
+        row.fullName,
+        row.emailId,
+        row.userDirectory
+      );
+
+      return {
+        ...remapped,
+        status: normalizedApproval.status,
+        approvedBy: normalizedApproval.approvedBy,
+        managerApprovedBy: normalizedApproval.managerApprovedBy,
+        managerRejectedBy: normalizedApproval.managerRejectedBy,
+        managerApprovedAt: normalizedApproval.managerApprovedAt,
+        managerRejectedAt: normalizedApproval.managerRejectedAt,
+        adminApprovedBy: normalizedApproval.adminApprovedBy,
+        adminRejectedBy: normalizedApproval.adminRejectedBy,
+        adminApprovedAt: normalizedApproval.adminApprovedAt,
+        adminRejectedAt: normalizedApproval.adminRejectedAt,
+        rejectionReason: updated.rejectionReason ?? null,
+        userDirectory: row.userDirectory
+      };
+    };
 
     this.leaves = this.leaves.map(patch);
     this.managerLeaves = this.managerLeaves.map(patch);
     this.myLeaves = this.myLeaves.map(patch);
   }
 
-  private loadLeaves(response: UserDashboardResponse): void {
-    this.isLeavesLoading = true;
+  private normalizeApprovalActors(leave: import('../services/leave.service').LeaveRecord): Pick<
+    AdminLeaveTableRow,
+    | 'status'
+    | 'approvedBy'
+    | 'managerApprovedBy'
+    | 'managerRejectedBy'
+    | 'managerApprovedAt'
+    | 'managerRejectedAt'
+    | 'adminApprovedBy'
+    | 'adminRejectedBy'
+    | 'adminApprovedAt'
+    | 'adminRejectedAt'
+  > {
+    const status = leave.status ?? 'PENDING';
+    const approvedBy = leave.approvedBy ?? null;
+    let managerApprovedBy = leave.managerApprovedBy ?? null;
+    const managerRejectedBy = leave.managerRejectedBy ?? null;
+    const managerApprovedAt = leave.managerApprovedAt ?? null;
+    const managerRejectedAt = leave.managerRejectedAt ?? null;
+    let adminApprovedBy = leave.adminApprovedBy ?? null;
+    let adminRejectedBy = leave.adminRejectedBy ?? null;
+    let adminApprovedAt = leave.adminApprovedAt ?? null;
+    let adminRejectedAt = leave.adminRejectedAt ?? null;
+
+    if (status === 'MANAGER_APPROVED') {
+      if (!managerApprovedBy && approvedBy) {
+        managerApprovedBy = approvedBy;
+      }
+      adminApprovedBy = null;
+      adminRejectedBy = null;
+      adminApprovedAt = null;
+      adminRejectedAt = null;
+    } else if (status === 'APPROVED') {
+      if (!adminApprovedBy && approvedBy) {
+        adminApprovedBy = approvedBy;
+      }
+    } else if (status === 'REJECTED' && managerRejectedBy) {
+      adminApprovedBy = null;
+      adminRejectedBy = null;
+      adminApprovedAt = null;
+      adminRejectedAt = null;
+    }
+
+    return {
+      status,
+      approvedBy,
+      managerApprovedBy,
+      managerRejectedBy,
+      managerApprovedAt,
+      managerRejectedAt,
+      adminApprovedBy,
+      adminRejectedBy,
+      adminApprovedAt,
+      adminRejectedAt
+    };
+  }
+
+  private loadLeaves(response: UserDashboardResponse, silent = false): void {
+    if (!silent) this.isLeavesLoading = true;
     const userDirectory = this.buildUserDirectory(response);
 
     this.leaveService.getLeaves().subscribe({
@@ -923,11 +1070,12 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           })
           .filter((leave): leave is AdminLeaveTableRow => leave !== null)
           .sort((left, right) => new Date(right.fromDate).getTime() - new Date(left.fromDate).getTime());
+        this.writeCacheWhenReady();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.isLeavesLoading = false;
         this.leaves = [];
-        this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave records right now.'));
+        if (!silent) this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to load leave records right now.'));
       }
     });
   }

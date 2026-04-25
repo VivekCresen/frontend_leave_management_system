@@ -42,7 +42,14 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     const currentUser = this.authService.currentUser();
-    if (!currentUser?.username || !this.hasMailDecisionParams()) {
+
+    if (!currentUser?.username) {
+      return;
+    }
+
+    // Already logged in — handle mail decision or redirect to dashboard
+    if (!this.hasMailDecisionParams()) {
+      this.router.navigate(['/dashboard']);
       return;
     }
 

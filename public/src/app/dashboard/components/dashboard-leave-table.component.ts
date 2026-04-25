@@ -3,6 +3,7 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  effect,
   EventEmitter,
   Input,
   OnChanges,
@@ -26,6 +27,8 @@ import {
 } from 'ag-grid-community';
 import { DateDecision } from '../../services/leave.service';
 import { LeaveProgressModalComponent } from './leave-progress-modal.component';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { TranslateService } from '../../i18n/translate.service';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -85,16 +88,17 @@ const leaveGridTheme = themeQuartz.withParams({
 @Component({
   selector: 'app-dashboard-leave-table',
   standalone: true,
-  imports: [CommonModule, DatePipe, TitleCasePipe, FormsModule, AgGridAngular, LeaveProgressModalComponent],
+  imports: [CommonModule, DatePipe, TitleCasePipe, FormsModule, AgGridAngular, LeaveProgressModalComponent, TranslatePipe],
   templateUrl: './dashboard-leave-table.component.html',
   styleUrls: ['./dashboard-leave-table.component.css']
 })
 export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnChanges {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly translate = inject(TranslateService);
   private gridApi: GridApi<AdminLeaveTableRow> | null = null;
 
-  @Input({ required: true }) leaves: AdminLeaveTableRow[] = [];
+  @Input() leaves: AdminLeaveTableRow[] = [];
   @Input() title = 'Team leave records';
   @Input() description = 'Review all leave requests created by managers and employees.';
   @Input() emptyTitle = 'No leave requests found';
@@ -135,6 +139,16 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   popupLeave: AdminLeaveTableRow | null = null;
   progressLeave: AdminLeaveTableRow | null = null;
 
+  constructor() {
+    effect(() => {
+      this.translate.currentLang(); // track signal
+      if (this.gridApi) {
+        this.gridApi.setGridOption('columnDefs', this.columnDefs);
+        this.gridApi.setGridOption('rowData', this.agRowData);
+      }
+    });
+  }
+
   readonly defaultColDef: ColDef<AdminLeaveTableRow> = {
     sortable: true,
     resizable: true,
@@ -145,7 +159,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   get columnDefs(): ColDef<AdminLeaveTableRow>[] {
     const columns: ColDef<AdminLeaveTableRow>[] = [
       {
-        headerName: 'Employee',
+        headerName: this.translate.getTranslation('table.employee') !== 'table.employee' ? this.translate.getTranslation('table.employee') : 'Employee',
         field: 'fullName',
         minWidth: 200,
         flex: 2,
@@ -156,15 +170,19 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
           </div>` : ''
       },
       {
-        headerName: 'Leave Type',
+        headerName: this.translate.getTranslation('table.leaveType') !== 'table.leaveType' ? this.translate.getTranslation('table.leaveType') : 'Leave Type',
         field: 'leaveType',
         minWidth: 160,
         flex: 1.5,
-        cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) =>
-          `<span class="ag-type-pill">${this.esc(value) || '—'}</span>`
+        cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) => {
+          const typeStr = value ? String(value) : '';
+          const trKey = 'leaveTypes.' + typeStr;
+          const translatedType = this.translate.getTranslation(trKey) !== trKey ? this.translate.getTranslation(trKey) : typeStr || '—';
+          return `<span class="ag-type-pill">${this.esc(translatedType)}</span>`;
+        }
       },
       {
-        headerName: 'Selected Dates',
+        headerName: this.translate.getTranslation('table.dateRange') !== 'table.dateRange' ? this.translate.getTranslation('table.dateRange') : 'Selected Dates',
         field: 'fromDate',
         minWidth: 280,
         flex: 2.2,
@@ -213,7 +231,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
         }
       },
       {
-        headerName: 'Reason',
+        headerName: this.translate.getTranslation('table.reason') !== 'table.reason' ? this.translate.getTranslation('table.reason') : 'Reason',
         field: 'reason',
         minWidth: 220,
         flex: 2,
@@ -224,7 +242,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
           </div>` : ''
       },
       {
-        headerName: 'Status',
+        headerName: this.translate.getTranslation('table.status') !== 'table.status' ? this.translate.getTranslation('table.status') : 'Status',
         field: 'status',
         minWidth: 130,
         flex: 1,
@@ -237,18 +255,44 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
             approved: 'fa-circle-check',
             rejected: 'fa-circle-xmark'
           };
-          const label = raw === 'MANAGER_APPROVED' ? 'Pending Admin' : this.titleCase(raw);
+          const tKey = raw === 'MANAGER_APPROVED' ? 'pending_admin' : raw.toLowerCase();
+          const fullKey = 'table.' + tKey;
+          const translatedStatus = this.translate.getTranslation(fullKey);
+          const label = translatedStatus !== fullKey ? translatedStatus : (raw === 'MANAGER_APPROVED' ? 'Pending Admin' : this.titleCase(raw));
           return `<span class="ag-status-badge ag-status-${cls}">
             <i class="fas ${icons[cls] ?? 'fa-circle'}"></i>
             ${label}
           </span>`;
+        }
+      },
+      {
+        headerName: this.translate.getTranslation('table.progress') !== 'table.progress' ? this.translate.getTranslation('table.progress') : 'Progress',
+        minWidth: 170,
+        flex: 1,
+        sortable: false,
+        suppressHeaderMenuButton: true,
+        cellRenderer: () => {
+          const lKey = 'table.leaveProgress';
+          const lbl = this.translate.getTranslation(lKey) !== lKey ? this.translate.getTranslation(lKey) : 'Leave Progress';
+          return `<div class="ag-actions-cell" style="justify-content: flex-start;">
+            <button type="button" class="ag-action-button track" data-action="track">
+              <i class="fas fa-chart-line"></i> ${lbl}
+            </button>
+          </div>`;
+        },
+        onCellClicked: ({ data, event }) => {
+          if (!data) return;
+          const target = event?.target as HTMLElement | null;
+          if (target?.closest('[data-action="track"]')) {
+            this.progressLeave = data;
+          }
         }
       }
     ];
 
     if (this.showActions) {
       columns.push({
-        headerName: 'Actions',
+        headerName: this.translate.getTranslation('table.actions') !== 'table.actions' ? this.translate.getTranslation('table.actions') : 'Actions',
         minWidth: 230,
         flex: 1.6,
         sortable: false,
@@ -259,24 +303,28 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
             return '';
           }
 
-          const actions = [
-            `<button type="button" class="ag-action-button track" data-action="track">
-              <i class="fas fa-chart-line"></i> Leave Progress
-            </button>`
-          ];
+          const actions: string[] = [];
 
           if (data.status === 'PENDING' || (data.status === 'MANAGER_APPROVED' && this.viewerRole === 'ADMIN')) {
+            const trReview = this.translate.getTranslation('table.reviewDates');
+            const trFinal = this.translate.getTranslation('table.finalDecision');
+            const trProcess = this.translate.getTranslation('table.processing');
+            const lblReview = trReview !== 'table.reviewDates' ? trReview : 'Review Dates';
+            const lblFinal = trFinal !== 'table.finalDecision' ? trFinal : 'Final Decision';
+            const lblProcessing = trProcess !== 'table.processing' ? trProcess : 'Processing';
             const label = data.status === 'MANAGER_APPROVED'
-              ? '<i class="fas fa-shield-halved"></i> Final Decision'
-              : '<i class="fas fa-list-check"></i> Review Dates';
+              ? '<i class="fas fa-shield-halved"></i> ' + lblFinal
+              : '<i class="fas fa-list-check"></i> ' + lblReview;
             const processing = this.processingLeaveId === data.id;
-            const buttonContent = processing ? 'Processing' : label;
+            const buttonContent = processing ? lblProcessing : label;
 
             actions.push(
               `<button type="button" class="ag-action-button partial${data.status === 'MANAGER_APPROVED' ? ' admin-final' : ''}${processing ? ' is-loading' : ''}" data-action="partial" ${processing ? 'disabled' : ''}>${buttonContent}</button>`
             );
           } else if (data.status === 'MANAGER_APPROVED' && this.viewerRole !== 'ADMIN') {
-            actions.push('<span class="ag-action-muted">Pending admin</span>');
+            const trPending = this.translate.getTranslation('table.pending_admin');
+            const lbl = trPending !== 'table.pending_admin' ? trPending : 'Pending admin';
+            actions.push(`<span class="ag-action-muted">${lbl}</span>`);
           }
 
           return `<div class="ag-actions-cell">${actions.join('')}</div>`;
@@ -288,10 +336,6 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
 
           const target = event?.target as HTMLElement | null;
           const action = target?.closest('[data-action]')?.getAttribute('data-action');
-
-          if (action === 'track') {
-            this.progressLeave = data;
-          }
 
           if (action === 'partial' && this.processingLeaveId !== data.id) {
             this.openPartialModal(data);
@@ -404,8 +448,8 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   get filteredCount(): number { return this.filteredLeaves.length; }
   get totalPages(): number { return Math.ceil(this.filteredCount / this.pageSize); }
   get visibleCountLabel(): string { return `${this.compactView ? this.agFilteredCount : this.filteredCount} leave records`; }
-  get resolvedEmptyTitle(): string { return this.hasActiveFilters ? 'No matching leave records' : this.emptyTitle; }
-  get resolvedEmptyMessage(): string { return this.hasActiveFilters ? 'Try a different search term or reset the filters.' : this.emptyMessage; }
+  get resolvedEmptyTitle(): string { return this.hasActiveFilters ? this.translate.getTranslation('tableActions.noMatchingLeave') : this.emptyTitle; }
+  get resolvedEmptyMessage(): string { return this.hasActiveFilters ? this.translate.getTranslation('tableActions.tryDifferentSearch') : this.emptyMessage; }
 
   approve(leave: AdminLeaveTableRow): void { this.approveRequested.emit(leave); }
 

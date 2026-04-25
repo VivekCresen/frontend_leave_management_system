@@ -12,6 +12,9 @@ import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/
 import { UserExcelImportComponent } from '../components/user-excel-import.component';
 import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../services/auth.service';
 import { LeaveType, LeaveTypeSavePayload, Holiday, CreateHolidayPayload } from '../../services/leave.service';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { TranslateService } from '../../i18n/translate.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -23,7 +26,8 @@ import { LeaveType, LeaveTypeSavePayload, Holiday, CreateHolidayPayload } from '
     DashboardUserFormComponent,
     DashboardUserTableComponent,
     DashboardLeaveTableComponent,
-    UserExcelImportComponent
+    UserExcelImportComponent,
+    TranslatePipe
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -53,6 +57,8 @@ export class AdminDashboardComponent implements OnChanges {
   @Input() isHolidaySaving = false;
   @Input() lastHolidaySavedAt = 0;
   @Input() processingLeaveId: number | null = null;
+
+  constructor(public translateService: TranslateService, public themeService: ThemeService) {}
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
@@ -84,45 +90,46 @@ export class AdminDashboardComponent implements OnChanges {
   holidayModel = this.createHolidayModel();
 
   get stats(): DashboardStatCard[] {
+    const t = (k: string, fb: string) => { const v = this.translateService.getTranslation(k); return v !== k ? v : fb; };
     return [
       {
-        label: 'Total visible users',
+        label: t('stats.totalVisibleUsers', 'Total visible users'),
         value: this.dashboard?.totalUsers ?? 0,
-        note: 'All accounts in the directory.',
+        note: t('stats.allAccountsNote', 'All accounts in the directory.'),
         tone: 'teal',
         icon: 'fa-users',
         route: ['/dashboard', 'users'],
-        actionLabel: 'Open users'
+        actionLabel: t('stats.openUsers', 'Open users')
       },
       {
-        label: 'Inactive accounts',
+        label: t('stats.inactiveAccounts', 'Inactive accounts'),
         value: this.dashboard?.inactiveUsers ?? 0,
-        note: 'Require review.',
+        note: t('stats.requireReview', 'Require review.'),
         tone: 'orange',
         icon: 'fa-user-slash',
         route: ['/dashboard', 'users'],
         queryParams: { status: 'INACTIVE' },
-        actionLabel: 'Review users'
+        actionLabel: t('stats.reviewUsers', 'Review users')
       },
       {
-        label: 'Manager leave records',
+        label: t('stats.managerLeaveRecords', 'Manager leave records'),
         value: this.managerLeaveCount,
-        note: 'Requests created by managers.',
+        note: t('stats.requestsByManagers', 'Requests created by managers.'),
         tone: 'teal',
         icon: 'fa-user-tie',
         route: ['/dashboard', 'leaves'],
         queryParams: { role: 'MANAGER' },
-        actionLabel: 'Open leaves'
+        actionLabel: t('stats.openLeaves', 'Open leaves')
       },
       {
-        label: 'Employee leave records',
+        label: t('stats.employeeLeaveRecords', 'Employee leave records'),
         value: this.employeeLeaveCount,
-        note: 'Requests created by employees.',
+        note: t('stats.requestsByEmployees', 'Requests created by employees.'),
         tone: 'slate',
         icon: 'fa-calendar-check',
         route: ['/dashboard', 'leaves'],
         queryParams: { role: 'EMPLOYEE' },
-        actionLabel: 'Open leaves'
+        actionLabel: t('stats.openLeaves', 'Open leaves')
       }
     ];
   }

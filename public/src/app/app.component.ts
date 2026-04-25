@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ToastContainerComponent } from './toast-container/toast-container.component';
 import { LoaderComponent } from './shared/components/loader/loader.component';
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -12,4 +13,7 @@ import { LoaderComponent } from './shared/components/loader/loader.component';
 })
 export class AppComponent {
   title = 'leave-app';
+
+  // Inject ThemeService so it initializes on startup and applies the saved theme
+  constructor(private readonly themeService: ThemeService) {}
 }

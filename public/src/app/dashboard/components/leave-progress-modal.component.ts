@@ -7,6 +7,7 @@ type LeaveAuditTrailEntry = {
   actor: string;
   timestamp: string;
   note: string;
+  taskId?: string;
 };
 
 type WorkflowTone = 'success' | 'danger' | 'warning' | 'neutral';
@@ -197,7 +198,7 @@ export class LeaveProgressModalComponent {
   }
 
   private getEntryTitle(entry: LeaveAuditTrailEntry): string {
-    const event = entry.event.trim().toUpperCase();
+    const event = this.getNormalizedEvent(entry);
     const note = entry.note.toLowerCase();
 
     if (event === 'SUBMITTED') {
@@ -236,7 +237,7 @@ export class LeaveProgressModalComponent {
   }
 
   private getActorLabel(entry: LeaveAuditTrailEntry): string {
-    const event = entry.event.trim().toUpperCase();
+    const event = this.getNormalizedEvent(entry);
 
     if (event === 'SUBMITTED') {
       return 'Requested by';
@@ -262,7 +263,7 @@ export class LeaveProgressModalComponent {
   }
 
   private getReviewerName(entry: LeaveAuditTrailEntry): string {
-    const event = entry.event.trim().toUpperCase();
+    const event = this.getNormalizedEvent(entry);
     const fromNote = this.extractActorFromNote(entry.note);
 
     if (event === 'SUBMITTED') {
@@ -273,7 +274,7 @@ export class LeaveProgressModalComponent {
   }
 
   private getEntryStatus(entry: LeaveAuditTrailEntry): string {
-    const event = entry.event.trim().toUpperCase();
+    const event = this.getNormalizedEvent(entry);
     const note = entry.note.toLowerCase();
 
     if (event === 'PENDING_MANAGER' || event === 'PENDING_ADMIN') {
@@ -348,7 +349,7 @@ export class LeaveProgressModalComponent {
       return 'fa-clock';
     }
 
-    const event = entry.event.trim().toUpperCase();
+    const event = this.getNormalizedEvent(entry);
     if (event === 'SUBMITTED') {
       return 'fa-paper-plane';
     }
@@ -376,7 +377,7 @@ export class LeaveProgressModalComponent {
     }
 
     const lowerNote = note.toLowerCase();
-    const event = entry.event.trim().toUpperCase();
+    const event = this.getNormalizedEvent(entry);
 
     if (lowerNote.includes('flowable approval process started')) {
       return 'started the approval workflow. The request is now moving through the review steps.';
@@ -417,6 +418,21 @@ export class LeaveProgressModalComponent {
     }
 
     return this.toSentenceCase(note);
+  }
+
+  private getNormalizedEvent(entry: LeaveAuditTrailEntry): string {
+    const event = entry.event.trim().toUpperCase();
+    const note = entry.note.toLowerCase();
+    const taskId = (entry.taskId || '').trim().toLowerCase();
+
+    if (
+      event === 'APPROVED' &&
+      (taskId === 'service_set_manager_approved' || note.includes('pending admin final approval'))
+    ) {
+      return 'MANAGER_APPROVED';
+    }
+
+    return event;
   }
 
   private getDefaultSummary(event: string, actorName: string, statusLabel: string, reason: string): string {
@@ -559,7 +575,7 @@ export class LeaveProgressModalComponent {
 
     const titleCased = cleaned
       .split(' ')
-      .filter((part) => !/^\d+$/.test(part)) // Remove trailing numbers like in "vivek 1"
+      .filter((part) => !/^\d+$/.test(part)) 
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
       .join(' ');

@@ -7,11 +7,12 @@ import { AuthApiService } from '../services/auth-api.service';
 import { LoginResponse } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 import { getDashboardMenuItems, getDefaultDashboardPage, isDashboardPageAllowed } from './dashboard.config';
+import { TranslatePipe } from '../i18n/translate.pipe';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -64,10 +65,10 @@ export class DashboardComponent {
 
   get sidebarToggleLabel(): string {
     if (this.isMobileViewport) {
-      return this.isMobileSidebarOpen ? 'Close sidebar menu' : 'Open sidebar menu';
+      return this.isMobileSidebarOpen ? 'closeSidebar' : 'openSidebar';
     }
 
-    return this.isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    return this.isSidebarCollapsed ? 'expandSidebar' : 'collapseSidebar';
   }
 
   @HostListener('window:resize')

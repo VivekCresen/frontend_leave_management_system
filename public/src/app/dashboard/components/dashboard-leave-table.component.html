@@ -18,30 +18,30 @@
     </label>
 
     <label class="tool-select">
-      <span>Role</span>
+      <span>{{ ('role.role' | translate) || 'Role' }}</span>
       <select [(ngModel)]="selectedRole" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
-        <option value="ALL">All roles</option>
+        <option value="ALL">{{ 'table.allRoles' | translate }}</option>
         <option *ngFor="let role of roleOptions" [ngValue]="role">{{ role | titlecase }}</option>
       </select>
     </label>
 
     <label class="tool-select">
-      <span>Leave Type</span>
+      <span>{{ 'table.leaveType' | translate }}</span>
       <select [(ngModel)]="selectedLeaveType" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
-        <option value="ALL">All leave types</option>
-        <option *ngFor="let leaveType of leaveTypeOptions" [ngValue]="leaveType">{{ leaveType }}</option>
+        <option value="ALL">{{ 'table.allLeaveTypes' | translate }}</option>
+        <option *ngFor="let leaveType of leaveTypeOptions" [ngValue]="leaveType">{{ ('leaveTypes.' + leaveType | translate) || leaveType }}</option>
       </select>
     </label>
 
     <label *ngIf="showStatusFilter" class="tool-select">
-      <span>Status</span>
+      <span>{{ 'table.status' | translate }}</span>
       <select [(ngModel)]="selectedStatus" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
-        <option value="ALL">All statuses</option>
-        <option *ngFor="let status of statusOptions" [ngValue]="status">{{ status | titlecase }}</option>
+        <option value="ALL">{{ 'table.allStatuses' | translate }}</option>
+        <option *ngFor="let status of statusOptions" [ngValue]="status">{{ ('table.' + (status === 'MANAGER_APPROVED' ? 'pending_admin' : status.toLowerCase()) | translate) || status }}</option>
       </select>
     </label>
 
-    <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">Reset</button>
+    <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">{{ 'table.reset' | translate }}</button>
   </div>
 
   <!-- ── AG Grid (compactView) ── -->
@@ -78,7 +78,7 @@
       <div class="table-inner">
         <div class="table-row table-head" [class.has-actions]="showActions">
           <span class="sortable-header" (click)="toggleSort('fullName')">
-            Employee
+            {{ 'table.employee' | translate }}
             <i class="fas" [class.fa-sort]="sortKey !== 'fullName'" [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('role')">
@@ -86,23 +86,24 @@
             <i class="fas" [class.fa-sort]="sortKey !== 'role'" [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('leaveType')">
-            Leave Type
+            {{ 'table.leaveType' | translate }}
             <i class="fas" [class.fa-sort]="sortKey !== 'leaveType'" [class.fa-sort-up]="sortKey === 'leaveType' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'leaveType' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('fromDate')">
-            Date Range
+            {{ 'table.dateRange' | translate }}
             <i class="fas" [class.fa-sort]="sortKey !== 'fromDate'" [class.fa-sort-up]="sortKey === 'fromDate' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fromDate' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('durationDays')">
             Days
             <i class="fas" [class.fa-sort]="sortKey !== 'durationDays'" [class.fa-sort-up]="sortKey === 'durationDays' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'durationDays' && sortDirection === 'desc'"></i>
           </span>
-          <span>Reason / Notes</span>
+          <span>{{ 'table.reason' | translate }}</span>
           <span class="sortable-header" (click)="toggleSort('status')">
-            Status
+            {{ 'table.status' | translate }}
             <i class="fas" [class.fa-sort]="sortKey !== 'status'" [class.fa-sort-up]="sortKey === 'status' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'status' && sortDirection === 'desc'"></i>
           </span>
-          <span *ngIf="showActions">Actions</span>
+          <span>{{ 'table.progress' | translate }}</span>
+          <span *ngIf="showActions">{{ 'table.actions' | translate }}</span>
         </div>
 
         <div class="table-body">
@@ -114,7 +115,7 @@
             </div>
             <span class="role-pill" [class.manager]="leave.role === 'MANAGER'">{{ leave.role | titlecase }}</span>
             <div class="type-cell">
-              <strong>{{ leave.leaveType }}</strong>
+              <strong>{{ ('leaveTypes.' + leave.leaveType | translate) || leave.leaveType }}</strong>
             </div>
             <div class="date-cell">
               <strong>{{ leave.fromDate | date: 'dd MMM yyyy' }}</strong>
@@ -141,28 +142,29 @@
                   [class.fa-hourglass-half]="leave.status === 'MANAGER_APPROVED'"
                   [class.fa-circle-check]="leave.status === 'APPROVED'"
                   [class.fa-circle-xmark]="leave.status === 'REJECTED'"></i>
-                {{ leave.status === 'MANAGER_APPROVED' ? 'Pending Admin' : (leave.status | titlecase) }}
+                {{ ('table.' + (leave.status === 'MANAGER_APPROVED' ? 'pending_admin' : leave.status.toLowerCase()) | translate) || leave.status }}
               </span>
               <small *ngIf="leave.managerApprovedBy" class="approved-by-note">Manager: {{ leave.managerApprovedBy }}</small>
               <small *ngIf="leave.managerRejectedBy" class="approved-by-note">Manager rejected: {{ leave.managerRejectedBy }}</small>
               <small *ngIf="leave.adminApprovedBy && leave.status !== 'MANAGER_APPROVED'" class="approved-by-note">Admin approved: {{ leave.adminApprovedBy }}</small>
               <small *ngIf="leave.adminRejectedBy" class="approved-by-note">Admin rejected: {{ leave.adminRejectedBy }}</small>
-              <small class="progress-hint"><i class="fas fa-chart-line"></i> View progress</small>
             </div>
-            <div *ngIf="showActions" class="action-cell">
+            <div class="progress-cell">
               <button type="button" class="track-btn" (click)="progressLeave = leave" title="View leave progress">
                 <i class="fas fa-chart-line"></i>
-                <span>Leave Progress</span>
+                <span>{{ 'table.leaveProgress' | translate }}</span>
               </button>
+            </div>
+            <div *ngIf="showActions" class="action-cell">
               <button *ngIf="leave.status === 'PENDING'" type="button" class="partial-btn" [class.is-loading]="processingLeaveId === leave.id" [disabled]="processingLeaveId === leave.id" (click)="openPartialModal(leave)" title="Review individual dates">
                 <i *ngIf="processingLeaveId !== leave.id" class="fas fa-list-check"></i>
-                <span>{{ processingLeaveId === leave.id ? 'Processing...' : 'Review Dates' }}</span>
+                <span>{{ processingLeaveId === leave.id ? ('table.processing' | translate) : ('table.reviewDates' | translate) }}</span>
               </button>
               <button *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole === 'ADMIN'" type="button" class="partial-btn partial-btn-admin" [class.is-loading]="processingLeaveId === leave.id" [disabled]="processingLeaveId === leave.id" (click)="openPartialModal(leave)" title="Give final admin decision">
                 <i *ngIf="processingLeaveId !== leave.id" class="fas fa-shield-halved"></i>
-                <span>{{ processingLeaveId === leave.id ? 'Processing...' : 'Final Decision' }}</span>
+                <span>{{ processingLeaveId === leave.id ? ('table.processing' | translate) : ('table.finalDecision' | translate) }}</span>
               </button>
-              <span *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole !== 'ADMIN'" class="action-done">Pending admin</span>
+              <span *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole !== 'ADMIN'" class="action-done">{{ 'table.pending_admin' | translate }}</span>
             </div>
           </div>
         </div>
@@ -198,8 +200,8 @@
   <div class="reject-modal-card" (click)="$event.stopPropagation()">
     <div class="reject-modal-header">
       <div>
-        <h3>Reject leave request</h3>
-        <p>Provide a reason so the employee understands the decision.</p>
+        <h3>{{ 'tableActions.rejectLeaveRequest' | translate }}</h3>
+        <p>{{ 'tableActions.rejectLeaveDesc' | translate }}</p>
       </div>
       <button type="button" class="close-btn" (click)="closeRejectModal()" aria-label="Close">✕</button>
     </div>
@@ -209,19 +211,19 @@
         ({{ rejectingLeave.fromDate | date: 'dd MMM' }} to {{ rejectingLeave.toDate | date: 'dd MMM yyyy' }})
       </p>
       <label class="reject-field">
-        <span>Rejection reason <span class="required-mark">*</span></span>
+        <span>{{ 'tableActions.rejectionReason' | translate }} <span class="required-mark">*</span></span>
         <textarea
           [(ngModel)]="rejectionReason"
           [class.input-invalid]="rejectionSubmitted && !rejectionReason.trim()"
           placeholder="Explain why this leave is being rejected"
           rows="3"
           maxlength="500"></textarea>
-        <small *ngIf="rejectionSubmitted && !rejectionReason.trim()">Rejection reason is required</small>
+        <small *ngIf="rejectionSubmitted && !rejectionReason.trim()">{{ 'tableActions.rejectionRequired' | translate }}</small>
       </label>
     </div>
     <div class="reject-modal-actions">
-      <button type="button" class="secondary-btn" (click)="closeRejectModal()">Cancel</button>
-      <button type="button" class="reject-confirm-btn" (click)="confirmReject()">Confirm rejection</button>
+      <button type="button" class="secondary-btn" (click)="closeRejectModal()">{{ 'tableActions.cancel' | translate }}</button>
+      <button type="button" class="reject-confirm-btn" (click)="confirmReject()">{{ 'tableActions.confirmRejection' | translate }}</button>
     </div>
   </div>
 </div>
@@ -231,8 +233,8 @@
   <div class="reject-modal-card partial-modal-card" (click)="$event.stopPropagation()">
     <div class="reject-modal-header">
       <div>
-        <h3>{{ partialLeave.status === 'MANAGER_APPROVED' ? 'Admin final decision' : 'Review leave dates' }}</h3>
-        <p>{{ partialLeave.status === 'MANAGER_APPROVED' ? 'Give your final approval or rejection for each date.' : 'Toggle each date to approve or reject individually.' }}</p>
+        <h3>{{ partialLeave.status === 'MANAGER_APPROVED' ? ('tableActions.adminFinalDecision' | translate) : ('tableActions.reviewLeaveDates' | translate) }}</h3>
+        <p>{{ partialLeave.status === 'MANAGER_APPROVED' ? ('tableActions.adminFinalDecisionDesc' | translate) : ('tableActions.reviewLeaveDatesDesc' | translate) }}</p>
       </div>
       <button type="button" class="close-btn" (click)="closePartialModal()" aria-label="Close">✕</button>
     </div>
@@ -246,14 +248,14 @@
           class="partial-bulk-btn approve-all-btn"
           [disabled]="hasMixedPartialDecisions || areAllPartialApproved"
           (click)="setAllPartialDecisions('APPROVED')">
-          Approve all
+          {{ 'tableActions.approveAll' | translate }}
         </button>
         <button
           type="button"
           class="partial-bulk-btn reject-all-btn"
           [disabled]="hasMixedPartialDecisions || areAllPartialRejected"
           (click)="setAllPartialDecisions('REJECTED')">
-          Reject all
+          {{ 'tableActions.rejectAll' | translate }}
         </button>
       </div>
       <div class="partial-dates-list">
@@ -262,31 +264,31 @@
           [class.partial-rejected]="getPartialDecision(d.date, d.dayType) === 'REJECTED'">
           <span class="partial-date-icon">{{ d.dayType === 'MORNING_HALF' ? '🌅' : d.dayType === 'AFTERNOON_HALF' ? '🌇' : '📅' }}</span>
           <span class="partial-date-label">{{ fmtDatePublic(d.date) }}</span>
-          <span class="partial-session-label">{{ d.dayType === 'MORNING_HALF' ? 'Morning' : d.dayType === 'AFTERNOON_HALF' ? 'Afternoon' : 'Full day' }}</span>
+          <span class="partial-session-label">{{ d.dayType === 'MORNING_HALF' ? ('tableActions.morning' | translate) : d.dayType === 'AFTERNOON_HALF' ? ('tableActions.afternoon' | translate) : ('tableActions.fullDay' | translate) }}</span>
           <button type="button" class="partial-toggle-btn"
             [class.is-approved]="getPartialDecision(d.date, d.dayType) === 'APPROVED'"
             [class.is-rejected]="getPartialDecision(d.date, d.dayType) === 'REJECTED'"
             (click)="togglePartialDecision(d.date, d.dayType)">
             <i class="fas" [class.fa-circle-check]="getPartialDecision(d.date, d.dayType) === 'APPROVED'" [class.fa-circle-xmark]="getPartialDecision(d.date, d.dayType) === 'REJECTED'"></i>
-            {{ getPartialDecision(d.date, d.dayType) === 'APPROVED' ? 'Approved' : 'Rejected' }}
+            {{ getPartialDecision(d.date, d.dayType) === 'APPROVED' ? ('tableActions.approved' | translate) : ('tableActions.rejected' | translate) }}
           </button>
         </div>
       </div>
       <label *ngIf="hasAnyRejected" class="reject-field" style="margin-top:14px;">
-        <span>Rejection reason <span class="required-mark">*</span></span>
+        <span>{{ 'tableActions.rejectionReason' | translate }} <span class="required-mark">*</span></span>
         <textarea
           [(ngModel)]="partialRejectionReason"
           [class.input-invalid]="partialSubmitted && !partialRejectionReason.trim()"
           placeholder="Explain why these dates are being rejected"
           rows="3"
           maxlength="500"></textarea>
-        <small *ngIf="partialSubmitted && !partialRejectionReason.trim()">Rejection reason is required</small>
+        <small *ngIf="partialSubmitted && !partialRejectionReason.trim()">{{ 'tableActions.rejectionRequired' | translate }}</small>
       </label>
     </div>
     <div class="reject-modal-actions">
-      <button type="button" class="secondary-btn" (click)="closePartialModal()">Cancel</button>
+      <button type="button" class="secondary-btn" (click)="closePartialModal()">{{ 'tableActions.cancel' | translate }}</button>
       <button type="button" class="reject-confirm-btn" [class.is-loading]="partialLeave && processingLeaveId === partialLeave.id" [disabled]="partialLeave && processingLeaveId === partialLeave.id" (click)="confirmPartial()">
-        <span>{{ partialLeave && processingLeaveId === partialLeave.id ? 'Applying...' : 'Confirm decisions' }}</span>
+        <span>{{ partialLeave && processingLeaveId === partialLeave.id ? ('tableActions.applying' | translate) : ('tableActions.confirmDecisions' | translate) }}</span>
       </button>
     </div>
   </div>
@@ -305,7 +307,7 @@
     <div class="dates-popup-header">
       <div>
         <p class="dates-popup-eyebrow">{{ popupLeave.leaveType }}</p>
-        <h3>All selected dates</h3>
+        <h3>{{ 'tableActions.allSelectedDates' | translate }}</h3>
       </div>
       <button type="button" class="dates-popup-close" (click)="popupLeave = null" aria-label="Close">✕</button>
     </div>
@@ -317,7 +319,7 @@
           [class.session-morning]="d.dayType === 'MORNING_HALF'"
           [class.session-afternoon]="d.dayType === 'AFTERNOON_HALF'"
           [class.session-full]="!d.dayType || d.dayType === 'FULL'">
-          {{ d.dayType === 'MORNING_HALF' ? 'Morning half' : d.dayType === 'AFTERNOON_HALF' ? 'Afternoon half' : 'Full day' }}
+          {{ d.dayType === 'MORNING_HALF' ? ('tableActions.morningHalf' | translate) : d.dayType === 'AFTERNOON_HALF' ? ('tableActions.afternoonHalf' | translate) : ('tableActions.fullDay' | translate) }}
         </span>
       </div>
     </div>

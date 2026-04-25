@@ -172,7 +172,7 @@
 
 .table-row {
   display: grid;
-  grid-template-columns: minmax(240px, 1.8fr) 110px 150px minmax(180px, 1.2fr) 100px minmax(220px, 1.4fr);
+  grid-template-columns: minmax(200px, 1.6fr) 100px 130px minmax(160px, 1.1fr) 90px minmax(180px, 1.2fr) 120px 160px;
   gap: 10px;
   align-items: center;
   padding: 10px 14px;
@@ -367,11 +367,11 @@
 
 /* Table row with actions column */
 .table-row.has-actions {
-  grid-template-columns: minmax(200px, 1.6fr) 100px 130px minmax(160px, 1.1fr) 90px minmax(180px, 1.2fr) 120px 140px;
+  grid-template-columns: minmax(180px, 1.5fr) 90px 120px minmax(140px, 1fr) 80px minmax(160px, 1fr) 110px 160px 120px;
 }
 
 .table-row:not(.has-actions) {
-  grid-template-columns: minmax(240px, 1.8fr) 110px 150px minmax(180px, 1.2fr) 100px minmax(220px, 1.4fr) 120px;
+  grid-template-columns: minmax(220px, 1.6fr) 110px 140px minmax(160px, 1.1fr) 90px minmax(200px, 1.2fr) 120px 160px;
 }
 
 /* Status badge */
@@ -431,6 +431,11 @@
 .rejection-note {
   color: #b42318;
   font-size: 0.78rem;
+}
+
+.progress-cell {
+  display: flex;
+  align-items: center;
 }
 
 /* Action buttons */

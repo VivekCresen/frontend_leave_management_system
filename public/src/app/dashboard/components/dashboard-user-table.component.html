@@ -18,23 +18,23 @@
     </label>
 
     <label class="tool-select">
-      <span>Role</span>
+      <span>{{ 'table.role' | translate }}</span>
       <select [(ngModel)]="selectedRole" (ngModelChange)="onFilterChange()">
-        <option value="ALL">All roles</option>
+        <option value="ALL">{{ 'table.allRoles' | translate }}</option>
         <option *ngFor="let role of roleOptions" [ngValue]="role">{{ role | titlecase }}</option>
       </select>
     </label>
 
     <label class="tool-select">
-      <span>Status</span>
+      <span>{{ 'table.status' | translate }}</span>
       <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()">
-        <option value="ALL">All status</option>
-        <option value="ACTIVE">Active</option>
-        <option value="INACTIVE">Inactive</option>
+        <option value="ALL">{{ 'table.allStatuses' | translate }}</option>
+        <option value="ACTIVE">{{ 'stats.active' | translate }}</option>
+        <option value="INACTIVE">{{ 'stats.inactive' | translate }}</option>
       </select>
     </label>
 
-    <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">Reset</button>
+    <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">{{ 'table.reset' | translate }}</button>
   </div>
 
   <!-- AG Grid mode -->
@@ -73,41 +73,41 @@
       <div class="table-inner">
         <div class="table-row table-head" [class.without-actions]="!showActions">
           <span class="sortable-header" (click)="toggleSort('fullName')">
-            User
+            {{ 'userTable.user' | translate }}
             <i class="fas"
               [class.fa-sort]="sortKey !== 'fullName'"
               [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'"
               [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('role')">
-            Role
+            {{ 'table.role' | translate }}
             <i class="fas"
               [class.fa-sort]="sortKey !== 'role'"
               [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'"
               [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('active')">
-            Status
+            {{ 'table.status' | translate }}
             <i class="fas"
               [class.fa-sort]="sortKey !== 'active'"
               [class.fa-sort-up]="sortKey === 'active' && sortDirection === 'asc'"
               [class.fa-sort-down]="sortKey === 'active' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('createdBy')">
-            Manager / Owner
+            {{ 'userTable.managerOwner' | translate }}
             <i class="fas"
               [class.fa-sort]="sortKey !== 'createdBy'"
               [class.fa-sort-up]="sortKey === 'createdBy' && sortDirection === 'asc'"
               [class.fa-sort-down]="sortKey === 'createdBy' && sortDirection === 'desc'"></i>
           </span>
           <span class="sortable-header" (click)="toggleSort('lastLogin')">
-            Last login
+            {{ 'userTable.lastLogin' | translate }}
             <i class="fas"
               [class.fa-sort]="sortKey !== 'lastLogin'"
               [class.fa-sort-up]="sortKey === 'lastLogin' && sortDirection === 'asc'"
               [class.fa-sort-down]="sortKey === 'lastLogin' && sortDirection === 'desc'"></i>
           </span>
-          <span *ngIf="showActions">Actions</span>
+          <span *ngIf="showActions">{{ 'table.actions' | translate }}</span>
         </div>
 
         <div
@@ -122,9 +122,9 @@
               <em>{{ user.companyId }}</em>
             </div>
             <span class="meta-text">{{ user.role | titlecase }}</span>
-            <span class="status-pill" [class.inactive]="!user.active">{{ user.active ? 'Active' : 'Inactive' }}</span>
-            <span class="meta-text">{{ user.createdBy || 'System' }}</span>
-            <span class="meta-text">{{ user.lastLogin ? (user.lastLogin | date: 'dd MMM yyyy, h:mm a') : 'Never' }}</span>
+            <span class="status-pill" [class.inactive]="!user.active">{{ user.active ? ('stats.active' | translate) : ('stats.inactive' | translate) }}</span>
+            <span class="meta-text">{{ user.createdBy || ('userTable.system' | translate) }}</span>
+            <span class="meta-text">{{ user.lastLogin ? (user.lastLogin | date: 'dd MMM yyyy, h:mm a') : ('userTable.never' | translate) }}</span>
             <div *ngIf="showActions" class="action-cell">
               <button *ngIf="user.canEdit" type="button" class="edit-button" (click)="editRequested.emit(user)" [disabled]="deletingUserId === user.id">Edit</button>
               <button *ngIf="user.canDelete" type="button" class="delete-button" [class.is-loading]="deletingUserId === user.id" (click)="deleteRequested.emit(user)" [disabled]="deletingUserId === user.id">

@@ -3,6 +3,7 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  effect,
   EventEmitter,
   inject,
   Input,
@@ -20,13 +21,13 @@ import {
   ICellRendererParams,
   ModuleRegistry,
   PaginationModule,
-  RowClickedEvent,
   themeQuartz,
   ValueFormatterParams
 } from 'ag-grid-community';
 import { AdminLeaveTableRow } from './dashboard-leave-table.component';
 import { LeaveProgressModalComponent } from './leave-progress-modal.component';
 import { LeaveType } from '../../services/leave.service';
+import { TranslateService } from '../../i18n/translate.service';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -60,21 +61,18 @@ const historyTheme = themeQuartz.withParams({
 <section class="table-card">
   <div class="table-heading">
     <div>
-      <p class="eyebrow">Leave History</p>
+      <p class="eyebrow">{{ translate.getTranslation('tableActions.leaveHistory') }}</p>
       <h3>{{ title }}</h3>
       <p>{{ description }}</p>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
       <span class="count-pill">{{ leaves.length }} record{{ leaves.length !== 1 ? 's' : '' }}</span>
-      <span *ngIf="leaves.length > 0" style="font-size:0.72rem;color:#0f8b8d;font-weight:600;opacity:0.8;">
-        <i class="fas fa-hand-pointer" style="font-size:0.65rem;"></i> Click any row to view progress
-      </span>
     </div>
   </div>
 
   <div *ngIf="leaves.length === 0" class="empty-state">
-    <h4>No leave history yet</h4>
-    <p>Submit your first leave request to start building your history.</p>
+    <h4>{{ translate.getTranslation('tableActions.noLeaveHistory') }}</h4>
+    <p>{{ translate.getTranslation('tableActions.submitFirstLeave') }}</p>
   </div>
 
   <div *ngIf="leaves.length > 0 && gridMounted" class="ag-shell">
@@ -89,8 +87,7 @@ const historyTheme = themeQuartz.withParams({
       [paginationPageSizeSelector]="[10, 20, 50]"
       [suppressCellFocus]="true"
       [domLayout]="'autoHeight'"
-      (gridReady)="onGridReady($event)"
-      (rowClicked)="onRowClicked($event)">
+      (gridReady)="onGridReady($event)">
     </ag-grid-angular>
   </div>
 </section>
@@ -108,7 +105,7 @@ const historyTheme = themeQuartz.withParams({
     <div class="dates-popup-header">
       <div>
         <p class="dates-popup-eyebrow">{{ popupLeave.leaveType }}</p>
-        <h3>All selected dates</h3>
+        <h3>{{ translate.getTranslation('tableActions.allSelectedDates') }}</h3>
       </div>
       <button type="button" class="dates-popup-close" (click)="popupLeave = null" aria-label="Close">✕</button>
     </div>
@@ -120,7 +117,7 @@ const historyTheme = themeQuartz.withParams({
           [class.session-morning]="d.dayType === 'MORNING_HALF'"
           [class.session-afternoon]="d.dayType === 'AFTERNOON_HALF'"
           [class.session-full]="!d.dayType || d.dayType === 'FULL'">
-          {{ d.dayType === 'MORNING_HALF' ? 'Morning half' : d.dayType === 'AFTERNOON_HALF' ? 'Afternoon half' : 'Full day' }}
+          {{ d.dayType === 'MORNING_HALF' ? translate.getTranslation('tableActions.morningHalf') : d.dayType === 'AFTERNOON_HALF' ? translate.getTranslation('tableActions.afternoonHalf') : translate.getTranslation('tableActions.fullDay') }}
         </span>
       </div>
     </div>
@@ -307,6 +304,11 @@ const historyTheme = themeQuartz.withParams({
     :host ::ng-deep .history-ag-grid .ag-action-button.delete {
       color: #b42318;
       border-color: rgba(180, 35, 24, 0.22);
+    }
+    :host ::ng-deep .history-ag-grid .ag-action-button.progress {
+      color: #0f8b8d;
+      border-color: rgba(15, 139, 141, 0.22);
+      background: rgba(15, 139, 141, 0.06);
     }
     :host ::ng-deep .history-ag-grid .ag-action-button:disabled {
       opacity: 0.72;
@@ -577,6 +579,7 @@ const historyTheme = themeQuartz.withParams({
 export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly cdr = inject(ChangeDetectorRef);
+  readonly translate = inject(TranslateService);
   private gridApi: GridApi<AdminLeaveTableRow> | null = null;
 
   @Input({ required: true }) leaves: AdminLeaveTableRow[] = [];
@@ -593,6 +596,16 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   readonly agTheme = historyTheme;
   popupLeave: AdminLeaveTableRow | null = null;
   progressLeave: AdminLeaveTableRow | null = null;
+
+  constructor() {
+    effect(() => {
+      this.translate.currentLang(); // track signal
+      if (this.gridApi) {
+        this.gridApi.setGridOption('columnDefs', this.columnDefs);
+        this.gridApi.setGridOption('rowData', this.leaves);
+      }
+    });
+  }
 
   get leaveBalances(): { name: string; maxDays: number; usedDays: number; remaining: number; pct: number }[] {
     return this.leaveTypes
@@ -624,17 +637,22 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   };
 
   get columnDefs(): ColDef<AdminLeaveTableRow>[] {
+    const tr = (k: string, fb: string) => { const v = this.translate.getTranslation(k); return v !== k ? v : fb; };
     return [
       {
-        headerName: 'Leave Name',
+        headerName: tr('table.leaveType', 'Leave Name'),
         field: 'leaveType',
         minWidth: 150,
         flex: 1.5,
-        cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) =>
-          `<div class="ag-leave-name-cell"><strong>${this.esc(value) || 'Unassigned'}</strong></div>`
+        cellRenderer: ({ value }: ICellRendererParams<AdminLeaveTableRow>) => {
+          const typeStr = value ? String(value) : '';
+          const tKey = 'leaveTypes.' + typeStr;
+          const translated = this.translate.getTranslation(tKey) !== tKey ? this.translate.getTranslation(tKey) : typeStr || 'Unassigned';
+          return `<div class="ag-leave-name-cell"><strong>${this.esc(translated)}</strong></div>`;
+        }
       },
       {
-        headerName: 'Selected Dates',
+        headerName: tr('table.dateRange', 'Selected Dates'),
         field: 'fromDate',
         minWidth: 260,
         flex: 2.2,
@@ -685,14 +703,14 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
         }
       },
       {
-        headerName: 'Reason',
+        headerName: tr('table.reason', 'Reason'),
         field: 'reason',
         minWidth: 220,
         flex: 2,
         valueFormatter: ({ value }: ValueFormatterParams) => value?.trim() || '—'
       },
       {
-        headerName: 'Status',
+        headerName: tr('table.status', 'Status'),
         field: 'status',
         minWidth: 130,
         flex: 1,
@@ -706,55 +724,89 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
             rejected: 'fa-circle-xmark'
           };
           const icon = icons[cls] ?? 'fa-circle';
-          const label = raw === 'MANAGER_APPROVED' ? 'Pending Admin' : this.titleCase(raw);
+          const tKey = 'table.' + (raw === 'MANAGER_APPROVED' ? 'pending_admin' : raw.toLowerCase());
+          const label = this.translate.getTranslation(tKey) !== tKey ? this.translate.getTranslation(tKey) : (raw === 'MANAGER_APPROVED' ? 'Pending Admin' : this.titleCase(raw));
           return `<span class="ag-status-badge ag-status-${cls}">
                     <i class="fas ${icon}"></i>
                     ${label}
-                  </span>
-                  <br><span style="font-size:0.7rem;color:#0f8b8d;opacity:0.7;cursor:pointer;">
-                    <i class="fas fa-chart-line" style="font-size:0.65rem;"></i> View progress
                   </span>`;
         }
       },
       {
-        headerName: 'Manager',
+        headerName: tr('table.manager', 'Manager'),
         minWidth: 180,
         flex: 1.3,
         sortable: false,
         valueGetter: ({ data }) => data?.managerApprovedBy ?? data?.managerRejectedBy ?? '',
         cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
           if (!data) return '';
+          const rej = tr('table.rejected', 'Rejected');
+          const apr = tr('table.approved', 'Approved');
+          const pend = tr('table.pending', 'Pending');
           if (data.managerRejectedBy) {
-            return `<div class="ag-date-cell"><strong style="color:#b42318;">Rejected</strong><span>${this.esc(data.managerRejectedBy)}</span></div>`;
+            return `<div class="ag-date-cell"><strong style="color:#b42318;">${rej}</strong><span>${this.esc(data.managerRejectedBy)}</span></div>`;
           }
           if (data.managerApprovedBy) {
-            return `<div class="ag-date-cell"><strong style="color:#0f766e;">Approved</strong><span>${this.esc(data.managerApprovedBy)}</span></div>`;
+            return `<div class="ag-date-cell"><strong style="color:#0f766e;">${apr}</strong><span>${this.esc(data.managerApprovedBy)}</span></div>`;
           }
-          return `<span style="color:#94a3b8;">Pending</span>`;
+          return `<span style="color:#94a3b8;">${pend}</span>`;
         }
       },
       {
-        headerName: 'Admin',
+        headerName: tr('table.admin', 'Admin'),
         minWidth: 180,
         flex: 1.3,
         sortable: false,
         valueGetter: ({ data }) => data?.adminApprovedBy ?? data?.adminRejectedBy ?? '',
         cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
           if (!data) return '';
+          const rej = tr('table.rejected', 'Rejected');
+          const apr = tr('table.approved', 'Approved');
+          const pend = tr('table.pending', 'Pending');
+          const notReached = tr('table.notReached', 'Not reached');
           if (data.adminRejectedBy) {
-            return `<div class="ag-date-cell"><strong style="color:#b42318;">Rejected</strong><span>${this.esc(data.adminRejectedBy)}</span></div>`;
+            return `<div class="ag-date-cell"><strong style="color:#b42318;">${rej}</strong><span>${this.esc(data.adminRejectedBy)}</span></div>`;
           }
           if (data.adminApprovedBy) {
-            return `<div class="ag-date-cell"><strong style="color:#0f766e;">Approved</strong><span>${this.esc(data.adminApprovedBy)}</span></div>`;
+            return `<div class="ag-date-cell"><strong style="color:#0f766e;">${apr}</strong><span>${this.esc(data.adminApprovedBy)}</span></div>`;
           }
           if (data.status === 'REJECTED' && data.managerRejectedBy) {
-            return `<span style="color:#94a3b8;">Not reached</span>`;
+            return `<span style="color:#94a3b8;">${notReached}</span>`;
           }
-          return `<span style="color:#94a3b8;">Pending</span>`;
+          return `<span style="color:#94a3b8;">${pend}</span>`;
         }
       },
       {
-        headerName: 'Actions',
+        headerName: tr('table.progress', 'Progress'),
+        minWidth: 140,
+        flex: 1,
+        sortable: false,
+        resizable: false,
+        suppressHeaderMenuButton: true,
+        cellRenderer: ({ data }: ICellRendererParams<AdminLeaveTableRow>) => {
+          if (!data) {
+            return '';
+          }
+
+          return `<button type="button" class="ag-action-button progress" data-action="progress">
+            <i class="fas fa-chart-line"></i>
+            ${tr('tableActions.track', 'Track')}
+          </button>`;
+        },
+        onCellClicked: ({ data, event }) => {
+          if (!data) {
+            return;
+          }
+
+          const target = event?.target as HTMLElement | null;
+          const action = target?.closest('[data-action]')?.getAttribute('data-action');
+          if (action === 'progress') {
+            this.progressLeave = data;
+          }
+        }
+      },
+      {
+        headerName: tr('table.actions', 'Actions'),
         minWidth: 180,
         flex: 1.2,
         hide: !this.showRequestActions,
@@ -767,13 +819,16 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
           }
 
           if (!data.editable || data.status !== 'PENDING') {
-            return `<span class="ag-action-muted">No actions</span>`;
+            return `<span class="ag-action-muted">${tr('tableActions.noActions', 'No actions')}</span>`;
           }
 
           const deleting = this.deletingLeaveId === data.id;
+          const editLbl = tr('tableActions.edit', 'Edit');
+          const deleteLbl = tr('tableActions.delete', 'Delete');
+          const deletingLbl = tr('tableActions.deleting', 'Deleting...');
           return `<div class="ag-actions-cell">
-            <button type="button" class="ag-action-button" data-action="edit" ${deleting ? 'disabled' : ''}>Edit</button>
-            <button type="button" class="ag-action-button delete${deleting ? ' is-loading' : ''}" data-action="delete" ${deleting ? 'disabled' : ''}>${deleting ? 'Deleting' : 'Delete'}</button>
+            <button type="button" class="ag-action-button" data-action="edit" ${deleting ? 'disabled' : ''}>${editLbl}</button>
+            <button type="button" class="ag-action-button delete${deleting ? ' is-loading' : ''}" data-action="delete" ${deleting ? 'disabled' : ''}>${deleting ? deletingLbl : deleteLbl}</button>
           </div>`;
         },
         onCellClicked: ({ data, event }) => {
@@ -820,13 +875,6 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
 
   onGridReady(event: GridReadyEvent<AdminLeaveTableRow>): void {
     this.gridApi = event.api;
-  }
-
-  onRowClicked(event: RowClickedEvent<AdminLeaveTableRow>): void {
-    // Don't open progress modal if user clicked a button inside the cell
-    const target = event.event?.target as HTMLElement | null;
-    if (target?.closest('button')) return;
-    if (event.data) this.progressLeave = event.data;
   }
 
   fmtDatePublic(value: string | number[] | unknown): string {

@@ -31,19 +31,19 @@
 
           <button type="button" class="profile-menu-item" (click)="openProfileEditor()">
             <i class="fas fa-user-pen"></i>
-            <span>Edit profile</span>
+            <span>{{ 'menu.editProfile' | translate }}</span>
           </button>
           <button type="button" class="profile-menu-item" (click)="openChangePassword()">
             <i class="fas fa-key"></i>
-            <span>Change password</span>
+            <span>{{ 'menu.changePassword' | translate }}</span>
           </button>
           <button type="button" class="profile-menu-item" (click)="openForgotPassword()">
             <i class="fas fa-unlock-keyhole"></i>
-            <span>Forgot password</span>
+            <span>{{ 'menu.forgotPassword' | translate }}</span>
           </button>
           <button type="button" class="profile-menu-item danger" (click)="logout()">
             <i class="fas fa-right-from-bracket"></i>
-            <span>Logout</span>
+            <span>{{ 'menu.logout' | translate }}</span>
           </button>
         </div>
       </div>
@@ -54,8 +54,8 @@
     <section class="profile-modal-card" (click)="$event.stopPropagation()">
       <div class="profile-modal-header">
         <div>
-          <h3>Edit your details</h3>
-          <p>Update your personal account information from the top-right menu.</p>
+          <h3>{{ 'profile.title' | translate }}</h3>
+          <p>{{ 'profile.desc' | translate }}</p>
         </div>
         <button
           type="button"
@@ -69,12 +69,12 @@
 
       <form #profileForm="ngForm" class="profile-form" (ngSubmit)="saveProfile(profileForm)">
         <label class="profile-field profile-field-wide">
-          <span>Company ID</span>
-          <input [value]="dashboard?.actor?.companyId || 'Not assigned'" readonly type="text" />
+          <span>{{ 'profile.companyId' | translate }}</span>
+          <input [value]="dashboard?.actor?.companyId || ('profile.notAssigned' | translate)" readonly type="text" />
         </label>
 
         <label class="profile-field">
-          <span>Full name</span>
+          <span>{{ 'profile.fullName' | translate }}</span>
           <input
             #profileFullName="ngModel"
             [(ngModel)]="profileModel.fullName"
@@ -88,7 +88,7 @@
         </label>
 
         <label class="profile-field">
-          <span>Username</span>
+          <span>{{ 'profile.username' | translate }}</span>
           <input
             [value]="dashboard?.actor?.username || user.username"
             readonly
@@ -96,7 +96,7 @@
         </label>
 
         <label class="profile-field">
-          <span>Email</span>
+          <span>{{ 'profile.email' | translate }}</span>
           <input
             [value]="dashboard?.actor?.email || user.email"
             readonly
@@ -104,7 +104,7 @@
         </label>
 
         <label class="profile-field">
-          <span>Gender</span>
+          <span>{{ 'profile.gender' | translate }}</span>
           <select
             #profileGender="ngModel"
             [(ngModel)]="profileModel.gender"
@@ -112,29 +112,44 @@
             [class.placeholder-selected]="!profileModel.gender"
             name="profileGender"
             required>
-            <option [ngValue]="''" disabled>Select gender</option>
+            <option [ngValue]="''" disabled>{{ 'profile.selectGender' | translate }}</option>
             <option *ngFor="let option of genderOptions" [ngValue]="option">{{ option }}</option>
           </select>
           <small>{{ getProfileControlError(profileGender, 'gender', 'Gender is required') || ' ' }}</small>
         </label>
 
+        <label class="profile-field">
+          <span>{{ 'profile.language' | translate }}</span>
+          <select [ngModel]="translateService.currentLang()" (ngModelChange)="translateService.setLanguage($event)" name="appLanguage">
+            <option value="en">English (US)</option>
+            <option value="es">Español (ES)</option>
+            <option value="fr">Français (FR)</option>
+            <option value="de">Deutsch (DE)</option>
+            <option value="zh">中文 (ZH)</option>
+            <option value="ru">Русский (RU)</option>
+            <option value="ja">日本語 (JA)</option>
+            <option value="ar">العربية (AR)</option>
+            <option value="hi">हिन्दी (HI)</option>
+          </select>
+        </label>
+
         <div class="profile-meta">
           <div>
-            <span>Role</span>
+            <span>{{ 'profile.role' | translate }}</span>
             <strong>{{ dashboard?.actor?.role || user.role }}</strong>
           </div>
           <div>
-            <span>Status</span>
+            <span>{{ 'profile.status' | translate }}</span>
             <strong>{{ dashboard?.actor?.active !== false ? 'Active' : 'Inactive' }}</strong>
           </div>
         </div>
 
         <div class="profile-form-actions">
           <button type="button" class="secondary-button" (click)="resetProfileForm()" [disabled]="isProfileSaving">
-            Reset
+            {{ 'common.reset' | translate }}
           </button>
           <button type="submit" class="primary-button" [class.is-loading]="isProfileSaving" [disabled]="isProfileSaving">
-            <span>{{ isProfileSaving ? 'Saving...' : 'Save profile' }}</span>
+            <span>{{ isProfileSaving ? ('profile.saving' | translate) : ('profile.saveProfile' | translate) }}</span>
           </button>
         </div>
       </form>

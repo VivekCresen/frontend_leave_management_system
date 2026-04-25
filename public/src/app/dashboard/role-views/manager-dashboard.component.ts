@@ -1,5 +1,6 @@
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
 import {
@@ -13,6 +14,9 @@ import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, Holiday } from '../../services/leave.service';
 import { CalendarBase } from '../components/calendar-base';
+import { TranslateService } from '../../i18n/translate.service';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { ThemeService } from '../../services/theme.service';
 
 export type CalendarDay = {
   date: Date;
@@ -27,18 +31,22 @@ export type CalendarDay = {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     DatePipe,
     TitleCasePipe,
     DashboardStatCardsComponent,
     DashboardUserFormComponent,
     DashboardUserTableComponent,
     DashboardLeaveTableComponent,
-    DashboardHistoryTableComponent
+    DashboardHistoryTableComponent,
+    TranslatePipe
   ],
   templateUrl: './manager-dashboard.component.html',
   styleUrls: ['./manager-dashboard.component.css']
 })
 export class ManagerDashboardComponent extends CalendarBase implements OnChanges {
+  readonly translateService = inject(TranslateService);
+  readonly themeService = inject(ThemeService);
   @Input({ required: true }) pageId!: DashboardPageId;
   @Input({ required: true }) user!: LoginResponse;
   @Input() dashboard: UserDashboardResponse | null = null;
@@ -138,42 +146,43 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
   }
 
   get stats(): DashboardStatCard[] {
+    const t = (k: string, fb: string) => { const v = this.translateService.getTranslation(k); return v !== k ? v : fb; };
     return [
       {
-        label: 'My employees',
+        label: t('stats.myEmployees', 'My employees'),
         value: this.dashboard?.employeeCount ?? 0,
-        note: 'Assigned to this manager.',
+        note: t('stats.assignedToManager', 'Assigned to this manager.'),
         tone: 'teal',
         icon: 'fa-user-group',
         route: ['/dashboard', 'team'],
-        actionLabel: 'Open team'
+        actionLabel: t('stats.openTeam', 'Open team')
       },
       {
-        label: 'Active team',
+        label: t('stats.activeTeam', 'Active team'),
         value: this.dashboard?.activeUsers ?? 0,
-        note: 'Currently active.',
+        note: t('stats.currentlyActive', 'Currently active.'),
         tone: 'orange',
         icon: 'fa-circle-check',
         route: ['/dashboard', 'team'],
-        actionLabel: 'View team'
+        actionLabel: t('stats.viewTeam', 'View team')
       },
       {
-        label: 'Pending approvals',
+        label: t('stats.pendingApprovals', 'Pending approvals'),
         value: this.pendingLeaves.length,
-        note: 'Awaiting your decision.',
+        note: t('stats.awaitingDecision', 'Awaiting your decision.'),
         tone: 'orange',
         icon: 'fa-clock',
         route: ['/dashboard', 'approvals'],
-        actionLabel: 'Review now'
+        actionLabel: t('stats.reviewNow', 'Review now')
       },
       {
-        label: 'Total leave requests',
+        label: t('stats.totalLeaveRequests', 'Total leave requests'),
         value: this.managerLeaves.length,
-        note: 'All team requests.',
+        note: t('stats.allTeamRequests', 'All team requests.'),
         tone: 'slate',
         icon: 'fa-calendar-check',
         route: ['/dashboard', 'approvals'],
-        actionLabel: 'Open approvals'
+        actionLabel: t('stats.openApprovals', 'Open approvals')
       }
     ];
   }
@@ -205,6 +214,7 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
     if (!this.leaveTypes || this.leaveTypes.length === 0) {
       return [];
     }
+    const t = (k: string, fb: string) => { const v = this.translateService.getTranslation(k); return v !== k ? v : fb; };
     const userGender = this.dashboard?.actor?.gender?.toUpperCase() || '';
     const relevantTypes = this.leaveTypes.filter(lt => {
       if (!lt.genderRestriction) return true;
@@ -220,11 +230,13 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
       const remaining = Math.max(0, leaveType.maxDays - takenDays);
       const remainingFmt = Number.isInteger(remaining) ? String(remaining) : remaining.toFixed(1);
       const usedFmt = Number.isInteger(takenDays) ? String(takenDays) : takenDays.toFixed(1);
+      const trKey = 'leaveTypes.' + (leaveType.leaveUniqueName || leaveType.leaveName);
+      const translatedName = this.translateService.getTranslation(trKey) !== trKey ? this.translateService.getTranslation(trKey) : leaveType.leaveName;
 
       return {
-        label: leaveType.leaveName,
-        value: `${remainingFmt} available`,
-        note: `Used ${usedFmt} of ${leaveType.maxDays} days`,
+        label: translatedName,
+        value: `${remainingFmt} ${t('stats.available', 'available')}`,
+        note: `${t('stats.used', 'Used')} ${usedFmt} ${t('stats.of', 'of')} ${leaveType.maxDays} ${t('stats.days', 'days')}`,
         tone: remaining > 0 ? 'teal' : 'orange',
         icon: 'fa-calendar-minus'
       };

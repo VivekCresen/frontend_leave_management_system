@@ -12,6 +12,7 @@ import {
   UserManagementPayload
 } from './auth.service';
 import { resolveApiUrl } from '../shared/api-url.util';
+import { TranslateService } from '../i18n/translate.service';
 
 @Injectable({
   providedIn: 'root'
@@ -23,7 +24,16 @@ export class AuthApiService implements AuthService {
 
   readonly currentUser = this.currentUserState.asReadonly();
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly translateService: TranslateService
+  ) {
+    // Restore language for any already-stored user (e.g. page refresh)
+    const stored = this.currentUserState();
+    if (stored?.username) {
+      this.translateService.initForUser(stored.username);
+    }
+  }
 
   login(payload: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, {
@@ -137,6 +147,7 @@ export class AuthApiService implements AuthService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(this.storageKey, JSON.stringify(normalizedUser));
     }
+    this.translateService.initForUser(normalizedUser.username);
   }
 
   clearCurrentUser(): void {
@@ -144,6 +155,7 @@ export class AuthApiService implements AuthService {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(this.storageKey);
     }
+    this.translateService.resetForLogout();
   }
 
   private readStoredUser(): LoginResponse | null {

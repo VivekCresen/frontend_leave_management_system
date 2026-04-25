@@ -1,5 +1,6 @@
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
 import { LoginResponse, UserDashboardResponse } from '../../services/auth.service';
@@ -8,6 +9,9 @@ import { AdminLeaveTableRow } from '../components/dashboard-leave-table.componen
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, NotifyUser, Holiday } from '../../services/leave.service';
 import { CalendarBase } from '../components/calendar-base';
+import { TranslateService } from '../../i18n/translate.service';
+import { TranslatePipe } from '../../i18n/translate.pipe';
+import { ThemeService } from '../../services/theme.service';
 
 type EmpCalendarDay = {
   date: Date;
@@ -22,15 +26,19 @@ type EmpCalendarDay = {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     DatePipe,
     TitleCasePipe,
     DashboardStatCardsComponent,
-    DashboardHistoryTableComponent
+    DashboardHistoryTableComponent,
+    TranslatePipe
   ],
   templateUrl: './employee-dashboard.component.html',
   styleUrls: ['./employee-dashboard.component.css']
 })
 export class EmployeeDashboardComponent extends CalendarBase implements OnChanges {
+  readonly translateService = inject(TranslateService);
+  readonly themeService = inject(ThemeService);
   @Input({ required: true }) pageId!: DashboardPageId;
   @Input({ required: true }) user!: LoginResponse;
   @Input() dashboard: UserDashboardResponse | null = null;
@@ -55,46 +63,45 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
 
   get stats(): DashboardStatCard[] {
     const approvedDays = this.approvedLeaves.reduce((sum, l) => sum + (l.durationDays ?? 0), 0);
-    const approvedDaysFmt = Number.isInteger(approvedDays)
-      ? String(approvedDays)
-      : approvedDays.toFixed(1);
+    const approvedDaysFmt = Number.isInteger(approvedDays) ? String(approvedDays) : approvedDays.toFixed(1);
+    const t = (k: string, fb: string) => { const v = this.translateService.getTranslation(k); return v !== k ? v : fb; };
 
     return [
       {
-        label: 'Profile role',
-        value: 'Employee',
-        note: 'Standard user access.',
+        label: t('stats.profileRole', 'Profile role'),
+        value: t('roles.employee', 'Employee'),
+        note: t('stats.standardAccess', 'Standard user access.'),
         tone: 'teal',
         icon: 'fa-id-badge',
         route: ['/dashboard', 'profile'],
-        actionLabel: 'Open profile'
+        actionLabel: t('stats.openProfile', 'Open profile')
       },
       {
-        label: 'Account status',
-        value: this.user.active ? 'Active' : 'Inactive',
-        note: 'Current account state.',
+        label: t('stats.accountStatus', 'Account status'),
+        value: this.user.active ? t('stats.active', 'Active') : t('stats.inactive', 'Inactive'),
+        note: t('stats.currentAccountState', 'Current account state.'),
         tone: this.user.active ? 'orange' : 'slate',
         icon: 'fa-circle-dot',
         route: ['/dashboard', 'profile'],
-        actionLabel: 'View account'
+        actionLabel: t('stats.viewAccount', 'View account')
       },
       {
-        label: 'Pending requests',
+        label: t('stats.pendingRequests', 'Pending requests'),
         value: this.pendingLeaves.length,
-        note: 'Awaiting manager or admin approval.',
+        note: t('stats.awaitingApproval', 'Awaiting manager or admin approval.'),
         tone: 'orange',
         icon: 'fa-clock',
         route: ['/dashboard', 'requests'],
-        actionLabel: 'View requests'
+        actionLabel: t('stats.viewRequests', 'View requests')
       },
       {
-        label: 'Approved leave days',
+        label: t('stats.approvedLeaveDays', 'Approved leave days'),
         value: approvedDaysFmt,
-        note: 'Total days approved this year.',
+        note: t('stats.totalApprovedYear', 'Total days approved this year.'),
         tone: 'teal',
         icon: 'fa-calendar-check',
         route: ['/dashboard', 'history'],
-        actionLabel: 'View history'
+        actionLabel: t('stats.viewHistory', 'View history')
       }
     ];
   }
@@ -144,6 +151,7 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
     if (!this.leaveTypes || this.leaveTypes.length === 0) {
       return [];
     }
+    const t = (k: string, fb: string) => { const v = this.translateService.getTranslation(k); return v !== k ? v : fb; };
     const userGender = this.dashboard?.actor?.gender?.toUpperCase() || '';
     const relevantTypes = this.leaveTypes.filter(lt => {
       if (!lt.genderRestriction) return true;
@@ -158,11 +166,13 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
       const remaining = Math.max(0, leaveType.maxDays - takenDays);
       const remainingFmt = Number.isInteger(remaining) ? String(remaining) : remaining.toFixed(1);
       const usedFmt = Number.isInteger(takenDays) ? String(takenDays) : takenDays.toFixed(1);
+      const trKey = 'leaveTypes.' + (leaveType.leaveUniqueName || leaveType.leaveName);
+      const translatedName = this.translateService.getTranslation(trKey) !== trKey ? this.translateService.getTranslation(trKey) : leaveType.leaveName;
 
       return {
-        label: leaveType.leaveName,
-        value: `${remainingFmt} available`,
-        note: `Used ${usedFmt} of ${leaveType.maxDays} days`,
+        label: translatedName,
+        value: `${remainingFmt} ${t('stats.available', 'available')}`,
+        note: `${t('stats.used', 'Used')} ${usedFmt} ${t('stats.of', 'of')} ${leaveType.maxDays} ${t('stats.days', 'days')}`,
         tone: remaining > 0 ? 'teal' : 'orange',
         icon: 'fa-calendar-minus'
       };

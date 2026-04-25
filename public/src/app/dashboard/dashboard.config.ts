@@ -59,14 +59,16 @@ const DASHBOARD_MENUS: Record<DashboardRole, DashboardMenuItem[]> = {
     { path: 'approvals', label: 'Approvals', icon: 'fa-circle-check' },
     { path: 'calendar', label: 'Team Calendar', icon: 'fa-calendar-days' },
     { path: 'history', label: 'My Leave History', icon: 'fa-clock-rotate-left' },
-    { path: 'reports', label: 'Reports', icon: 'fa-chart-line' }
+    { path: 'reports', label: 'Reports', icon: 'fa-chart-line' },
+    { path: 'settings', label: 'Settings', icon: 'fa-sliders' }
   ],
   EMPLOYEE: [
     { path: 'overview', label: 'Overview', icon: 'fa-house' },
     { path: 'profile', label: 'My Profile', icon: 'fa-id-card' },
     { path: 'requests', label: 'Leave Requests', icon: 'fa-paper-plane'},
     { path: 'history', label: 'History', icon: 'fa-clock-rotate-left' },
-    { path: 'calendar', label: 'Calendar', icon: 'fa-calendar' }
+    { path: 'calendar', label: 'Calendar', icon: 'fa-calendar' },
+    { path: 'settings', label: 'Settings', icon: 'fa-sliders' }
   ]
 };
 

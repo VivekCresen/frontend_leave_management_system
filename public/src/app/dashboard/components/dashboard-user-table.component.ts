@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe, isPlatformBrowser, TitleCasePipe } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, OnInit, Output, PLATFORM_ID, SimpleChanges } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, effect, EventEmitter, inject, Input, OnChanges, OnInit, Output, PLATFORM_ID, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
@@ -15,6 +15,8 @@ import {
   ValueFormatterParams
 } from 'ag-grid-community';
 import { ManagedUser } from '../../services/auth.service';
+import { TranslateService } from '../../i18n/translate.service';
+import { TranslatePipe } from '../../i18n/translate.pipe';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -42,13 +44,14 @@ const userTableTheme = themeQuartz.withParams({
 @Component({
   selector: 'app-dashboard-user-table',
   standalone: true,
-  imports: [CommonModule, DatePipe, TitleCasePipe, FormsModule, AgGridAngular],
+  imports: [CommonModule, DatePipe, TitleCasePipe, FormsModule, AgGridAngular, TranslatePipe],
   templateUrl: './dashboard-user-table.component.html',
   styleUrls: ['./dashboard-user-table.component.css']
 })
 export class DashboardUserTableComponent implements AfterViewInit, OnChanges, OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly translate = inject(TranslateService);
   private gridApi: GridApi<ManagedUser> | null = null;
 
   @Input({ required: true }) users: ManagedUser[] = [];
@@ -85,6 +88,16 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   pageSize = 4;
   agGridMounted = false;
 
+  constructor() {
+    effect(() => {
+      this.translate.currentLang(); // track signal
+      if (this.gridApi) {
+        this.gridApi.setGridOption('columnDefs', this.agColumnDefsWithActions);
+        this.gridApi.setGridOption('rowData', this.filteredUsers);
+      }
+    });
+  }
+
   readonly agTheme = userTableTheme;
   readonly agPageSize = 7;
   readonly defaultColDef: ColDef<ManagedUser> = {
@@ -94,51 +107,57 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
     suppressMovable: true
   };
 
-  readonly agColumnDefs: ColDef<ManagedUser>[] = [
-    {
-      headerName: 'User',
-      field: 'fullName',
-      minWidth: 200,
-      flex: 2,
-      cellRenderer: ({ data }: ICellRendererParams<ManagedUser>) =>
-        data
-          ? `<div class="ag-user-cell">
-               <strong>${this.esc(data.fullName)}</strong>
-               <span>${this.esc(data.username)}</span>
-               <small>${this.esc(data.email)}</small>
-             </div>`
-          : ''
-    },
-    {
-      headerName: 'Role',
-      field: 'role',
-      minWidth: 110,
-      flex: 0.8,
-      valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => this.titleCase(value)
-    },
-    {
-      headerName: 'Status',
-      field: 'active',
-      minWidth: 110,
-      flex: 0.8,
-      cellRenderer: ({ value }: ICellRendererParams<ManagedUser>) =>
-        `<span class="ag-status-badge ${value ? 'active' : 'inactive'}">${value ? 'Active' : 'Inactive'}</span>`
-    },
-    {
-      headerName: 'Manager / Owner',
-      field: 'createdBy',
-      minWidth: 150,
-      flex: 1,
-      valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => value || 'System'
-    },
-    {
-      headerName: 'Last login',
-      field: 'lastLogin',
-      minWidth: 170,
-      flex: 1.1,
-      valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => this.fmtDate(value)
-    }
-  ];
+  get agColumnDefs(): ColDef<ManagedUser>[] {
+    const tr = (k: string, fb: string) => { const v = this.translate.getTranslation(k); return v !== k ? v : fb; };
+    return [
+      {
+        headerName: tr('userTable.user', 'User'),
+        field: 'fullName',
+        minWidth: 200,
+        flex: 2,
+        cellRenderer: ({ data }: ICellRendererParams<ManagedUser>) =>
+          data
+            ? `<div class="ag-user-cell">
+                 <strong>${this.esc(data.fullName)}</strong>
+                 <span>${this.esc(data.username)}</span>
+                 <small>${this.esc(data.email)}</small>
+               </div>`
+            : ''
+      },
+      {
+        headerName: tr('table.role', 'Role'),
+        field: 'role',
+        minWidth: 110,
+        flex: 0.8,
+        valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => this.titleCase(value)
+      },
+      {
+        headerName: tr('table.status', 'Status'),
+        field: 'active',
+        minWidth: 110,
+        flex: 0.8,
+        cellRenderer: ({ value }: ICellRendererParams<ManagedUser>) => {
+          const activeLabel = tr('stats.active', 'Active');
+          const inactiveLabel = tr('stats.inactive', 'Inactive');
+          return `<span class="ag-status-badge ${value ? 'active' : 'inactive'}">${value ? activeLabel : inactiveLabel}</span>`;
+        }
+      },
+      {
+        headerName: tr('userTable.managerOwner', 'Manager / Owner'),
+        field: 'createdBy',
+        minWidth: 150,
+        flex: 1,
+        valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => value || tr('userTable.system', 'System')
+      },
+      {
+        headerName: tr('userTable.lastLogin', 'Last login'),
+        field: 'lastLogin',
+        minWidth: 170,
+        flex: 1.1,
+        valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => this.fmtDate(value)
+      }
+    ];
+  }
 
   get agColumnDefsWithActions(): ColDef<ManagedUser>[] {
     if (!this.showActions) return this.agColumnDefs;

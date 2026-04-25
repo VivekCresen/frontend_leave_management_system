@@ -6,12 +6,13 @@ import { provideClientHydration, withEventReplay } from '@angular/platform-brows
 import { AuthApiService } from './services/auth-api.service';
 import { AUTH_SERVICE } from './services/auth.service';
 import { loaderInterceptor } from './loader.interceptor';
+import { languageInterceptor } from './i18n/language.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withFetch(), withInterceptors([loaderInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([languageInterceptor, loaderInterceptor])),
     provideClientHydration(withEventReplay()),
     AuthApiService,
     { provide: AUTH_SERVICE, useExisting: AuthApiService }
