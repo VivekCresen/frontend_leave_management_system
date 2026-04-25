@@ -82,3 +82,13 @@
     </div>
   </section>
 </div>
+
+<!-- Language auto-detection popup -->
+<app-language-popup
+  *ngIf="showLanguagePopup"
+  [detectedLang]="detectedLang"
+  [countryName]="detectedCountry"
+  [source]="detectedSource"
+  (keepLanguage)="onKeepLanguage()"
+  (switchToEnglish)="onSwitchToEnglish()">
+</app-language-popup>

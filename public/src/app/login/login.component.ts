@@ -8,11 +8,15 @@ import { ApiErrorResponse } from '../services/auth.service';
 import { LeaveApiService } from '../services/leave-api.service';
 import { ToastService } from '../services/toast.service';
 import { LoaderService } from '../shared/services/loader.service';
+import { CountryLanguageService } from '../i18n/country-language.service';
+import { TranslateService, Language } from '../i18n/translate.service';
+import { LanguagePopupComponent } from '../language-popup/language-popup.component';
+import { DashboardCacheService } from '../services/dashboard-cache.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, LanguagePopupComponent],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
@@ -29,13 +33,23 @@ export class LoginComponent implements OnInit {
   fieldErrors: Record<string, string> = {};
   showPassword = false;
 
+  // Language popup state
+  showLanguagePopup = false;
+  detectedLang: Language = 'en';
+  detectedCountry = '';
+  detectedSource: 'db' | 'ip' = 'ip';
+  private pendingNavigateFn: (() => void) | null = null;
+
   constructor(
     authService: AuthApiService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly leaveService: LeaveApiService,
     private readonly toastService: ToastService,
-    private readonly loaderService: LoaderService
+    private readonly loaderService: LoaderService,
+    private readonly countryLangService: CountryLanguageService,
+    private readonly translateService: TranslateService,
+    private readonly dashboardCache: DashboardCacheService
   ) {
     this.authService = authService;
   }
@@ -90,7 +104,9 @@ export class LoginComponent implements OnInit {
 
         this.isSubmitting = false;
         this.authService.setCurrentUser(response);
-        this.completeMailDecisionAfterLogin(response.username);
+        this.detectAndMaybeShowLanguagePopup(response.username, () => {
+          this.completeMailDecisionAfterLogin(response.username);
+        });
       },
       error: (err: { error?: ApiErrorResponse & { error?: string } }) => {
         this.isSubmitting = false;
@@ -154,6 +170,92 @@ export class LoginComponent implements OnInit {
 
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
+  }
+
+  // ── Language popup ───────────────────────────────────────────
+
+  onKeepLanguage(): void {
+    // Persist the detected language as the user's explicit choice
+    this.translateService.setLanguage(this.detectedLang);
+    this.countryLangService.markPopupShown();
+    this.showLanguagePopup = false;
+    this.pendingNavigateFn?.();
+    this.pendingNavigateFn = null;
+  }
+
+  onSwitchToEnglish(): void {
+    this.translateService.setLanguage('en');
+    this.countryLangService.markPopupShown();
+    this.showLanguagePopup = false;
+    this.pendingNavigateFn?.();
+    this.pendingNavigateFn = null;
+  }
+
+  private detectAndMaybeShowLanguagePopup(username: string, navigateFn: () => void): void {
+    // If the user already has a saved language preference, skip detection entirely
+    if (this.countryLangService.hasSavedPreference(username)) {
+      navigateFn();
+      return;
+    }
+
+    // If the popup was already shown this session, skip
+    if (this.countryLangService.popupAlreadyShown()) {
+      navigateFn();
+      return;
+    }
+
+    // ── Fetch user profile from backend (DB-country as Priority 1) ────────────
+    this.authService.getDashboard().subscribe({
+      next: (dashboardData) => {
+        // Warm up the dashboard cache so the dashboard page loads instantly
+        this.dashboardCache.set({
+          username,
+          dashboard: dashboardData,
+          leaveTypes: [],
+          holidays: [],
+          leaves: [],
+          managerLeaves: [],
+          myLeaves: [],
+          cachedAt: Date.now()
+        });
+
+        const actor = dashboardData.actor;
+        this.runLanguageDetection(
+          actor.countryCode ?? null,
+          actor.countryName ?? null,
+          navigateFn
+        );
+      },
+      error: () => {
+        // If the dashboard call fails (e.g. network error), fall back to IP
+        this.runLanguageDetection(null, null, navigateFn);
+      }
+    });
+  }
+
+  private runLanguageDetection(
+    dbCountryCode: string | null,
+    dbCountryName: string | null,
+    navigateFn: () => void
+  ): void {
+    this.countryLangService
+      .detectLanguageFromDbOrIp(dbCountryCode, dbCountryName)
+      .subscribe(result => {
+        if (result.lang === 'en') {
+          // English-speaking region — set silently and navigate
+          this.translateService.setLanguage('en');
+          navigateFn();
+          return;
+        }
+
+        // Apply language temporarily before user confirms
+        this.translateService.setLanguageTemp(result.lang);
+        this.detectedLang = result.lang;
+        this.detectedCountry = result.countryName;
+        this.detectedSource = result.source;
+        this.pendingNavigateFn = navigateFn;
+        this.showLanguagePopup = true;
+      });
   }
 
   navigateToForgotPassword(event?: Event): void {

@@ -8,8 +8,43 @@ import { TRANSLATIONS_RU } from './translations/ru';
 import { TRANSLATIONS_JA } from './translations/ja';
 import { TRANSLATIONS_AR } from './translations/ar';
 import { TRANSLATIONS_HI } from './translations/hi';
+import { TRANSLATIONS_PT } from './translations/pt';
+import { TRANSLATIONS_KO } from './translations/ko';
+import { TRANSLATIONS_IT } from './translations/it';
+import { TRANSLATIONS_TR } from './translations/tr';
+import { TRANSLATIONS_NL } from './translations/nl';
+import { TRANSLATIONS_PL } from './translations/pl';
+import { TRANSLATIONS_TH } from './translations/th';
+import { TRANSLATIONS_VI } from './translations/vi';
+import { TRANSLATIONS_ID } from './translations/id';
+import { TRANSLATIONS_SV } from './translations/sv';
+import { TRANSLATIONS_BN } from './translations/bn';
 
-export type Language = 'en' | 'es' | 'fr' | 'zh' | 'de' | 'ru' | 'ja' | 'ar' | 'hi';
+export type Language = 'en' | 'es' | 'fr' | 'zh' | 'de' | 'ru' | 'ja' | 'ar' | 'hi'
+  | 'pt' | 'ko' | 'it' | 'tr' | 'nl' | 'pl' | 'th' | 'vi' | 'id' | 'sv' | 'bn';
+
+export const LANGUAGE_NAMES: Record<Language, string> = {
+  en: 'English',
+  es: 'Español',
+  fr: 'Français',
+  zh: '中文',
+  de: 'Deutsch',
+  ru: 'Русский',
+  ja: '日本語',
+  ar: 'العربية',
+  hi: 'हिन्दी',
+  pt: 'Português',
+  ko: '한국어',
+  it: 'Italiano',
+  tr: 'Türkçe',
+  nl: 'Nederlands',
+  pl: 'Polski',
+  th: 'ไทย',
+  vi: 'Tiếng Việt',
+  id: 'Bahasa Indonesia',
+  sv: 'Svenska',
+  bn: 'বাংলা'
+};
 
 @Injectable({
   providedIn: 'root'
@@ -28,7 +63,18 @@ export class TranslateService {
     ru: TRANSLATIONS_RU,
     ja: TRANSLATIONS_JA,
     ar: TRANSLATIONS_AR,
-    hi: TRANSLATIONS_HI
+    hi: TRANSLATIONS_HI,
+    pt: TRANSLATIONS_PT,
+    ko: TRANSLATIONS_KO,
+    it: TRANSLATIONS_IT,
+    tr: TRANSLATIONS_TR,
+    nl: TRANSLATIONS_NL,
+    pl: TRANSLATIONS_PL,
+    th: TRANSLATIONS_TH,
+    vi: TRANSLATIONS_VI,
+    id: TRANSLATIONS_ID,
+    sv: TRANSLATIONS_SV,
+    bn: TRANSLATIONS_BN
   };
 
   constructor() {
@@ -61,6 +107,15 @@ export class TranslateService {
     if (typeof localStorage !== 'undefined' && this.currentUsername) {
       localStorage.setItem(this._langKey(this.currentUsername), lang);
     }
+  }
+
+  /**
+   * Sets the language in memory only — does NOT persist to localStorage.
+   * Used during the auto-detect flow before the user confirms their choice.
+   */
+  setLanguageTemp(lang: Language): void {
+    if (!this.dictionaries[lang]) return;
+    this.currentLang.set(lang);
   }
 
   getTranslation(key: string): string {
