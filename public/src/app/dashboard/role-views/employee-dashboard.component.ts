@@ -300,7 +300,18 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
     { code: 'ru', label: 'Русский (RU)' },
     { code: 'ja', label: '日本語 (JA)' },
     { code: 'ar', label: 'العربية (AR)' },
-    { code: 'hi', label: 'हिन्दी (HI)' }
+    { code: 'hi', label: 'हिन्दी (HI)' },
+    { code: 'pt', label: 'Português (PT)' },
+    { code: 'ko', label: '한국어 (KO)' },
+    { code: 'it', label: 'Italiano (IT)' },
+    { code: 'tr', label: 'Türkçe (TR)' },
+    { code: 'nl', label: 'Nederlands (NL)' },
+    { code: 'pl', label: 'Polski (PL)' },
+    { code: 'th', label: 'ไทย (TH)' },
+    { code: 'vi', label: 'Tiếng Việt (VI)' },
+    { code: 'id', label: 'Bahasa Indonesia (ID)' },
+    { code: 'sv', label: 'Svenska (SV)' },
+    { code: 'bn', label: 'বাংলা (BN)' }
   ];
 
   getSelectedLangLabel(): string {
