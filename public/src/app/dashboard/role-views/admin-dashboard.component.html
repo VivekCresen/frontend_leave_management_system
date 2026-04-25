@@ -81,18 +81,6 @@
         (editRequested)="editRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
 
-      <div *ngIf="isUserFormOpen" class="form-modal-backdrop" (click)="cancelEditRequested.emit()">
-        <div class="form-modal-card" (click)="$event.stopPropagation()">
-          <app-dashboard-user-form
-            [assignableRoles]="assignableRoles"
-            [editingUser]="editingUser"
-            [fieldErrors]="fieldErrors"
-            [isSaving]="isSaving"
-            [users]="dashboard?.users ?? []"
-            (saveRequested)="saveRequested.emit($event)"
-            (cancelRequested)="cancelEditRequested.emit()"></app-dashboard-user-form>
-        </div>
-      </div>
     </section>
 
     <section *ngSwitchCase="'roles'" class="panel-grid">
@@ -478,17 +466,19 @@
         <div style="margin-top: 1rem;">
           <label class="leave-field">
             <span>{{ 'adminSettings.languageControl' | translate }}</span>
-            <select [ngModel]="translateService.currentLang()" (ngModelChange)="translateService.setLanguage($event)" style="max-width: 300px; display: block; border-radius: 4px; border: 1px solid #ccc; padding: 0.5rem;">
-              <option value="en">English (US)</option>
-              <option value="es">Español (ES)</option>
-              <option value="fr">Français (FR)</option>
-              <option value="de">Deutsch (DE)</option>
-              <option value="zh">中文 (ZH)</option>
-              <option value="ru">Русский (RU)</option>
-              <option value="ja">日本語 (JA)</option>
-              <option value="ar">العربية (AR)</option>
-              <option value="hi">हिन्दी (HI)</option>
-            </select>
+            <div class="custom-dropdown-container">
+              <div class="custom-dropdown-trigger" (click)="toggleLangDropdown($event)">
+                <span>{{ getSelectedLangLabel() }}</span>
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              <div class="custom-dropdown-panel" *ngIf="isLangDropdownOpen" (click)="$event.stopPropagation()">
+                <div class="dropdown-list">
+                  <div class="dropdown-item" *ngFor="let lang of availableLangs" (click)="selectLang(lang.code)">
+                    {{ lang.label }}
+                  </div>
+                </div>
+              </div>
+            </div>
           </label>
         </div>
       </article>
@@ -521,4 +511,18 @@
       </article>
     </section>
   </ng-container>
+
+<!-- User create/edit modal — rendered at root level to avoid scrollbar clipping -->
+<div *ngIf="isUserFormOpen" class="form-modal-backdrop" (click)="cancelEditRequested.emit()">
+  <div class="form-modal-card" (click)="$event.stopPropagation()">
+    <app-dashboard-user-form
+      [assignableRoles]="assignableRoles"
+      [editingUser]="editingUser"
+      [fieldErrors]="fieldErrors"
+      [isSaving]="isSaving"
+      [users]="dashboard?.users ?? []"
+      (saveRequested)="saveRequested.emit($event)"
+      (cancelRequested)="cancelEditRequested.emit()"></app-dashboard-user-form>
+  </div>
+</div>
 </section>

@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
@@ -14,7 +14,7 @@ import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, Holiday } from '../../services/leave.service';
 import { CalendarBase } from '../components/calendar-base';
-import { TranslateService } from '../../i18n/translate.service';
+import { TranslateService, Language } from '../../i18n/translate.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { ThemeService } from '../../services/theme.service';
 
@@ -246,5 +246,39 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
   getInitials(name: string): string {
     const parts = (name || 'U').trim().split(/\s+/);
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U';
+  }
+
+  isLangDropdownOpen = false;
+  availableLangs = [
+    { code: 'en', label: 'English (US)' },
+    { code: 'es', label: 'Español (ES)' },
+    { code: 'fr', label: 'Français (FR)' },
+    { code: 'de', label: 'Deutsch (DE)' },
+    { code: 'zh', label: '中文 (ZH)' },
+    { code: 'ru', label: 'Русский (RU)' },
+    { code: 'ja', label: '日本語 (JA)' },
+    { code: 'ar', label: 'العربية (AR)' },
+    { code: 'hi', label: 'हिन्दी (HI)' }
+  ];
+
+  getSelectedLangLabel(): string {
+    const code = this.translateService.currentLang() || 'en';
+    const lang = this.availableLangs.find(l => l.code === code);
+    return lang ? lang.label : 'Select language';
+  }
+
+  toggleLangDropdown(event: Event): void {
+    event.stopPropagation();
+    this.isLangDropdownOpen = !this.isLangDropdownOpen;
+  }
+
+  selectLang(code: string): void {
+    this.translateService.setLanguage(code as Language);
+    this.isLangDropdownOpen = false;
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.isLangDropdownOpen = false;
   }
 }

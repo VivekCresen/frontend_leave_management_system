@@ -3,11 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   AuthService,
+  CountryOption,
   ImportUsersResult,
   LoginRequest,
   LoginResponse,
   ManagedUser,
   MessageResponse,
+  PhoneCodeOption,
   UserDashboardResponse,
   UserManagementPayload
 } from './auth.service';
@@ -19,6 +21,7 @@ import { TranslateService } from '../i18n/translate.service';
 })
 export class AuthApiService implements AuthService {
   private readonly apiUrl = resolveApiUrl('__LEAVE_APP_API_URL__', 'leave-app-api-url', ':8081/api/users');
+  private readonly baseApiUrl = this.apiUrl.replace('/api/users', '/api');
   private readonly storageKey = 'leave-app-user';
   private readonly currentUserState = signal<LoginResponse | null>(this.readStoredUser());
 
@@ -46,6 +49,14 @@ export class AuthApiService implements AuthService {
     return this.http.get<UserDashboardResponse>(`${this.apiUrl}/dashboard/${this.actorUsernameOrThrow()}`);
   }
 
+  getCountries(): Observable<CountryOption[]> {
+    return this.http.get<CountryOption[]>(`${this.baseApiUrl}/countries`);
+  }
+
+  getPhoneCodes(): Observable<PhoneCodeOption[]> {
+    return this.http.get<PhoneCodeOption[]>(`${this.baseApiUrl}/countries/phone-codes`);
+  }
+
   createUser(payload: UserManagementPayload): Observable<ManagedUser> {
     return this.http.post<ManagedUser>(this.apiUrl, {
       actorUsername: this.actorUsernameOrThrow(),
@@ -57,7 +68,10 @@ export class AuthApiService implements AuthService {
       role: payload.role.trim().toUpperCase(),
       managerUsername: payload.managerUsername?.trim() || null,
       active: payload.active,
-      gender: payload.gender.trim()
+      gender: payload.gender.trim(),
+      countryId: payload.countryId ?? null,
+      phoneCodeId: payload.phoneCodeId ?? null,
+      phoneNumber: payload.phoneNumber?.trim() || null
     });
   }
 
@@ -71,7 +85,10 @@ export class AuthApiService implements AuthService {
       password: (payload.password ?? '').trim(),
       role: payload.role.trim().toUpperCase(),
       active: payload.active,
-      gender: payload.gender.trim()
+      gender: payload.gender.trim(),
+      countryId: payload.countryId ?? null,
+      phoneCodeId: payload.phoneCodeId ?? null,
+      phoneNumber: payload.phoneNumber?.trim() || null
     });
   }
 

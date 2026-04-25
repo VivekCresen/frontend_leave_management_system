@@ -15,6 +15,21 @@ export interface LoginResponse {
   message: string;
 }
 
+export interface CountryOption {
+  id: number;
+  name: string;
+  code: string;
+  flagEmoji: string;
+}
+
+export interface PhoneCodeOption {
+  id: number;
+  countryId: number;
+  countryName: string;
+  dialCode: string;
+  flagEmoji: string;
+}
+
 export interface ManagedUser {
   id: number;
   companyId: string;
@@ -31,6 +46,13 @@ export interface ManagedUser {
   lastLogin: string | null;
   canEdit: boolean;
   canDelete: boolean;
+  countryId: number | null;
+  countryName: string | null;
+  countryCode: string | null;
+  countryFlagEmoji: string | null;
+  phoneCodeId: number | null;
+  dialCode: string | null;
+  phoneNumber: string | null;
 }
 
 export interface UserDashboardResponse {
@@ -56,6 +78,9 @@ export interface UserManagementPayload {
   managerUsername?: string;
   active: boolean;
   gender: string;
+  countryId?: number | null;
+  phoneCodeId?: number | null;
+  phoneNumber?: string | null;
 }
 
 export interface MessageResponse {
@@ -76,6 +101,8 @@ export interface AuthService {
   readonly currentUser: Signal<LoginResponse | null>;
   login(payload: LoginRequest): Observable<LoginResponse>;
   getDashboard(): Observable<UserDashboardResponse>;
+  getCountries(): Observable<CountryOption[]>;
+  getPhoneCodes(): Observable<PhoneCodeOption[]>;
   createUser(payload: UserManagementPayload): Observable<ManagedUser>;
   updateUser(userId: number, payload: UserManagementPayload): Observable<ManagedUser>;
   updateProfile(userId: number, fullName: string, gender: string): Observable<ManagedUser>;

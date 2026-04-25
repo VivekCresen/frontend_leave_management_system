@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
@@ -9,7 +9,7 @@ import { AdminLeaveTableRow } from '../components/dashboard-leave-table.componen
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, NotifyUser, Holiday } from '../../services/leave.service';
 import { CalendarBase } from '../components/calendar-base';
-import { TranslateService } from '../../i18n/translate.service';
+import { TranslateService, Language } from '../../i18n/translate.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { ThemeService } from '../../services/theme.service';
 
@@ -288,5 +288,39 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
     this.calendarWeeks = weeks;
     this.selectedDay = null;
     this.jumpDate = this.toMonthValue(this.calendarYear, this.calendarMonth);
+  }
+
+  isLangDropdownOpen = false;
+  availableLangs = [
+    { code: 'en', label: 'English (US)' },
+    { code: 'es', label: 'Español (ES)' },
+    { code: 'fr', label: 'Français (FR)' },
+    { code: 'de', label: 'Deutsch (DE)' },
+    { code: 'zh', label: '中文 (ZH)' },
+    { code: 'ru', label: 'Русский (RU)' },
+    { code: 'ja', label: '日本語 (JA)' },
+    { code: 'ar', label: 'العربية (AR)' },
+    { code: 'hi', label: 'हिन्दी (HI)' }
+  ];
+
+  getSelectedLangLabel(): string {
+    const code = this.translateService.currentLang() || 'en';
+    const lang = this.availableLangs.find(l => l.code === code);
+    return lang ? lang.label : 'Select language';
+  }
+
+  toggleLangDropdown(event: Event): void {
+    event.stopPropagation();
+    this.isLangDropdownOpen = !this.isLangDropdownOpen;
+  }
+
+  selectLang(code: string): void {
+    this.translateService.setLanguage(code as Language);
+    this.isLangDropdownOpen = false;
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.isLangDropdownOpen = false;
   }
 }

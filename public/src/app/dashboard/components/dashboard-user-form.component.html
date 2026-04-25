@@ -135,15 +135,15 @@
     </label>
 
     <label *ngIf="shouldShowManagerField" class="field">
-      <span>Manager</span>
+      <span>Manager{{ isEditMode ? ' (optional)' : '' }}</span>
       <select
         #managerUsername="ngModel"
         [(ngModel)]="model.managerUsername"
         [class.input-invalid]="getManagerError() !== null"
         [class.placeholder-selected]="!model.managerUsername"
         name="managerUsername"
-        required>
-        <option [ngValue]="''" disabled>Select manager</option>
+        [required]="!isEditMode">
+        <option [ngValue]="''" [disabled]="!isEditMode">Select manager</option>
         <option *ngFor="let manager of managerOptions" [ngValue]="manager.username">
           {{ manager.fullName }} ({{ manager.username }})
         </option>
@@ -169,6 +169,104 @@
         [class.field-message-empty]="!getControlError(gender, 'gender', 'Gender is required')"
         aria-live="polite">
         {{ getControlError(gender, 'gender', 'Gender is required') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Country</span>
+      <div class="custom-dropdown-container">
+        <div 
+          class="custom-dropdown-trigger" 
+          [class.placeholder-selected]="!model.countryId"
+          [attr.disabled]="isLoading ? true : null"
+          (click)="toggleCountryDropdown($event)"
+        >
+          <span>{{ getSelectedCountryLabel() }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        
+        <div class="custom-dropdown-panel" *ngIf="isCountryDropdownOpen" (click)="$event.stopPropagation()">
+          <div class="dropdown-search">
+            <input type="text" [(ngModel)]="countrySearchText" [ngModelOptions]="{standalone: true}" placeholder="Search country..." autocomplete="off">
+          </div>
+          <div class="dropdown-list">
+            <div class="dropdown-item" (click)="selectCountry(null)">
+              Select country (optional)
+            </div>
+            <div 
+              class="dropdown-item" 
+              *ngFor="let country of searchedCountries" 
+              (click)="selectCountry(country.id)"
+            >
+              {{ country.flagEmoji }} {{ country.name }}
+            </div>
+            <div class="dropdown-empty" *ngIf="searchedCountries.length === 0">
+              No matching countries
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" #countryId="ngModel" [(ngModel)]="model.countryId" name="countryId">
+    </label>
+
+    <label class="field">
+      <span>Phone Code<span *ngIf="model.phoneNumber?.trim()"> *</span></span>
+      <div class="custom-dropdown-container">
+        <div 
+          class="custom-dropdown-trigger" 
+          [class.input-invalid]="isFieldInvalid(phoneCodeId, 'phoneCodeId', 'Phone code is required')"
+          [class.placeholder-selected]="!model.phoneCodeId"
+          [attr.disabled]="isLoading ? true : null"
+          (click)="togglePhoneCodeDropdown($event)"
+        >
+          <span>{{ getSelectedPhoneCodeLabel() }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        
+        <div class="custom-dropdown-panel" *ngIf="isPhoneCodeDropdownOpen" (click)="$event.stopPropagation()">
+          <div class="dropdown-search">
+            <input type="text" [(ngModel)]="phoneCodeSearchText" [ngModelOptions]="{standalone: true}" placeholder="Search phone code..." autocomplete="off">
+          </div>
+          <div class="dropdown-list">
+            <div class="dropdown-item" (click)="selectPhoneCode(null)">
+              Select phone code (optional)
+            </div>
+            <div 
+              class="dropdown-item" 
+              *ngFor="let phoneCode of searchedPhoneCodes" 
+              (click)="selectPhoneCode(phoneCode.id)"
+            >
+              {{ phoneCode.flagEmoji }} {{ phoneCode.countryName }} (+{{ phoneCode.dialCode }})
+            </div>
+            <div class="dropdown-empty" *ngIf="searchedPhoneCodes.length === 0">
+              No matching phone codes
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" #phoneCodeId="ngModel" [(ngModel)]="model.phoneCodeId" name="phoneCodeId" [required]="!!model.phoneNumber?.trim()">
+      <small
+        [class.field-message-empty]="!getControlError(phoneCodeId, 'phoneCodeId', 'Phone code is required')"
+        aria-live="polite">
+        {{ getControlError(phoneCodeId, 'phoneCodeId', 'Phone code is required') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Phone Number</span>
+      <input
+        #phoneNumber="ngModel"
+        [(ngModel)]="model.phoneNumber"
+        [class.input-invalid]="isFieldInvalid(phoneNumber, 'phoneNumber', '')"
+        (blur)="normalizeField('phoneNumber')"
+        maxlength="30"
+        name="phoneNumber"
+        placeholder="Enter phone number (optional)"
+        type="text" />
+      <small
+        [class.field-message-empty]="!getControlError(phoneNumber, 'phoneNumber', '')"
+        aria-live="polite">
+        {{ getControlError(phoneNumber, 'phoneNumber', '') || ' ' }}
       </small>
     </label>
 

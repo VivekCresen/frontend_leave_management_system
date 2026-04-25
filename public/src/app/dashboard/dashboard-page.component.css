@@ -291,8 +291,6 @@
   gap: 6px;
 }
 
-.profile-field.profile-field-wide,
-.profile-meta,
 .profile-form-actions {
   grid-column: 1 / -1;
 }
@@ -359,25 +357,7 @@
   line-height: 1.25;
 }
 
-.profile-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: var(--modal-meta-bg);
-  border: 1px solid var(--modal-meta-border);
-}
 
-.profile-meta div {
-  display: grid;
-  gap: 4px;
-}
-
-.profile-meta strong {
-  color: var(--modal-meta-strong);
-  font-size: 1rem;
-}
 
 .profile-form-actions {
   display: flex;
@@ -545,7 +525,5 @@
     grid-template-columns: 1fr;
   }
 
-  .profile-meta {
-    grid-template-columns: 1fr;
-  }
+
 }

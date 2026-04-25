@@ -1216,4 +1216,41 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   private calculateDurationDays(leaveDates: { date: string | number[] | unknown; dayType: string }[]): number {
     return leaveDates.reduce((sum, d) => sum + (d.dayType && d.dayType.includes('HALF') ? 0.5 : 1.0), 0);
   }
+
+  isLangDropdownOpen = false;
+  availableLangs = [
+    { code: 'en', label: 'English (US)' },
+    { code: 'es', label: 'Español (ES)' },
+    { code: 'fr', label: 'Français (FR)' },
+    { code: 'de', label: 'Deutsch (DE)' },
+    { code: 'zh', label: '中文 (ZH)' },
+    { code: 'ru', label: 'Русский (RU)' },
+    { code: 'ja', label: '日本語 (JA)' },
+    { code: 'ar', label: 'العربية (AR)' },
+    { code: 'hi', label: 'हिन्दी (HI)' }
+  ];
+
+  getSelectedLangLabel(): string {
+    const code = this.translateService.currentLang() || 'en';
+    const lang = this.availableLangs.find(l => l.code === code);
+    return lang ? lang.label : 'Select language';
+  }
+
+  toggleLangDropdown(event: Event): void {
+    event.stopPropagation();
+    this.isLangDropdownOpen = !this.isLangDropdownOpen;
+  }
+
+  selectLang(code: string): void {
+    this.translateService.setLanguage(code as Language);
+    this.isLangDropdownOpen = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClickLang(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.custom-dropdown-container') && !target.closest('.profile-trigger')) {
+      this.isLangDropdownOpen = false;
+    }
+  }
 }

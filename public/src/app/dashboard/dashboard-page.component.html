@@ -68,7 +68,7 @@
       </div>
 
       <form #profileForm="ngForm" class="profile-form" (ngSubmit)="saveProfile(profileForm)">
-        <label class="profile-field profile-field-wide">
+        <label class="profile-field">
           <span>{{ 'profile.companyId' | translate }}</span>
           <input [value]="dashboard?.actor?.companyId || ('profile.notAssigned' | translate)" readonly type="text" />
         </label>
@@ -120,29 +120,30 @@
 
         <label class="profile-field">
           <span>{{ 'profile.language' | translate }}</span>
-          <select [ngModel]="translateService.currentLang()" (ngModelChange)="translateService.setLanguage($event)" name="appLanguage">
-            <option value="en">English (US)</option>
-            <option value="es">Español (ES)</option>
-            <option value="fr">Français (FR)</option>
-            <option value="de">Deutsch (DE)</option>
-            <option value="zh">中文 (ZH)</option>
-            <option value="ru">Русский (RU)</option>
-            <option value="ja">日本語 (JA)</option>
-            <option value="ar">العربية (AR)</option>
-            <option value="hi">हिन्दी (HI)</option>
-          </select>
+          <div class="custom-dropdown-container">
+            <div class="custom-dropdown-trigger" (click)="toggleLangDropdown($event)">
+              <span>{{ getSelectedLangLabel() }}</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="custom-dropdown-panel" *ngIf="isLangDropdownOpen" (click)="$event.stopPropagation()">
+              <div class="dropdown-list">
+                <div class="dropdown-item" *ngFor="let lang of availableLangs" (click)="selectLang(lang.code)">
+                  {{ lang.label }}
+                </div>
+              </div>
+            </div>
+          </div>
         </label>
 
-        <div class="profile-meta">
-          <div>
-            <span>{{ 'profile.role' | translate }}</span>
-            <strong>{{ dashboard?.actor?.role || user.role }}</strong>
-          </div>
-          <div>
-            <span>{{ 'profile.status' | translate }}</span>
-            <strong>{{ dashboard?.actor?.active !== false ? 'Active' : 'Inactive' }}</strong>
-          </div>
-        </div>
+        <label class="profile-field">
+          <span>{{ 'profile.role' | translate }}</span>
+          <input [value]="dashboard?.actor?.role || user.role" readonly type="text" />
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.status' | translate }}</span>
+          <input [value]="dashboard?.actor?.active !== false ? 'Active' : 'Inactive'" readonly type="text" />
+        </label>
 
         <div class="profile-form-actions">
           <button type="button" class="secondary-button" (click)="resetProfileForm()" [disabled]="isProfileSaving">
