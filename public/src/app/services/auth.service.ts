@@ -97,6 +97,16 @@ export interface ImportUsersResult {
   imported: number;
 }
 
+export interface AttendanceLogDto {
+  id: number;
+  username: string;
+  fullName: string;
+  role: string;
+  checkInTime: string;
+  checkOutTime: string | null;
+  dateOfLog: string;
+}
+
 export interface AuthService {
   readonly currentUser: Signal<LoginResponse | null>;
   login(payload: LoginRequest): Observable<LoginResponse>;
@@ -114,6 +124,12 @@ export interface AuthService {
   clearCurrentUser(): void;
   downloadImportTemplate(): Observable<Blob>;
   importUsersFromExcel(file: File): Observable<ImportUsersResult>;
+  checkIn(username: string): Observable<AttendanceLogDto>;
+  checkOut(username: string): Observable<AttendanceLogDto>;
+  getTodayStatus(username: string): Observable<AttendanceLogDto | null>;
+  getAllAttendanceLogs(): Observable<AttendanceLogDto[]>;
+  getAttendanceLogsByUser(username: string): Observable<AttendanceLogDto[]>;
+  getAttendanceLogsByDate(date: string): Observable<AttendanceLogDto[]>;
 }
 
 export const AUTH_SERVICE = new InjectionToken<AuthService>('AUTH_SERVICE');

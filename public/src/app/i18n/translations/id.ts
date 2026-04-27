@@ -272,6 +272,46 @@ export const TRANSLATIONS_ID = {
     requests: 'Permintaan cuti',
     requestsDesc: 'Ruang kerja permintaan.',
     history: 'Riwayat',
-    historyDesc: 'Lihat riwayat permintaan.'
+    historyDesc: 'Lihat riwayat permintaan.',
+    attendance: 'Kehadiran',
+    attendanceDesc: 'Lihat catatan masuk dan keluar.'
+  },
+  attendanceTable: {
+    employee: 'Karyawan',
+    role: 'Peran',
+    date: 'Tanggal',
+    checkIn: 'Masuk',
+    checkOut: 'Keluar',
+    duration: 'Durasi',
+    status: 'Status',
+    complete: 'Selesai',
+    inProgress: 'Sedang berlangsung',
+    active: 'Aktif'
+  },
+  tableTitles: {
+    recentAccounts: 'Akun terbaru',
+    recentAccountsDesc: 'Cari, filter, dan tinjau akun terbaru.',
+    userDirectory: 'Direktori pengguna',
+    userDirectoryDesc: 'Buat, perbarui, atau hapus akun.',
+    myEmployees: 'Karyawan saya',
+    myEmployeesDesc: 'Karyawan dalam lingkup Anda. Cari, filter, dan kelola.',
+    attendanceLogs: 'Log kehadiran',
+    attendanceLogsDesc: 'Pantau catatan masuk dan keluar karyawan.',
+    myAttendance: 'Kehadiran saya',
+    myAttendanceDesc: 'Riwayat masuk dan keluar pribadi Anda.',
+    managerEmployeeLeave: 'Cuti manajer dan karyawan',
+    managerEmployeeLeaveDesc: 'Cari dan tinjau semua permintaan cuti yang terlihat oleh administrator.',
+    teamLeaveRequests: 'Permintaan cuti tim',
+    teamLeaveRequestsDesc: 'Setujui atau tolak permintaan cuti yang tertunda.',
+    noManagedUsers: 'Tidak ada pengguna yang dikelola',
+    noManagedUsersMsg: 'Buat akun pertama dari formulir.',
+    noEmployeesYet: 'Belum ada karyawan',
+    noEmployeesYetMsg: 'Tambahkan karyawan pertama menggunakan tombol di atas.',
+    noLeaveRequests: 'Belum ada permintaan cuti',
+    noLeaveRequestsMsg: 'Permintaan cuti tim Anda akan muncul di sini.',
+    noManagerEmployeeLeave: 'Tidak ada catatan cuti',
+    noManagerEmployeeLeaveMsg: 'Setelah staf mengajukan permintaan, akan muncul di sini.',
+    noUsersAvailable: 'Tidak ada pengguna tersedia',
+    noUsersAvailableMsg: 'Buat manajer atau karyawan untuk memulai.'
   }
 };

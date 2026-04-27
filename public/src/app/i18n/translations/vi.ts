@@ -272,6 +272,46 @@ export const TRANSLATIONS_VI = {
     requests: 'Yêu cầu nghỉ phép',
     requestsDesc: 'Không gian làm việc yêu cầu.',
     history: 'Lịch sử',
-    historyDesc: 'Xem lịch sử yêu cầu.'
+    historyDesc: 'Xem lịch sử yêu cầu.',
+    attendance: 'Chấm công',
+    attendanceDesc: 'Xem hồ sơ vào và ra.'
+  },
+  attendanceTable: {
+    employee: 'Nhân viên',
+    role: 'Vai trò',
+    date: 'Ngày',
+    checkIn: 'Vào',
+    checkOut: 'Ra',
+    duration: 'Thời lượng',
+    status: 'Trạng thái',
+    complete: 'Hoàn thành',
+    inProgress: 'Đang tiến hành',
+    active: 'Đang hoạt động'
+  },
+  tableTitles: {
+    recentAccounts: 'Tài khoản gần đây',
+    recentAccountsDesc: 'Tìm kiếm, lọc và xem lại các tài khoản mới nhất.',
+    userDirectory: 'Danh mục người dùng',
+    userDirectoryDesc: 'Tạo, cập nhật hoặc xóa tài khoản.',
+    myEmployees: 'Nhân viên của tôi',
+    myEmployeesDesc: 'Nhân viên trong phạm vi của bạn. Tìm kiếm, lọc và quản lý.',
+    attendanceLogs: 'Nhật ký chấm công',
+    attendanceLogsDesc: 'Theo dõi hồ sơ vào và ra của nhân viên.',
+    myAttendance: 'Chấm công của tôi',
+    myAttendanceDesc: 'Lịch sử vào và ra cá nhân của bạn.',
+    managerEmployeeLeave: 'Hồ sơ nghỉ phép của quản lý và nhân viên',
+    managerEmployeeLeaveDesc: 'Tìm kiếm và xem lại tất cả yêu cầu nghỉ phép hiển thị cho quản trị viên.',
+    teamLeaveRequests: 'Yêu cầu nghỉ phép của nhóm',
+    teamLeaveRequestsDesc: 'Phê duyệt hoặc từ chối các yêu cầu nghỉ phép đang chờ xử lý.',
+    noManagedUsers: 'Không có người dùng được quản lý',
+    noManagedUsersMsg: 'Tạo tài khoản đầu tiên từ biểu mẫu.',
+    noEmployeesYet: 'Chưa có nhân viên',
+    noEmployeesYetMsg: 'Thêm nhân viên đầu tiên bằng nút ở trên.',
+    noLeaveRequests: 'Chưa có yêu cầu nghỉ phép',
+    noLeaveRequestsMsg: 'Yêu cầu của nhóm bạn sẽ xuất hiện ở đây.',
+    noManagerEmployeeLeave: 'Không có hồ sơ nghỉ phép',
+    noManagerEmployeeLeaveMsg: 'Khi nhân viên gửi yêu cầu, chúng sẽ xuất hiện ở đây.',
+    noUsersAvailable: 'Không có người dùng nào',
+    noUsersAvailableMsg: 'Tạo quản lý hoặc nhân viên để bắt đầu.'
   }
 };

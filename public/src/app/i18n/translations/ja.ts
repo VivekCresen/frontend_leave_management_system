@@ -268,6 +268,46 @@ export const TRANSLATIONS_JA = {
     requests: '休暇申請',
     requestsDesc: '申請ワークスペース。',
     history: '履歴',
-    historyDesc: '申請履歴を表示します。'
+    historyDesc: '申請履歴を表示します。',
+    attendance: '出勤',
+    attendanceDesc: '出退勤記録を表示します。'
+  },
+  attendanceTable: {
+    employee: '従業員',
+    role: '役割',
+    date: '日付',
+    checkIn: '出勤',
+    checkOut: '退勤',
+    duration: '時間',
+    status: 'ステータス',
+    complete: '完了',
+    inProgress: '進行中',
+    active: 'アクティブ'
+  },
+  tableTitles: {
+    recentAccounts: '最近のアカウント',
+    recentAccountsDesc: '最新のアカウントを検索、フィルタリング、確認します。',
+    userDirectory: 'ユーザーディレクトリ',
+    userDirectoryDesc: 'アカウントの作成、更新、または削除。',
+    myEmployees: '私の従業員',
+    myEmployeesDesc: '担当範囲内の従業員を検索、フィルタリング、管理します。',
+    attendanceLogs: '出勤記録',
+    attendanceLogsDesc: '従業員の出退勤記録を監視します。',
+    myAttendance: '私の出勤',
+    myAttendanceDesc: '個人の出退勤履歴。',
+    managerEmployeeLeave: 'マネージャーと従業員の休暇記録',
+    managerEmployeeLeaveDesc: '管理者に表示されるすべての休暇申請を検索・確認します。',
+    teamLeaveRequests: 'チームの休暇申請',
+    teamLeaveRequestsDesc: '従業員の保留中の休暇申請を承認または却下します。',
+    noManagedUsers: '管理ユーザーなし',
+    noManagedUsersMsg: 'フォームから最初のアカウントを作成してください。',
+    noEmployeesYet: 'まだ従業員がいません',
+    noEmployeesYetMsg: '上のボタンを使って最初の従業員を追加してください。',
+    noLeaveRequests: 'まだ休暇申請がありません',
+    noLeaveRequestsMsg: 'チームの休暇申請がここに表示されます。',
+    noManagerEmployeeLeave: '休暇記録なし',
+    noManagerEmployeeLeaveMsg: 'スタッフが申請を提出するとここに表示されます。',
+    noUsersAvailable: '利用可能なユーザーなし',
+    noUsersAvailableMsg: 'マネージャーまたは従業員を作成して開始してください。'
   }
 };

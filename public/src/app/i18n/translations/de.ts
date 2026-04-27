@@ -268,6 +268,46 @@ export const TRANSLATIONS_DE = {
     requests: 'Urlaubsanträge',
     requestsDesc: 'Antragsarbeitsbereich.',
     history: 'Verlauf',
-    historyDesc: 'Antragsverlauf anzeigen.'
+    historyDesc: 'Antragsverlauf anzeigen.',
+    attendance: 'Anwesenheit',
+    attendanceDesc: 'Ein- und Ausstempelungen anzeigen.'
+  },
+  attendanceTable: {
+    employee: 'Mitarbeiter',
+    role: 'Rolle',
+    date: 'Datum',
+    checkIn: 'Einstempeln',
+    checkOut: 'Ausstempeln',
+    duration: 'Dauer',
+    status: 'Status',
+    complete: 'Abgeschlossen',
+    inProgress: 'In Bearbeitung',
+    active: 'Aktiv'
+  },
+  tableTitles: {
+    recentAccounts: 'Neueste Konten',
+    recentAccountsDesc: 'Suchen, filtern und überprüfen Sie die neuesten Konten.',
+    userDirectory: 'Benutzerverzeichnis',
+    userDirectoryDesc: 'Konten erstellen, aktualisieren oder löschen.',
+    myEmployees: 'Meine Mitarbeiter',
+    myEmployeesDesc: 'Mitarbeiter in Ihrem Bereich. Suchen, filtern und verwalten.',
+    attendanceLogs: 'Anwesenheitsprotokolle',
+    attendanceLogsDesc: 'Ein- und Ausstempelungen der Mitarbeiter überwachen.',
+    myAttendance: 'Meine Anwesenheit',
+    myAttendanceDesc: 'Ihre persönliche Ein- und Ausstempelhistorie.',
+    managerEmployeeLeave: 'Urlaub von Managern und Mitarbeitern',
+    managerEmployeeLeaveDesc: 'Alle für den Administrator sichtbaren Urlaubsanträge suchen und überprüfen.',
+    teamLeaveRequests: 'Urlaubsanträge des Teams',
+    teamLeaveRequestsDesc: 'Ausstehende Urlaubsanträge Ihrer Mitarbeiter genehmigen oder ablehnen.',
+    noManagedUsers: 'Keine verwalteten Benutzer',
+    noManagedUsersMsg: 'Erstellen Sie das erste Konto über das Formular.',
+    noEmployeesYet: 'Noch keine Mitarbeiter',
+    noEmployeesYetMsg: 'Fügen Sie Ihren ersten Mitarbeiter über die Schaltfläche oben hinzu.',
+    noLeaveRequests: 'Noch keine Urlaubsanträge',
+    noLeaveRequestsMsg: 'Urlaubsanträge Ihres Teams werden hier angezeigt.',
+    noManagerEmployeeLeave: 'Keine Urlaubseinträge',
+    noManagerEmployeeLeaveMsg: 'Sobald Mitarbeiter Anträge stellen, erscheinen sie hier.',
+    noUsersAvailable: 'Keine Benutzer verfügbar',
+    noUsersAvailableMsg: 'Erstellen Sie einen Manager oder Mitarbeiter, um zu beginnen.'
   }
 };

@@ -272,6 +272,46 @@ export const TRANSLATIONS_BN = {
     requests: 'ছুটির আবেদন',
     requestsDesc: 'আবেদন কর্মক্ষেত্র।',
     history: 'ইতিহাস',
-    historyDesc: 'আবেদনের ইতিহাস দেখুন।'
+    historyDesc: 'আবেদনের ইতিহাস দেখুন।',
+    attendance: 'উপস্থিতি',
+    attendanceDesc: 'চেক-ইন এবং চেক-আউট রেকর্ড দেখুন।'
+  },
+  attendanceTable: {
+    employee: 'কর্মচারী',
+    role: 'ভূমিকা',
+    date: 'তারিখ',
+    checkIn: 'চেক-ইন',
+    checkOut: 'চেক-আউট',
+    duration: 'সময়কাল',
+    status: 'অবস্থা',
+    complete: 'সম্পন্ন',
+    inProgress: 'চলমান',
+    active: 'সক্রিয়'
+  },
+  tableTitles: {
+    recentAccounts: 'সাম্প্রতিক অ্যাকাউন্ট',
+    recentAccountsDesc: 'সর্বশেষ অ্যাকাউন্টগুলি অনুসন্ধান, ফিল্টার এবং পর্যালোচনা করুন।',
+    userDirectory: 'ব্যবহারকারী ডিরেক্টরি',
+    userDirectoryDesc: 'অ্যাকাউন্ট তৈরি, আপডেট বা মুছুন।',
+    myEmployees: 'আমার কর্মচারীরা',
+    myEmployeesDesc: 'আপনার পরিধির মধ্যে কর্মচারীরা। অনুসন্ধান, ফিল্টার এবং পরিচালনা করুন।',
+    attendanceLogs: 'উপস্থিতি লগ',
+    attendanceLogsDesc: 'কর্মচারীদের চেক-ইন এবং চেক-আউট রেকর্ড পর্যবেক্ষণ করুন।',
+    myAttendance: 'আমার উপস্থিতি',
+    myAttendanceDesc: 'আপনার ব্যক্তিগত চেক-ইন এবং চেক-আউট ইতিহাস।',
+    managerEmployeeLeave: 'ম্যানেজার ও কর্মচারীদের ছুটির রেকর্ড',
+    managerEmployeeLeaveDesc: 'প্রশাসকের কাছে দৃশ্যমান সমস্ত ছুটির অনুরোধ অনুসন্ধান ও পর্যালোচনা করুন।',
+    teamLeaveRequests: 'দলের ছুটির অনুরোধ',
+    teamLeaveRequestsDesc: 'কর্মচারীদের মুলতুবি ছুটির অনুরোধ অনুমোদন বা প্রত্যাখ্যান করুন।',
+    noManagedUsers: 'কোনো পরিচালিত ব্যবহারকারী নেই',
+    noManagedUsersMsg: 'ফর্ম থেকে প্রথম অ্যাকাউন্ট তৈরি করুন।',
+    noEmployeesYet: 'এখনো কোনো কর্মচারী নেই',
+    noEmployeesYetMsg: 'উপরের বোতাম ব্যবহার করে প্রথম কর্মচারী যোগ করুন।',
+    noLeaveRequests: 'এখনো কোনো ছুটির অনুরোধ নেই',
+    noLeaveRequestsMsg: 'আপনার দলের ছুটির অনুরোধ এখানে দেখাবে।',
+    noManagerEmployeeLeave: 'কোনো ছুটির রেকর্ড নেই',
+    noManagerEmployeeLeaveMsg: 'কর্মচারীরা অনুরোধ জমা দিলে এখানে দেখাবে।',
+    noUsersAvailable: 'কোনো ব্যবহারকারী উপলব্ধ নেই',
+    noUsersAvailableMsg: 'শুরু করতে একজন ম্যানেজার বা কর্মচারী তৈরি করুন।'
   }
 };

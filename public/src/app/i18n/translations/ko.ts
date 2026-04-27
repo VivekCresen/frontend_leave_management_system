@@ -272,6 +272,46 @@ export const TRANSLATIONS_KO = {
     requests: '휴가 신청',
     requestsDesc: '신청 작업 공간.',
     history: '이력',
-    historyDesc: '신청 이력을 봅니다.'
+    historyDesc: '신청 이력을 봅니다.',
+    attendance: '출결',
+    attendanceDesc: '출퇴근 기록을 봅니다.'
+  },
+  attendanceTable: {
+    employee: '직원',
+    role: '역할',
+    date: '날짜',
+    checkIn: '출근',
+    checkOut: '퇴근',
+    duration: '시간',
+    status: '상태',
+    complete: '완료',
+    inProgress: '진행 중',
+    active: '활성'
+  },
+  tableTitles: {
+    recentAccounts: '최근 계정',
+    recentAccountsDesc: '최신 계정을 검색, 필터링 및 검토합니다.',
+    userDirectory: '사용자 디렉토리',
+    userDirectoryDesc: '계정을 생성, 업데이트 또는 삭제합니다.',
+    myEmployees: '내 직원',
+    myEmployeesDesc: '담당 범위 내 직원을 검색, 필터링 및 관리합니다.',
+    attendanceLogs: '출결 기록',
+    attendanceLogsDesc: '직원의 출퇴근 기록을 모니터링합니다.',
+    myAttendance: '내 출결',
+    myAttendanceDesc: '개인 출퇴근 이력.',
+    managerEmployeeLeave: '매니저 및 직원 휴가 기록',
+    managerEmployeeLeaveDesc: '관리자에게 표시되는 모든 휴가 신청을 검색 및 검토합니다.',
+    teamLeaveRequests: '팀 휴가 신청',
+    teamLeaveRequestsDesc: '직원의 대기 중인 휴가 신청을 승인 또는 거부합니다.',
+    noManagedUsers: '관리 사용자 없음',
+    noManagedUsersMsg: '양식에서 첫 번째 계정을 만드세요.',
+    noEmployeesYet: '아직 직원 없음',
+    noEmployeesYetMsg: '위 버튼을 사용하여 첫 번째 직원을 추가하세요.',
+    noLeaveRequests: '아직 휴가 신청 없음',
+    noLeaveRequestsMsg: '팀의 휴가 신청이 여기에 표시됩니다.',
+    noManagerEmployeeLeave: '휴가 기록 없음',
+    noManagerEmployeeLeaveMsg: '직원이 신청을 제출하면 여기에 표시됩니다.',
+    noUsersAvailable: '사용 가능한 사용자 없음',
+    noUsersAvailableMsg: '시작하려면 매니저 또는 직원을 만드세요.'
   }
 };

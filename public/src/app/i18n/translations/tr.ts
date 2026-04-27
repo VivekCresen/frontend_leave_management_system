@@ -272,6 +272,46 @@ export const TRANSLATIONS_TR = {
     requests: 'İzin talepleri',
     requestsDesc: 'Talep çalışma alanı.',
     history: 'Geçmiş',
-    historyDesc: 'Talep geçmişini görüntüle.'
+    historyDesc: 'Talep geçmişini görüntüle.',
+    attendance: 'Devam',
+    attendanceDesc: 'Giriş ve çıkış kayıtlarını görüntüle.'
+  },
+  attendanceTable: {
+    employee: 'Çalışan',
+    role: 'Rol',
+    date: 'Tarih',
+    checkIn: 'Giriş',
+    checkOut: 'Çıkış',
+    duration: 'Süre',
+    status: 'Durum',
+    complete: 'Tamamlandı',
+    inProgress: 'Devam ediyor',
+    active: 'Aktif'
+  },
+  tableTitles: {
+    recentAccounts: 'Son hesaplar',
+    recentAccountsDesc: 'En yeni hesapları arayın, filtreleyin ve inceleyin.',
+    userDirectory: 'Kullanıcı dizini',
+    userDirectoryDesc: 'Hesap oluşturun, güncelleyin veya silin.',
+    myEmployees: 'Çalışanlarım',
+    myEmployeesDesc: 'Kapsamınızdaki çalışanlar. Arayın, filtreleyin ve yönetin.',
+    attendanceLogs: 'Devam kayıtları',
+    attendanceLogsDesc: 'Çalışanların giriş ve çıkış kayıtlarını izleyin.',
+    myAttendance: 'Devamım',
+    myAttendanceDesc: 'Kişisel giriş ve çıkış geçmişiniz.',
+    managerEmployeeLeave: 'Yönetici ve çalışan izin kayıtları',
+    managerEmployeeLeaveDesc: 'Yöneticiye görünen tüm izin taleplerini arayın ve inceleyin.',
+    teamLeaveRequests: 'Ekip izin talepleri',
+    teamLeaveRequestsDesc: 'Bekleyen izin taleplerini onaylayın veya reddedin.',
+    noManagedUsers: 'Yönetilen kullanıcı yok',
+    noManagedUsersMsg: 'Formdan ilk hesabı oluşturun.',
+    noEmployeesYet: 'Henüz çalışan yok',
+    noEmployeesYetMsg: 'Yukarıdaki düğmeyi kullanarak ilk çalışanı ekleyin.',
+    noLeaveRequests: 'Henüz izin talebi yok',
+    noLeaveRequestsMsg: 'Ekibinizin izin talepleri burada görünecek.',
+    noManagerEmployeeLeave: 'İzin kaydı yok',
+    noManagerEmployeeLeaveMsg: 'Personel talep gönderdiğinde burada görünecek.',
+    noUsersAvailable: 'Kullanılabilir kullanıcı yok',
+    noUsersAvailableMsg: 'Başlamak için bir yönetici veya çalışan oluşturun.'
   }
 };

@@ -12,10 +12,10 @@
 
       <app-dashboard-user-table
         [users]="dashboard?.users ?? []"
-        title="Recent accounts"
-        description="Search, filter, and review the newest visible accounts from this overview."
-        emptyTitle="No users available"
-        emptyMessage="Create a manager or employee to begin."
+        [title]="'tableTitles.recentAccounts' | translate"
+        [description]="'tableTitles.recentAccountsDesc' | translate"
+        [emptyTitle]="'tableTitles.noUsersAvailable' | translate"
+        [emptyMessage]="'tableTitles.noUsersAvailableMsg' | translate"
         [showActions]="false"
         [showTableTools]="true"
         [useAgGrid]="true"
@@ -68,10 +68,10 @@
 
       <app-dashboard-user-table
         [users]="dashboard?.users ?? []"
-        title="User directory"
-        description="Create, update, or remove accounts."
-        emptyTitle="No managed users"
-        emptyMessage="Create the first account from the form."
+        [title]="'tableTitles.userDirectory' | translate"
+        [description]="'tableTitles.userDirectoryDesc' | translate"
+        [emptyTitle]="'tableTitles.noManagedUsers' | translate"
+        [emptyMessage]="'tableTitles.noManagedUsersMsg' | translate"
         [showTableTools]="true"
         [useAgGrid]="true"
         [compactCard]="true"
@@ -166,10 +166,10 @@
         <div *ngIf="isRecordsTabActive" class="leave-tab-panel">
           <app-dashboard-leave-table
             [leaves]="leaves"
-            title="Manager and employee leave records"
-            description="Search, filter, and review every leave request visible to the administrator."
-            emptyTitle="No manager or employee leave records"
-            emptyMessage="Once staff submit leave requests, they will appear here."
+            [title]="'tableTitles.managerEmployeeLeave' | translate"
+            [description]="'tableTitles.managerEmployeeLeaveDesc' | translate"
+            [emptyTitle]="'tableTitles.noManagerEmployeeLeave' | translate"
+            [emptyMessage]="'tableTitles.noManagerEmployeeLeaveMsg' | translate"
             [initialRole]="filterRole"
             [initialStatus]="filterStatus || 'ALL'"
             [allowedStatuses]="['PENDING', 'MANAGER_APPROVED', 'APPROVED', 'REJECTED']"
@@ -436,79 +436,77 @@
     </section>
 
     <section *ngSwitchCase="'reports'" class="panel-grid">
-      <article class="surface">
-        <h3>Account summary</h3>
-        <ul class="detail-list">
-          <li>{{ dashboard?.activeUsers ?? 0 }} active accounts</li>
-          <li>{{ dashboard?.inactiveUsers ?? 0 }} inactive accounts</li>
-          <li>{{ dashboard?.managerCount ?? 0 }} manager accounts</li>
-        </ul>
-      </article>
-      <article class="surface">
-        <h3>Reporting layout ready</h3>
-        <p class="body-copy">Counts and user status are available for reporting.</p>
-      </article>
+      <app-dashboard-attendance-table
+        [logs]="attendanceLogs"
+        [title]="'tableTitles.attendanceLogs' | translate"
+        [description]="'tableTitles.attendanceLogsDesc' | translate"
+      ></app-dashboard-attendance-table>
     </section>
 
-    <section *ngSwitchCase="'settings'" class="panel-grid">
-      <article class="surface">
-        <h3>{{ 'adminSettings.accountControls' | translate }}</h3>
-        <ul class="detail-list">
-          <li>{{ 'adminSettings.passwordPolicy' | translate }}</li>
-          <li>{{ 'adminSettings.accountStatus' | translate }}</li>
-          <li>{{ 'adminSettings.roleLimits' | translate }}</li>
-        </ul>
-      </article>
+    <section *ngSwitchCase="'attendance'" class="panel-grid">
+      <app-dashboard-attendance-table
+        [logs]="attendanceLogs"
+        [title]="'tableTitles.attendanceLogs' | translate"
+        [description]="'tableTitles.attendanceLogsDesc' | translate"
+      ></app-dashboard-attendance-table>
+    </section>
 
-      <article class="surface">
-        <h3>{{ 'adminSettings.localization' | translate }}</h3>
-        <p class="body-copy">{{ 'adminSettings.languageDesc' | translate }}</p>
-        <div style="margin-top: 1rem;">
-          <label class="leave-field">
-            <span>{{ 'adminSettings.languageControl' | translate }}</span>
-            <div class="custom-dropdown-container">
-              <div class="custom-dropdown-trigger" (click)="toggleLangDropdown($event)">
-                <span>{{ getSelectedLangLabel() }}</span>
-                <i class="fas fa-chevron-down"></i>
-              </div>
-              <div class="custom-dropdown-panel" *ngIf="isLangDropdownOpen" (click)="$event.stopPropagation()">
-                <div class="dropdown-list">
-                  <div class="dropdown-item" *ngFor="let lang of availableLangs" (click)="selectLang(lang.code)">
-                    {{ lang.label }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </label>
+    <section *ngSwitchCase="'settings'" class="settings-page">
+
+      <!-- Appearance -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <div class="settings-card-icon"><i class="fas fa-palette"></i></div>
+          <div>
+            <p class="settings-eyebrow">Display</p>
+            <h3>Appearance</h3>
+            <p>Choose between light and dark mode for the dashboard interface.</p>
+          </div>
         </div>
-      </article>
-
-      <article class="surface">
-        <h3>Appearance</h3>
-        <p class="body-copy">Choose between light and dark mode for the dashboard interface.</p>
         <div class="theme-mode-buttons">
-          <button
-            type="button"
-            class="theme-mode-btn"
-            [class.theme-mode-btn-active]="!themeService.isDark"
-            (click)="themeService.setTheme('light')"
-            aria-label="Switch to light mode">
+          <button type="button" class="theme-mode-btn" [class.theme-mode-btn-active]="!themeService.isDark"
+            (click)="themeService.setTheme('light')" aria-label="Switch to light mode">
             <span class="theme-mode-icon">☀️</span>
             <span class="theme-mode-label">Light</span>
             <span *ngIf="!themeService.isDark" class="theme-mode-check"><i class="fas fa-check"></i></span>
           </button>
-          <button
-            type="button"
-            class="theme-mode-btn"
-            [class.theme-mode-btn-active]="themeService.isDark"
-            (click)="themeService.setTheme('dark')"
-            aria-label="Switch to dark mode">
+          <button type="button" class="theme-mode-btn" [class.theme-mode-btn-active]="themeService.isDark"
+            (click)="themeService.setTheme('dark')" aria-label="Switch to dark mode">
             <span class="theme-mode-icon">🌙</span>
             <span class="theme-mode-label">Dark</span>
             <span *ngIf="themeService.isDark" class="theme-mode-check"><i class="fas fa-check"></i></span>
           </button>
         </div>
-      </article>
+      </div>
+
+      <!-- Localization -->
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <div class="settings-card-icon"><i class="fas fa-globe"></i></div>
+          <div>
+            <p class="settings-eyebrow">Regional</p>
+            <h3>{{ 'adminSettings.localization' | translate }}</h3>
+            <p>{{ 'adminSettings.languageDesc' | translate }}</p>
+          </div>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">{{ 'adminSettings.languageControl' | translate }}</label>
+          <div class="custom-dropdown-container settings-dropdown">
+            <div class="custom-dropdown-trigger" (click)="toggleLangDropdown($event)">
+              <span>{{ getSelectedLangLabel() }}</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="custom-dropdown-panel" *ngIf="isLangDropdownOpen" (click)="$event.stopPropagation()">
+              <div class="dropdown-list">
+                <div class="dropdown-item" *ngFor="let lang of availableLangs" (click)="selectLang(lang.code)">
+                  {{ lang.label }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </section>
   </ng-container>
 

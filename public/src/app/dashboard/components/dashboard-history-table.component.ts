@@ -8,6 +8,8 @@ import {
   inject,
   Input,
   OnChanges,
+  OnDestroy,
+  OnInit,
   Output,
   PLATFORM_ID,
   SimpleChanges
@@ -576,11 +578,12 @@ const historyTheme = themeQuartz.withParams({
     }
   `]
 })
-export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges {
+export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges, OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly cdr = inject(ChangeDetectorRef);
   readonly translate = inject(TranslateService);
   private gridApi: GridApi<AdminLeaveTableRow> | null = null;
+  private static readonly PROGRESS_STORAGE_KEY = 'history_table_progress_leave_id';
 
   @Input({ required: true }) leaves: AdminLeaveTableRow[] = [];
   @Input() leaveTypes: LeaveType[] = [];
@@ -595,7 +598,23 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
   gridMounted = false;
   readonly agTheme = historyTheme;
   popupLeave: AdminLeaveTableRow | null = null;
-  progressLeave: AdminLeaveTableRow | null = null;
+
+  private _progressLeave: AdminLeaveTableRow | null = null;
+
+  get progressLeave(): AdminLeaveTableRow | null {
+    return this._progressLeave;
+  }
+
+  set progressLeave(value: AdminLeaveTableRow | null) {
+    this._progressLeave = value;
+    if (isPlatformBrowser(this.platformId)) {
+      if (value) {
+        localStorage.setItem(DashboardHistoryTableComponent.PROGRESS_STORAGE_KEY, String(value.id));
+      } else {
+        localStorage.removeItem(DashboardHistoryTableComponent.PROGRESS_STORAGE_KEY);
+      }
+    }
+  }
 
   constructor() {
     effect(() => {
@@ -863,6 +882,14 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
     });
   }
 
+  ngOnInit(): void {
+    this.restoreProgressLeave();
+  }
+
+  ngOnDestroy(): void {
+    // Don't clear localStorage on destroy — we want it to persist across navigation
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if ((changes['showRequestActions'] || changes['deletingLeaveId']) && this.gridApi) {
       this.gridApi.setGridOption('columnDefs', this.columnDefs);
@@ -871,10 +898,26 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges 
     if (changes['leaves'] && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.leaves);
     }
+
+    // Restore progress leave when leaves data becomes available
+    if (changes['leaves'] && this.leaves.length > 0 && !this._progressLeave) {
+      this.restoreProgressLeave();
+    }
   }
 
   onGridReady(event: GridReadyEvent<AdminLeaveTableRow>): void {
     this.gridApi = event.api;
+  }
+
+  private restoreProgressLeave(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const savedId = localStorage.getItem(DashboardHistoryTableComponent.PROGRESS_STORAGE_KEY);
+    if (!savedId || !this.leaves.length) return;
+    const id = Number(savedId);
+    const found = this.leaves.find(l => l.id === id) ?? null;
+    if (found) {
+      this._progressLeave = found;
+    }
   }
 
   fmtDatePublic(value: string | number[] | unknown): string {

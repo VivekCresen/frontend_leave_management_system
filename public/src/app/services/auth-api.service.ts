@@ -11,7 +11,8 @@ import {
   MessageResponse,
   PhoneCodeOption,
   UserDashboardResponse,
-  UserManagementPayload
+  UserManagementPayload,
+  AttendanceLogDto
 } from './auth.service';
 import { resolveApiUrl } from '../shared/api-url.util';
 import { TranslateService } from '../i18n/translate.service';
@@ -156,6 +157,30 @@ export class AuthApiService implements AuthService {
         }
       });
     });
+  }
+
+  checkIn(username: string): Observable<AttendanceLogDto> {
+    return this.http.post<AttendanceLogDto>(`${this.apiUrl}/attendance/check-in?username=${encodeURIComponent(username)}`, {});
+  }
+
+  checkOut(username: string): Observable<AttendanceLogDto> {
+    return this.http.put<AttendanceLogDto>(`${this.apiUrl}/attendance/check-out?username=${encodeURIComponent(username)}`, {});
+  }
+
+  getTodayStatus(username: string): Observable<AttendanceLogDto | null> {
+    return this.http.get<AttendanceLogDto | null>(`${this.apiUrl}/attendance/status?username=${encodeURIComponent(username)}`);
+  }
+
+  getAllAttendanceLogs(): Observable<AttendanceLogDto[]> {
+    return this.http.get<AttendanceLogDto[]>(`${this.apiUrl}/attendance/logs`);
+  }
+
+  getAttendanceLogsByUser(username: string): Observable<AttendanceLogDto[]> {
+    return this.http.get<AttendanceLogDto[]>(`${this.apiUrl}/attendance/logs/user?username=${encodeURIComponent(username)}`);
+  }
+
+  getAttendanceLogsByDate(date: string): Observable<AttendanceLogDto[]> {
+    return this.http.get<AttendanceLogDto[]>(`${this.apiUrl}/attendance/logs/date?date=${encodeURIComponent(date)}`);
   }
 
   setCurrentUser(user: LoginResponse): void {

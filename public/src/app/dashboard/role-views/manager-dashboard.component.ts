@@ -17,6 +17,9 @@ import { CalendarBase } from '../components/calendar-base';
 import { TranslateService, Language } from '../../i18n/translate.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { ThemeService } from '../../services/theme.service';
+import { DashboardProfileComponent } from '../components/dashboard-profile.component';
+import { DashboardAttendanceTableComponent } from '../components/dashboard-attendance-table.component';
+import { AttendanceLogDto } from '../../services/auth.service';
 
 export type CalendarDay = {
   date: Date;
@@ -39,6 +42,8 @@ export type CalendarDay = {
     DashboardUserTableComponent,
     DashboardLeaveTableComponent,
     DashboardHistoryTableComponent,
+    DashboardProfileComponent,
+    DashboardAttendanceTableComponent,
     TranslatePipe
   ],
   templateUrl: './manager-dashboard.component.html',
@@ -64,6 +69,7 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
   @Input() managerLeaves: AdminLeaveTableRow[] = [];
   @Input() myLeaves: AdminLeaveTableRow[] = [];
   @Input() holidays: Holiday[] = [];
+  @Input() myAttendanceLogs: AttendanceLogDto[] = [];
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
@@ -78,6 +84,7 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
   @Output() leavePartialStatusRequested = new EventEmitter<{ leave: AdminLeaveTableRow; decisions: import('../../services/leave.service').DateDecision[]; rejectionReason?: string }>();
   @Output() editLeaveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() deleteLeaveRequested = new EventEmitter<AdminLeaveTableRow>();
+  @Output() editProfileRequested = new EventEmitter<void>();
 
   calendarWeeks: CalendarDay[][] = [];
   selectedDay: CalendarDay | null = null;

@@ -129,7 +129,12 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
         field: 'role',
         minWidth: 110,
         flex: 0.8,
-        valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => this.titleCase(value)
+        valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => {
+          if (!value) return '';
+          const roleKey = 'roles.' + value.toLowerCase();
+          const translated = this.translate.getTranslation(roleKey);
+          return translated !== roleKey ? translated : this.titleCase(value);
+        }
       },
       {
         headerName: tr('table.status', 'Status'),
@@ -164,7 +169,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
     return [
       ...this.agColumnDefs,
       {
-        headerName: 'Actions',
+        headerName: this.translate.getTranslation('table.actions') !== 'table.actions' ? this.translate.getTranslation('table.actions') : 'Actions',
         sortable: false,
         resizable: false,
         minWidth: 140,
@@ -172,15 +177,20 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
         cellRenderer: ({ data }: ICellRendererParams<ManagedUser>) => {
           if (!data) return '';
           const deleting = this.deletingUserId === data.id;
+          const t = (k: string, fb: string) => { const v = this.translate.getTranslation(k); return v !== k ? v : fb; };
+          const editLabel = t('tableActions.edit', 'Edit');
+          const deleteLabel = t('tableActions.delete', 'Delete');
+          const deletingLabel = t('tableActions.deleting', 'Deleting...');
+          const viewOnlyLabel = t('tableActions.viewOnly', 'View only');
           const edit = data.canEdit
-            ? `<button class="ag-action-btn edit" data-id="${data.id}" ${deleting ? 'disabled' : ''}>Edit</button>`
+            ? `<button class="ag-action-btn edit" data-id="${data.id}" ${deleting ? 'disabled' : ''}>${editLabel}</button>`
             : '';
           const del = data.canDelete
-            ? `<button class="ag-action-btn delete${deleting ? ' is-loading' : ''}" data-id="${data.id}" ${deleting ? 'disabled' : ''}>${deleting ? 'Deleting' : 'Delete'}</button>`
+            ? `<button class="ag-action-btn delete${deleting ? ' is-loading' : ''}" data-id="${data.id}" ${deleting ? 'disabled' : ''}>${deleting ? deletingLabel : deleteLabel}</button>`
             : '';
           return edit || del
             ? `<div class="ag-action-cell">${edit}${del}</div>`
-            : '<span class="ag-read-only">View only</span>';
+            : `<span class="ag-read-only">${viewOnlyLabel}</span>`;
         }
       }
     ];

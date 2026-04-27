@@ -272,6 +272,46 @@ export const TRANSLATIONS_IT = {
     requests: 'Richieste di ferie',
     requestsDesc: 'Area di lavoro richieste.',
     history: 'Cronologia',
-    historyDesc: 'Visualizza cronologia richieste.'
+    historyDesc: 'Visualizza cronologia richieste.',
+    attendance: 'Presenze',
+    attendanceDesc: 'Visualizza i registri di entrata e uscita.'
+  },
+  attendanceTable: {
+    employee: 'Dipendente',
+    role: 'Ruolo',
+    date: 'Data',
+    checkIn: 'Entrata',
+    checkOut: 'Uscita',
+    duration: 'Durata',
+    status: 'Stato',
+    complete: 'Completato',
+    inProgress: 'In corso',
+    active: 'Attivo'
+  },
+  tableTitles: {
+    recentAccounts: 'Account recenti',
+    recentAccountsDesc: 'Cerca, filtra e rivedi gli account più recenti.',
+    userDirectory: 'Elenco utenti',
+    userDirectoryDesc: 'Crea, aggiorna o rimuovi account.',
+    myEmployees: 'I miei dipendenti',
+    myEmployeesDesc: 'Dipendenti nel tuo ambito. Cerca, filtra e gestisci.',
+    attendanceLogs: 'Registri presenze',
+    attendanceLogsDesc: 'Monitora i registri di entrata e uscita dei dipendenti.',
+    myAttendance: 'La mia presenza',
+    myAttendanceDesc: 'Il tuo storico personale di entrate e uscite.',
+    managerEmployeeLeave: 'Ferie di manager e dipendenti',
+    managerEmployeeLeaveDesc: 'Cerca e rivedi tutte le richieste di ferie visibili all\'amministratore.',
+    teamLeaveRequests: 'Richieste ferie del team',
+    teamLeaveRequestsDesc: 'Approva o rifiuta le richieste di ferie in sospeso.',
+    noManagedUsers: 'Nessun utente gestito',
+    noManagedUsersMsg: 'Crea il primo account dal modulo.',
+    noEmployeesYet: 'Nessun dipendente ancora',
+    noEmployeesYetMsg: 'Aggiungi il tuo primo dipendente usando il pulsante sopra.',
+    noLeaveRequests: 'Nessuna richiesta di ferie ancora',
+    noLeaveRequestsMsg: 'Le richieste del tuo team appariranno qui.',
+    noManagerEmployeeLeave: 'Nessun registro ferie',
+    noManagerEmployeeLeaveMsg: 'Una volta che il personale invia richieste, appariranno qui.',
+    noUsersAvailable: 'Nessun utente disponibile',
+    noUsersAvailableMsg: 'Crea un manager o un dipendente per iniziare.'
   }
 };

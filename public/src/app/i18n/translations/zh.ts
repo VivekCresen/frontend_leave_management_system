@@ -268,6 +268,46 @@ export const TRANSLATIONS_ZH = {
     requests: '请假申请',
     requestsDesc: '申请工作区。',
     history: '历史记录',
-    historyDesc: '查看申请历史。'
+    historyDesc: '查看申请历史。',
+    attendance: '考勤',
+    attendanceDesc: '查看签到和签退记录。'
+  },
+  attendanceTable: {
+    employee: '员工',
+    role: '角色',
+    date: '日期',
+    checkIn: '签到',
+    checkOut: '签退',
+    duration: '时长',
+    status: '状态',
+    complete: '已完成',
+    inProgress: '进行中',
+    active: '活跃'
+  },
+  tableTitles: {
+    recentAccounts: '最近账户',
+    recentAccountsDesc: '搜索、筛选并查看最新的账户。',
+    userDirectory: '用户目录',
+    userDirectoryDesc: '创建、更新或删除账户。',
+    myEmployees: '我的员工',
+    myEmployeesDesc: '您范围内的员工。搜索、筛选并管理他们的账户。',
+    attendanceLogs: '考勤记录',
+    attendanceLogsDesc: '监控员工的签到和签退记录。',
+    myAttendance: '我的考勤',
+    myAttendanceDesc: '您的个人签到和签退历史。',
+    managerEmployeeLeave: '经理和员工的请假记录',
+    managerEmployeeLeaveDesc: '搜索、筛选并查看管理员可见的所有请假申请。',
+    teamLeaveRequests: '团队请假申请',
+    teamLeaveRequestsDesc: '批准或拒绝员工的待处理请假申请。',
+    noManagedUsers: '没有受管用户',
+    noManagedUsersMsg: '从表单创建第一个账户。',
+    noEmployeesYet: '暂无员工',
+    noEmployeesYetMsg: '使用上方按钮添加您的第一位员工。',
+    noLeaveRequests: '暂无请假申请',
+    noLeaveRequestsMsg: '您团队的请假申请将显示在这里。',
+    noManagerEmployeeLeave: '没有经理或员工的请假记录',
+    noManagerEmployeeLeaveMsg: '一旦员工提交请假申请，将显示在这里。',
+    noUsersAvailable: '没有可用用户',
+    noUsersAvailableMsg: '创建一个经理或员工以开始。'
   }
 };

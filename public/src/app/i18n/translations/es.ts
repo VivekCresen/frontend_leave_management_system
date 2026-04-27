@@ -272,6 +272,46 @@ export const TRANSLATIONS_ES = {
     requests: 'Solicitudes de Ausencias',
     requestsDesc: 'Espacio de trabajo de solicitudes.',
     history: 'Historial',
-    historyDesc: 'Ver historial de solicitudes.'
+    historyDesc: 'Ver historial de solicitudes.',
+    attendance: 'Asistencia',
+    attendanceDesc: 'Ver registros de entrada y salida.'
+  },
+  attendanceTable: {
+    employee: 'Empleado',
+    role: 'Rol',
+    date: 'Fecha',
+    checkIn: 'Entrada',
+    checkOut: 'Salida',
+    duration: 'Duración',
+    status: 'Estado',
+    complete: 'Completado',
+    inProgress: 'En progreso',
+    active: 'Activo'
+  },
+  tableTitles: {
+    recentAccounts: 'Cuentas recientes',
+    recentAccountsDesc: 'Busca, filtra y revisa las cuentas más recientes desde esta vista.',
+    userDirectory: 'Directorio de usuarios',
+    userDirectoryDesc: 'Crear, actualizar o eliminar cuentas.',
+    myEmployees: 'Mis empleados',
+    myEmployeesDesc: 'Empleados dentro de tu ámbito. Busca, filtra y gestiona sus cuentas.',
+    attendanceLogs: 'Registros de asistencia',
+    attendanceLogsDesc: 'Supervisar los registros de entrada y salida de los empleados.',
+    myAttendance: 'Mi asistencia',
+    myAttendanceDesc: 'Tu historial personal de entradas y salidas.',
+    managerEmployeeLeave: 'Registros de ausencias de jefes y empleados',
+    managerEmployeeLeaveDesc: 'Busca, filtra y revisa todas las solicitudes de ausencia visibles para el administrador.',
+    teamLeaveRequests: 'Solicitudes de ausencia del equipo',
+    teamLeaveRequestsDesc: 'Aprobar o rechazar solicitudes de ausencia pendientes de tus empleados.',
+    noManagedUsers: 'Sin usuarios gestionados',
+    noManagedUsersMsg: 'Crea la primera cuenta desde el formulario.',
+    noEmployeesYet: 'Aún no hay empleados',
+    noEmployeesYetMsg: 'Añade tu primer empleado usando el botón de arriba.',
+    noLeaveRequests: 'Aún no hay solicitudes de ausencia',
+    noLeaveRequestsMsg: 'Las solicitudes de ausencia de tu equipo aparecerán aquí.',
+    noManagerEmployeeLeave: 'Sin registros de ausencias de jefes o empleados',
+    noManagerEmployeeLeaveMsg: 'Una vez que el personal envíe solicitudes, aparecerán aquí.',
+    noUsersAvailable: 'Sin usuarios disponibles',
+    noUsersAvailableMsg: 'Crea un jefe o empleado para comenzar.'
   }
 };

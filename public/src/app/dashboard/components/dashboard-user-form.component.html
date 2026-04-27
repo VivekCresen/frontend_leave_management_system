@@ -210,7 +210,7 @@
     </label>
 
     <label class="field">
-      <span>Phone Code<span *ngIf="model.phoneNumber?.trim()"> *</span></span>
+      <span>Phone Code<span *ngIf="model.phoneNumber.trim()"> *</span></span>
       <div class="custom-dropdown-container">
         <div 
           class="custom-dropdown-trigger" 
@@ -244,7 +244,7 @@
           </div>
         </div>
       </div>
-      <input type="hidden" #phoneCodeId="ngModel" [(ngModel)]="model.phoneCodeId" name="phoneCodeId" [required]="!!model.phoneNumber?.trim()">
+      <input type="hidden" #phoneCodeId="ngModel" [(ngModel)]="model.phoneCodeId" name="phoneCodeId" [required]="!!model.phoneNumber.trim()">
       <small
         [class.field-message-empty]="!getControlError(phoneCodeId, 'phoneCodeId', 'Phone code is required')"
         aria-live="polite">

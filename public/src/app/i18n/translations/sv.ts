@@ -272,6 +272,46 @@ export const TRANSLATIONS_SV = {
     requests: 'Ledighetsförfrågningar',
     requestsDesc: 'Arbetsyta för förfrågningar.',
     history: 'Historik',
-    historyDesc: 'Visa förfrågningshistorik.'
+    historyDesc: 'Visa förfrågningshistorik.',
+    attendance: 'Närvaro',
+    attendanceDesc: 'Visa in- och utcheckningstider.'
+  },
+  attendanceTable: {
+    employee: 'Anställd',
+    role: 'Roll',
+    date: 'Datum',
+    checkIn: 'Incheckning',
+    checkOut: 'Utcheckning',
+    duration: 'Varaktighet',
+    status: 'Status',
+    complete: 'Klar',
+    inProgress: 'Pågår',
+    active: 'Aktiv'
+  },
+  tableTitles: {
+    recentAccounts: 'Senaste konton',
+    recentAccountsDesc: 'Sök, filtrera och granska de senaste kontona.',
+    userDirectory: 'Användarkatalog',
+    userDirectoryDesc: 'Skapa, uppdatera eller ta bort konton.',
+    myEmployees: 'Mina anställda',
+    myEmployeesDesc: 'Anställda inom ditt ansvarsområde. Sök, filtrera och hantera.',
+    attendanceLogs: 'Närvarologg',
+    attendanceLogsDesc: 'Övervaka in- och utcheckningstider för anställda.',
+    myAttendance: 'Min närvaro',
+    myAttendanceDesc: 'Din personliga in- och utcheckningshistorik.',
+    managerEmployeeLeave: 'Ledighet för chefer och anställda',
+    managerEmployeeLeaveDesc: 'Sök och granska alla ledighetsansökningar synliga för administratören.',
+    teamLeaveRequests: 'Teamets ledighetsansökningar',
+    teamLeaveRequestsDesc: 'Godkänn eller avvisa väntande ledighetsansökningar.',
+    noManagedUsers: 'Inga hanterade användare',
+    noManagedUsersMsg: 'Skapa det första kontot från formuläret.',
+    noEmployeesYet: 'Inga anställda ännu',
+    noEmployeesYetMsg: 'Lägg till din första anställda med knappen ovan.',
+    noLeaveRequests: 'Inga ledighetsansökningar ännu',
+    noLeaveRequestsMsg: 'Ditt teams ansökningar visas här.',
+    noManagerEmployeeLeave: 'Inga ledighetsrekord',
+    noManagerEmployeeLeaveMsg: 'När personal skickar ansökningar visas de här.',
+    noUsersAvailable: 'Inga tillgängliga användare',
+    noUsersAvailableMsg: 'Skapa en chef eller anställd för att börja.'
   }
 };

@@ -81,6 +81,11 @@ export const routes: Routes = [
         path: 'history',
         loadComponent: () =>
           import('./dashboard/pages/dashboard-pages.component').then((m) => m.DashboardHistoryPageComponent)
+      },
+      {
+        path: 'attendance',
+        loadComponent: () =>
+          import('./dashboard/pages/dashboard-pages.component').then((m) => m.DashboardAttendancePageComponent)
       }
     ]
   },

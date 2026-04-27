@@ -10,7 +10,8 @@ import {
 import { DashboardUserTableComponent } from '../components/dashboard-user-table.component';
 import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
 import { UserExcelImportComponent } from '../components/user-excel-import.component';
-import { LoginResponse, ManagedUser, UserDashboardResponse } from '../../services/auth.service';
+import { DashboardAttendanceTableComponent } from '../components/dashboard-attendance-table.component';
+import { LoginResponse, ManagedUser, UserDashboardResponse, AttendanceLogDto } from '../../services/auth.service';
 import { LeaveType, LeaveTypeSavePayload, Holiday, CreateHolidayPayload } from '../../services/leave.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { TranslateService, Language } from '../../i18n/translate.service';
@@ -27,6 +28,7 @@ import { ThemeService } from '../../services/theme.service';
     DashboardUserTableComponent,
     DashboardLeaveTableComponent,
     UserExcelImportComponent,
+    DashboardAttendanceTableComponent,
     TranslatePipe
   ],
   templateUrl: './admin-dashboard.component.html',
@@ -42,6 +44,7 @@ export class AdminDashboardComponent implements OnChanges {
   @Input() fieldErrors: Record<string, string> = {};
   @Input() leaveTypes: LeaveType[] = [];
   @Input() leaves: AdminLeaveTableRow[] = [];
+  @Input() attendanceLogs: AttendanceLogDto[] = [];
   @Input() isLeaveTypesLoading = false;
   @Input() isLeavesLoading = false;
   @Input() isLeaveTypeSaving = false;

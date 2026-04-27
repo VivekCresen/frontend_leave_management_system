@@ -104,8 +104,21 @@ export class LoginComponent implements OnInit {
 
         this.isSubmitting = false;
         this.authService.setCurrentUser(response);
-        this.detectAndMaybeShowLanguagePopup(response.username, () => {
-          this.completeMailDecisionAfterLogin(response.username);
+        
+        // Trigger auto check-in upon login
+        this.authService.checkIn(response.username).subscribe({
+          next: () => {
+            this.detectAndMaybeShowLanguagePopup(response.username, () => {
+              this.completeMailDecisionAfterLogin(response.username);
+            });
+          },
+          error: (err) => {
+            console.error('Auto check-in failed:', err);
+            // Proceed to dashboard regardless of check-in error
+            this.detectAndMaybeShowLanguagePopup(response.username, () => {
+              this.completeMailDecisionAfterLogin(response.username);
+            });
+          }
         });
       },
       error: (err: { error?: ApiErrorResponse & { error?: string } }) => {

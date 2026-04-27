@@ -203,3 +203,15 @@ export class DashboardHistoryPageComponent extends DashboardPageBase {
     super(authService, router, toastService, 'history');
   }
 }
+
+@Component({
+  selector: 'app-dashboard-attendance-page',
+  standalone: true,
+  imports: [DashboardPageComponent],
+  template: '<app-dashboard-page [pageId]="pageId" [user]="user"></app-dashboard-page>'
+})
+export class DashboardAttendancePageComponent extends DashboardPageBase {
+  constructor(authService: AuthApiService, router: Router, toastService: ToastService) {
+    super(authService, router, toastService, 'attendance');
+  }
+}

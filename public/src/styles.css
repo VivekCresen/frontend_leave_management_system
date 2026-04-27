@@ -1,9 +1,6 @@
-/* You can add global styles to this file, and also import other style files */
 
-/* Font Awesome Icons Support */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
-/* ── Light theme (default) ── */
 :root,
 [data-theme="light"] {
   --app-bg-start: #fcfaf6;
@@ -1526,4 +1523,83 @@ body {
   text-align: center;
   color: var(--ws-desc);
   font-size: 0.9rem;
+}
+
+/* ── Dark mode: Attendance AG Grid ── */
+[data-theme="dark"] .att-ag-grid,
+[data-theme="dark"] .att-ag-grid .ag-root-wrapper {
+  --ag-background-color: #111827;
+  --ag-odd-row-background-color: #0f172a;
+  --ag-header-background-color: #0a1120;
+  --ag-header-foreground-color: #94a3b8;
+  --ag-foreground-color: #e2e8f0;
+  --ag-secondary-foreground-color: #94a3b8;
+  --ag-border-color: rgba(51, 65, 85, 0.6);
+  --ag-row-border-color: rgba(51, 65, 85, 0.4);
+  --ag-row-hover-color: rgba(45, 212, 191, 0.05);
+  --ag-selected-row-background-color: rgba(45, 212, 191, 0.08);
+}
+
+[data-theme="dark"] .att-ag-grid .ag-header,
+[data-theme="dark"] .att-ag-grid .ag-header-row {
+  background: #0a1120 !important;
+  border-bottom-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-header-cell-label,
+[data-theme="dark"] .att-ag-grid .ag-header-cell-text {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-row {
+  background: #111827 !important;
+  border-bottom-color: rgba(51, 65, 85, 0.4) !important;
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-row-odd {
+  background: #0f172a !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-row:hover {
+  background: rgba(45, 212, 191, 0.05) !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-cell {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-employee-cell strong {
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-employee-cell small {
+  color: #2dd4bf !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-role-pill {
+  background: rgba(51, 65, 85, 0.4) !important;
+  color: #94a3b8 !important;
+  border-color: rgba(71, 85, 105, 0.4) !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-paging-panel {
+  background: rgba(10, 17, 32, 0.9) !important;
+  border-top-color: rgba(51, 65, 85, 0.6) !important;
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-paging-button {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-paging-button:hover {
+  color: #2dd4bf !important;
+}
+
+[data-theme="dark"] .att-ag-grid .ag-select .ag-picker-field-wrapper,
+[data-theme="dark"] .att-ag-grid .ag-text-field-input {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: rgba(71, 85, 105, 0.5) !important;
+  color: #e2e8f0 !important;
 }

@@ -272,6 +272,46 @@ export const TRANSLATIONS_NL = {
     requests: 'Verlofaanvragen',
     requestsDesc: 'Aanvraagwerkruimte.',
     history: 'Geschiedenis',
-    historyDesc: 'Aanvraaggeschiedenis bekijken.'
+    historyDesc: 'Aanvraaggeschiedenis bekijken.',
+    attendance: 'Aanwezigheid',
+    attendanceDesc: 'In- en uitchecktijden bekijken.'
+  },
+  attendanceTable: {
+    employee: 'Medewerker',
+    role: 'Rol',
+    date: 'Datum',
+    checkIn: 'Inchecken',
+    checkOut: 'Uitchecken',
+    duration: 'Duur',
+    status: 'Status',
+    complete: 'Voltooid',
+    inProgress: 'Bezig',
+    active: 'Actief'
+  },
+  tableTitles: {
+    recentAccounts: 'Recente accounts',
+    recentAccountsDesc: 'Zoek, filter en bekijk de nieuwste accounts.',
+    userDirectory: 'Gebruikersdirectory',
+    userDirectoryDesc: 'Accounts aanmaken, bijwerken of verwijderen.',
+    myEmployees: 'Mijn medewerkers',
+    myEmployeesDesc: 'Medewerkers binnen uw bereik. Zoek, filter en beheer.',
+    attendanceLogs: 'Aanwezigheidslogboeken',
+    attendanceLogsDesc: 'In- en uitchecktijden van medewerkers bewaken.',
+    myAttendance: 'Mijn aanwezigheid',
+    myAttendanceDesc: 'Uw persoonlijke in- en uitcheckgeschiedenis.',
+    managerEmployeeLeave: 'Verlof van managers en medewerkers',
+    managerEmployeeLeaveDesc: 'Zoek en bekijk alle verlofaanvragen zichtbaar voor de beheerder.',
+    teamLeaveRequests: 'Verlofaanvragen van het team',
+    teamLeaveRequestsDesc: 'Openstaande verlofaanvragen goedkeuren of afwijzen.',
+    noManagedUsers: 'Geen beheerde gebruikers',
+    noManagedUsersMsg: 'Maak het eerste account via het formulier.',
+    noEmployeesYet: 'Nog geen medewerkers',
+    noEmployeesYetMsg: 'Voeg uw eerste medewerker toe via de knop hierboven.',
+    noLeaveRequests: 'Nog geen verlofaanvragen',
+    noLeaveRequestsMsg: 'Verlofaanvragen van uw team verschijnen hier.',
+    noManagerEmployeeLeave: 'Geen verlofrecords',
+    noManagerEmployeeLeaveMsg: 'Zodra medewerkers aanvragen indienen, verschijnen ze hier.',
+    noUsersAvailable: 'Geen gebruikers beschikbaar',
+    noUsersAvailableMsg: 'Maak een manager of medewerker aan om te beginnen.'
   }
 };

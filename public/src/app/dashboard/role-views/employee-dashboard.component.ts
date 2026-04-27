@@ -9,9 +9,12 @@ import { AdminLeaveTableRow } from '../components/dashboard-leave-table.componen
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, NotifyUser, Holiday } from '../../services/leave.service';
 import { CalendarBase } from '../components/calendar-base';
-import { TranslateService, Language } from '../../i18n/translate.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
+import { TranslateService, Language } from '../../i18n/translate.service';
 import { ThemeService } from '../../services/theme.service';
+import { DashboardProfileComponent } from '../components/dashboard-profile.component';
+import { DashboardAttendanceTableComponent } from '../components/dashboard-attendance-table.component';
+import { AttendanceLogDto } from '../../services/auth.service';
 
 type EmpCalendarDay = {
   date: Date;
@@ -31,6 +34,8 @@ type EmpCalendarDay = {
     TitleCasePipe,
     DashboardStatCardsComponent,
     DashboardHistoryTableComponent,
+    DashboardProfileComponent,
+    DashboardAttendanceTableComponent,
     TranslatePipe
   ],
   templateUrl: './employee-dashboard.component.html',
@@ -50,6 +55,7 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
   @Input() myLeaves: AdminLeaveTableRow[] = [];
   @Input() notifyUsers: NotifyUser[] = [];
   @Input() holidays: Holiday[] = [];
+  @Input() myAttendanceLogs: AttendanceLogDto[] = [];
 
   @Output() openLeaveFormRequested = new EventEmitter<void>();
   @Output() leaveSubmitRequested = new EventEmitter<LeaveFormSubmitEvent>();

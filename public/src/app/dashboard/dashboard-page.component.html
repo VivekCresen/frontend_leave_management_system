@@ -41,6 +41,7 @@
             <i class="fas fa-unlock-keyhole"></i>
             <span>{{ 'menu.forgotPassword' | translate }}</span>
           </button>
+        
           <button type="button" class="profile-menu-item danger" (click)="logout()">
             <i class="fas fa-right-from-bracket"></i>
             <span>{{ 'menu.logout' | translate }}</span>
@@ -211,6 +212,7 @@
       [leaveTypeFieldErrors]="leaveTypeFieldErrors"
       [leaves]="leaves"
       [leaveTypes]="leaveTypes"
+      [attendanceLogs]="attendanceLogs"
       [holidays]="holidays"
       [isHolidaysLoading]="isHolidaysLoading"
       [pageId]="pageId"
@@ -247,6 +249,7 @@
       [managerLeaves]="managerLeaves"
       [myLeaves]="myLeaves"
       [holidays]="holidays"
+      [myAttendanceLogs]="myAttendanceLogs"
       [pageId]="pageId"
       [user]="user"
       (cancelEditRequested)="cancelEdit()"
@@ -260,6 +263,7 @@
       (leaveApproveRequested)="handleApproveLeave($event)"
       (leaveRejectRequested)="handleRejectLeave($event)"
       (leavePartialStatusRequested)="handlePartialLeaveStatus($event)"
+      (editProfileRequested)="openProfileEditor()"
       (editLeaveRequested)="handleEditLeave($event)"
       (deleteLeaveRequested)="handleDeleteLeave($event)"></app-manager-dashboard>
 
@@ -274,6 +278,7 @@
       [myLeaves]="myLeaves"
       [notifyUsers]="notifyUsers"
       [holidays]="holidays"
+      [myAttendanceLogs]="myAttendanceLogs"
       [pageId]="pageId"
       [user]="user"
       (openLeaveFormRequested)="openLeaveForm()"

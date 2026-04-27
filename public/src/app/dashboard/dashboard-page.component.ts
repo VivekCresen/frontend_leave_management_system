@@ -12,7 +12,8 @@ import {
   LoginResponse,
   ManagedUser,
   UserManagementPayload,
-  UserDashboardResponse
+  UserDashboardResponse,
+  AttendanceLogDto
 } from '../services/auth.service';
 import { CreateLeavePayload, LeaveApiErrorResponse, LeaveType, LeaveTypeSavePayload, UpdateLeaveStatusPayload, PartialLeaveStatusPayload, NotifyUser, Holiday, CreateHolidayPayload } from '../services/leave.service';
 import { ToastService } from '../services/toast.service';
@@ -66,6 +67,11 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   isProfileMenuOpen = false;
   isProfileModalOpen = false;
   isProfileSaving = false;
+  isCheckingOut = false;
+  attendanceLogs: AttendanceLogDto[] = [];
+  myAttendanceLogs: AttendanceLogDto[] = [];
+  private attendanceLoadedAt = 0;
+  private readonly ATTENDANCE_TTL_MS = 60_000; // 1 minute
   leaveTypes: LeaveType[] = [];
   leaves: AdminLeaveTableRow[] = [];
   isLeaveTypesLoading = false;
@@ -139,12 +145,17 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         prev?.active !== curr?.active;
       if (identityChanged) {
         this.dashboardCache.invalidate();
+        this.attendanceLoadedAt = 0; // invalidate attendance cache
         this.loadDashboard();
       }
     }
 
     if (changes['user'] && !this.isProfileModalOpen) {
       this.syncProfileModel();
+    }
+
+    if (changes['pageId'] && (this.pageId === 'profile' || this.pageId === 'reports' || this.pageId === 'attendance')) {
+      this.loadAttendanceLogs();
     }
   }
 
@@ -165,7 +176,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       calendar: 'pageHeaders.calendar',
       profile: 'pageHeaders.profile',
       requests: 'pageHeaders.requests',
-      history: 'pageHeaders.history'
+      history: 'pageHeaders.history',
+      attendance: 'pageHeaders.attendance'
     };
     return this.translateService.getTranslation(keys[this.pageId]);
   }
@@ -183,7 +195,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       calendar: 'pageHeaders.calendarDesc',
       profile: 'pageHeaders.profileDesc',
       requests: 'pageHeaders.requestsDesc',
-      history: 'pageHeaders.historyDesc'
+      history: 'pageHeaders.historyDesc',
+      attendance: 'pageHeaders.attendanceDesc'
     };
     return this.translateService.getTranslation(keys[this.pageId]);
   }
@@ -261,6 +274,23 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   openForgotPassword(): void {
     this.isProfileMenuOpen = false;
     this.router.navigate(['/forgot-password']);
+  }
+
+  checkOutWorkDay(): void {
+    if (this.isCheckingOut) return;
+    this.isCheckingOut = true;
+    this.authService.checkOut(this.user.username).subscribe({
+      next: () => {
+        this.isCheckingOut = false;
+        this.toastService.success('Checked out successfully!');
+        this.isProfileMenuOpen = false;
+      },
+      error: (err) => {
+        this.isCheckingOut = false;
+        const msg = err.error?.message || 'Unable to check out. You may not be checked in.';
+        this.toastService.error(msg);
+      }
+    });
   }
 
   logout(): void {
@@ -709,6 +739,28 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     return null;
   }
 
+  loadAttendanceLogs(force = false): void {
+    const now = Date.now();
+    const isFresh = (now - this.attendanceLoadedAt) < this.ATTENDANCE_TTL_MS;
+    const hasData = this.normalizedRole === 'ADMIN'
+      ? this.attendanceLogs.length > 0
+      : this.myAttendanceLogs.length > 0;
+
+    if (!force && isFresh && hasData) return;
+
+    if (this.normalizedRole === 'ADMIN') {
+      this.authService.getAllAttendanceLogs().subscribe({
+        next: (logs) => { this.attendanceLogs = logs; this.attendanceLoadedAt = Date.now(); },
+        error: () => { this.attendanceLogs = []; }
+      });
+    } else {
+      this.authService.getAttendanceLogsByUser(this.user.username).subscribe({
+        next: (logs) => { this.myAttendanceLogs = logs; this.attendanceLoadedAt = Date.now(); },
+        error: () => { this.myAttendanceLogs = []; }
+      });
+    }
+  }
+
   protected loadDashboard(silent = false): void {
     if (!silent) {
       this.isLoading = true;
@@ -725,12 +777,15 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         }
         if (this.normalizedRole === 'ADMIN') {
           this.loadLeaves(response, silent);
+          this.loadAttendanceLogs(true);
         }
         if (this.normalizedRole === 'MANAGER') {
           this.loadManagerLeaves(response, silent);
+          this.loadAttendanceLogs(true);
         }
         if (this.normalizedRole === 'EMPLOYEE') {
           this.loadMyLeaves(response, silent);
+          this.loadAttendanceLogs(true);
           this.leaveService.getNotifyUsers(this.user.username).subscribe({
             next: (users) => { this.notifyUsers = users; },
             error: () => { this.notifyUsers = []; }

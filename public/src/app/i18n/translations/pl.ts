@@ -272,6 +272,46 @@ export const TRANSLATIONS_PL = {
     requests: 'Wnioski urlopowe',
     requestsDesc: 'Obszar roboczy wniosków.',
     history: 'Historia',
-    historyDesc: 'Zobacz historię wniosków.'
+    historyDesc: 'Zobacz historię wniosków.',
+    attendance: 'Obecność',
+    attendanceDesc: 'Zobacz rekordy wejść i wyjść.'
+  },
+  attendanceTable: {
+    employee: 'Pracownik',
+    role: 'Rola',
+    date: 'Data',
+    checkIn: 'Wejście',
+    checkOut: 'Wyjście',
+    duration: 'Czas trwania',
+    status: 'Status',
+    complete: 'Zakończono',
+    inProgress: 'W toku',
+    active: 'Aktywny'
+  },
+  tableTitles: {
+    recentAccounts: 'Ostatnie konta',
+    recentAccountsDesc: 'Wyszukaj, filtruj i przeglądaj najnowsze konta.',
+    userDirectory: 'Katalog użytkowników',
+    userDirectoryDesc: 'Tworzenie, aktualizowanie lub usuwanie kont.',
+    myEmployees: 'Moi pracownicy',
+    myEmployeesDesc: 'Pracownicy w Twoim zakresie. Wyszukuj, filtruj i zarządzaj.',
+    attendanceLogs: 'Dzienniki obecności',
+    attendanceLogsDesc: 'Monitoruj rekordy wejść i wyjść pracowników.',
+    myAttendance: 'Moja obecność',
+    myAttendanceDesc: 'Twoja osobista historia wejść i wyjść.',
+    managerEmployeeLeave: 'Urlopy menedżerów i pracowników',
+    managerEmployeeLeaveDesc: 'Wyszukaj i przeglądaj wszystkie wnioski urlopowe widoczne dla administratora.',
+    teamLeaveRequests: 'Wnioski urlopowe zespołu',
+    teamLeaveRequestsDesc: 'Zatwierdź lub odrzuć oczekujące wnioski urlopowe.',
+    noManagedUsers: 'Brak zarządzanych użytkowników',
+    noManagedUsersMsg: 'Utwórz pierwsze konto z formularza.',
+    noEmployeesYet: 'Brak pracowników',
+    noEmployeesYetMsg: 'Dodaj pierwszego pracownika za pomocą przycisku powyżej.',
+    noLeaveRequests: 'Brak wniosków urlopowych',
+    noLeaveRequestsMsg: 'Wnioski Twojego zespołu pojawią się tutaj.',
+    noManagerEmployeeLeave: 'Brak rekordów urlopowych',
+    noManagerEmployeeLeaveMsg: 'Po złożeniu wniosków przez pracowników pojawią się tutaj.',
+    noUsersAvailable: 'Brak dostępnych użytkowników',
+    noUsersAvailableMsg: 'Utwórz menedżera lub pracownika, aby rozpocząć.'
   }
 };

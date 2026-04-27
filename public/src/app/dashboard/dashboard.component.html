@@ -53,7 +53,7 @@
           <i class="fas" [ngClass]="item.icon"></i>
         </span>
         <span class="menu-copy">
-          <strong>{{ 'sidebar.' + (item.path === 'users' ? 'userManagement' : item.path === 'leaves' ? 'leaveOperations' : item.path === 'team' ? 'teamMembers' : item.path === 'approvals' ? 'approvals' : item.path === 'reports' ? 'reports' : item.path === 'settings' ? 'settings' : item.path === 'calendar' && user.role === 'MANAGER' ? 'teamCalendar' : item.path === 'calendar' ? 'calendar' : item.path === 'history' && user.role === 'MANAGER' ? 'myLeaveHistory' : item.path === 'history' ? 'history' : item.path === 'profile' ? 'myProfile' : item.path === 'requests' ? 'leaveRequests' : 'overview') | translate }}</strong>
+          <strong>{{ 'sidebar.' + (item.path === 'users' ? 'userManagement' : item.path === 'leaves' ? 'leaveOperations' : item.path === 'team' ? 'teamMembers' : item.path === 'approvals' ? 'approvals' : item.path === 'reports' ? 'reports' : item.path === 'settings' ? 'settings' : item.path === 'calendar' && user.role === 'MANAGER' ? 'teamCalendar' : item.path === 'calendar' ? 'calendar' : item.path === 'history' && user.role === 'MANAGER' ? 'myLeaveHistory' : item.path === 'history' ? 'history' : item.path === 'profile' ? 'myProfile' : item.path === 'requests' ? 'leaveRequests' : item.path === 'attendance' ? 'attendance' : 'overview') | translate }}</strong>
         </span>
       </a>
     </nav>

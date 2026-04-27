@@ -7,6 +7,24 @@
 
   <ng-container [ngSwitch]="pageId">
 
+    <!-- PROFILE -->
+    <section *ngSwitchCase="'profile'" class="panel-grid">
+      <app-dashboard-profile 
+        [user]="user" 
+        [actor]="dashboard?.actor ?? null"
+        (editProfileRequested)="editProfileRequested.emit()">
+      </app-dashboard-profile>
+    </section>
+
+    <!-- ATTENDANCE -->
+    <section *ngSwitchCase="'attendance'" class="panel-grid">
+      <app-dashboard-attendance-table
+        [logs]="myAttendanceLogs"
+        [title]="'tableTitles.myAttendance' | translate"
+        [description]="'tableTitles.myAttendanceDesc' | translate"
+      ></app-dashboard-attendance-table>
+    </section>
+
     <!-- TEAM MANAGEMENT -->
     <section *ngSwitchCase="'team'" class="management-grid">
       <div class="management-toolbar">
@@ -22,10 +40,10 @@
 
       <app-dashboard-user-table
         [users]="dashboard?.users ?? []"
-        title="My employees"
-        description="Employees within your scope. Search, filter, and manage their accounts."
-        emptyTitle="No employees yet"
-        emptyMessage="Add your first employee using the button above."
+        [title]="'tableTitles.myEmployees' | translate"
+        [description]="'tableTitles.myEmployeesDesc' | translate"
+        [emptyTitle]="'tableTitles.noEmployeesYet' | translate"
+        [emptyMessage]="'tableTitles.noEmployeesYetMsg' | translate"
         [showTableTools]="true"
         [useAgGrid]="true"
         [compactCard]="true"
@@ -79,10 +97,10 @@
 
       <app-dashboard-leave-table
         [leaves]="managerLeaves"
-        title="Team leave requests"
-        description="Approve or reject pending leave requests from your employees."
-        emptyTitle="No leave requests yet"
-        emptyMessage="Leave requests from your team will appear here."
+        [title]="'tableTitles.teamLeaveRequests' | translate"
+        [description]="'tableTitles.teamLeaveRequestsDesc' | translate"
+        [emptyTitle]="'tableTitles.noLeaveRequests' | translate"
+        [emptyMessage]="'tableTitles.noLeaveRequestsMsg' | translate"
         [compactView]="true"
         [showActions]="true"
         [viewerRole]="'MANAGER'"

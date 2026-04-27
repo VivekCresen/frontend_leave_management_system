@@ -272,6 +272,46 @@ export const TRANSLATIONS_PT = {
     requests: 'Solicitações de licença',
     requestsDesc: 'Espaço de trabalho de solicitações.',
     history: 'Histórico',
-    historyDesc: 'Ver histórico de solicitações.'
+    historyDesc: 'Ver histórico de solicitações.',
+    attendance: 'Presença',
+    attendanceDesc: 'Ver registros de entrada e saída.'
+  },
+  attendanceTable: {
+    employee: 'Funcionário',
+    role: 'Função',
+    date: 'Data',
+    checkIn: 'Entrada',
+    checkOut: 'Saída',
+    duration: 'Duração',
+    status: 'Status',
+    complete: 'Concluído',
+    inProgress: 'Em andamento',
+    active: 'Ativo'
+  },
+  tableTitles: {
+    recentAccounts: 'Contas recentes',
+    recentAccountsDesc: 'Pesquise, filtre e revise as contas mais recentes.',
+    userDirectory: 'Diretório de usuários',
+    userDirectoryDesc: 'Criar, atualizar ou remover contas.',
+    myEmployees: 'Meus funcionários',
+    myEmployeesDesc: 'Funcionários no seu escopo. Pesquise, filtre e gerencie.',
+    attendanceLogs: 'Registros de presença',
+    attendanceLogsDesc: 'Monitorar registros de entrada e saída dos funcionários.',
+    myAttendance: 'Minha presença',
+    myAttendanceDesc: 'Seu histórico pessoal de entradas e saídas.',
+    managerEmployeeLeave: 'Licenças de gerentes e funcionários',
+    managerEmployeeLeaveDesc: 'Pesquise e revise todas as solicitações de licença visíveis ao administrador.',
+    teamLeaveRequests: 'Solicitações de licença da equipe',
+    teamLeaveRequestsDesc: 'Aprovar ou rejeitar solicitações de licença pendentes.',
+    noManagedUsers: 'Nenhum usuário gerenciado',
+    noManagedUsersMsg: 'Crie a primeira conta pelo formulário.',
+    noEmployeesYet: 'Nenhum funcionário ainda',
+    noEmployeesYetMsg: 'Adicione seu primeiro funcionário usando o botão acima.',
+    noLeaveRequests: 'Nenhuma solicitação de licença ainda',
+    noLeaveRequestsMsg: 'As solicitações da sua equipe aparecerão aqui.',
+    noManagerEmployeeLeave: 'Nenhum registro de licença',
+    noManagerEmployeeLeaveMsg: 'Assim que a equipe enviar solicitações, elas aparecerão aqui.',
+    noUsersAvailable: 'Nenhum usuário disponível',
+    noUsersAvailableMsg: 'Crie um gerente ou funcionário para começar.'
   }
 };

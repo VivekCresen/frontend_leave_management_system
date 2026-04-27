@@ -7,6 +7,7 @@ import {
   EventEmitter,
   Input,
   OnChanges,
+  OnDestroy,
   OnInit,
   Output,
   PLATFORM_ID,
@@ -92,11 +93,12 @@ const leaveGridTheme = themeQuartz.withParams({
   templateUrl: './dashboard-leave-table.component.html',
   styleUrls: ['./dashboard-leave-table.component.css']
 })
-export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnChanges {
+export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly translate = inject(TranslateService);
   private gridApi: GridApi<AdminLeaveTableRow> | null = null;
+  private static readonly PROGRESS_STORAGE_KEY = 'leave_table_progress_leave_id';
 
   @Input() leaves: AdminLeaveTableRow[] = [];
   @Input() title = 'Team leave records';
@@ -137,7 +139,23 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   gridMounted = false;
   readonly agTheme = leaveGridTheme;
   popupLeave: AdminLeaveTableRow | null = null;
-  progressLeave: AdminLeaveTableRow | null = null;
+
+  private _progressLeave: AdminLeaveTableRow | null = null;
+
+  get progressLeave(): AdminLeaveTableRow | null {
+    return this._progressLeave;
+  }
+
+  set progressLeave(value: AdminLeaveTableRow | null) {
+    this._progressLeave = value;
+    if (isPlatformBrowser(this.platformId)) {
+      if (value) {
+        localStorage.setItem(DashboardLeaveTableComponent.PROGRESS_STORAGE_KEY, String(value.id));
+      } else {
+        localStorage.removeItem(DashboardLeaveTableComponent.PROGRESS_STORAGE_KEY);
+      }
+    }
+  }
 
   constructor() {
     effect(() => {
@@ -362,6 +380,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   ngOnInit(): void {
     if (this.initialRole) this.selectedRole = this.initialRole;
     this.selectedStatus = this.resolvedInitialStatus;
+    this.restoreProgressLeave();
   }
 
   ngAfterViewInit(): void {
@@ -384,10 +403,30 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
     if (changes['leaves'] && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.agRowData);
     }
+
+    // Restore progress leave when leaves data becomes available
+    if (changes['leaves'] && this.leaves.length > 0 && !this._progressLeave) {
+      this.restoreProgressLeave();
+    }
   }
 
   onGridReady(event: GridReadyEvent<AdminLeaveTableRow>): void {
     this.gridApi = event.api;
+  }
+
+  ngOnDestroy(): void {
+    // Don't clear localStorage on destroy — we want it to persist across navigation
+  }
+
+  private restoreProgressLeave(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const savedId = localStorage.getItem(DashboardLeaveTableComponent.PROGRESS_STORAGE_KEY);
+    if (!savedId || !this.leaves.length) return;
+    const id = Number(savedId);
+    const found = this.leaves.find(l => l.id === id) ?? null;
+    if (found) {
+      this._progressLeave = found;
+    }
   }
 
   onAgFilterChange(): void {

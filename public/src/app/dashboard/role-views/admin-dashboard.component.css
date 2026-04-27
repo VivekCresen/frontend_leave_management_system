@@ -96,7 +96,8 @@
 }
 
 .panel-grid app-dashboard-user-table,
-.overview-panel app-dashboard-user-table {
+.overview-panel app-dashboard-user-table,
+.panel-grid app-dashboard-attendance-table {
   grid-column: 1 / -1;
 }
 
@@ -970,4 +971,113 @@
 .import-modal-body {
   padding: 1.25rem 1.5rem 1.5rem;
   overflow-y: auto;
+}
+
+/* ── Settings page ── */
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 680px;
+}
+
+.settings-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 20px;
+  background: var(--surface-bg, #fff);
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 1px 4px rgba(15,23,42,0.06), 0 12px 40px -20px rgba(15,23,42,0.14);
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--surface-border, rgba(226, 232, 240, 0.85));
+}
+
+.settings-card-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 10px;
+  background: rgba(15, 139, 141, 0.1);
+  color: #0f8b8d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.settings-eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--app-teal, #0f8b8d);
+}
+
+.settings-card-header h3 {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--surface-heading, #0f172a);
+}
+
+.settings-card-header p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--surface-body, #64748b);
+  line-height: 1.5;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--surface-body, #64748b);
+}
+
+.settings-dropdown .custom-dropdown-trigger {
+  min-height: 42px;
+  border: 1.5px solid var(--field-input-border, rgba(148, 163, 184, 0.35));
+  border-radius: 10px;
+  background: var(--field-input-bg, #f8fafc);
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--field-input-text, #0f172a);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.settings-dropdown .custom-dropdown-trigger:hover {
+  border-color: rgba(15, 139, 141, 0.5);
+  box-shadow: 0 0 0 3px rgba(15, 139, 141, 0.08);
+}
+
+[data-theme="dark"] .settings-card {
+  background: var(--surface-bg);
+  border-color: var(--surface-border);
+  box-shadow: var(--surface-shadow);
+}
+[data-theme="dark"] .settings-card-header { border-bottom-color: var(--surface-border); }
+[data-theme="dark"] .settings-card-header h3 { color: var(--surface-heading); }
+[data-theme="dark"] .settings-card-header p { color: var(--surface-body); }
+[data-theme="dark"] .settings-dropdown .custom-dropdown-trigger {
+  background: var(--field-input-bg);
+  border-color: var(--field-input-border);
+  color: var(--field-input-text);
 }

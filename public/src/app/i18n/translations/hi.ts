@@ -268,6 +268,46 @@ export const TRANSLATIONS_HI = {
     requests: 'अवकाश अनुरोध',
     requestsDesc: 'अनुरोध कार्यक्षेत्र।',
     history: 'इतिहास',
-    historyDesc: 'अनुरोध इतिहास देखें।'
+    historyDesc: 'अनुरोध इतिहास देखें।',
+    attendance: 'उपस्थिति',
+    attendanceDesc: 'चेक-इन और चेक-आउट रिकॉर्ड देखें।'
+  },
+  attendanceTable: {
+    employee: 'कर्मचारी',
+    role: 'भूमिका',
+    date: 'तारीख',
+    checkIn: 'चेक-इन',
+    checkOut: 'चेक-आउट',
+    duration: 'अवधि',
+    status: 'स्थिति',
+    complete: 'पूर्ण',
+    inProgress: 'प्रगति में',
+    active: 'सक्रिय'
+  },
+  tableTitles: {
+    recentAccounts: 'हाल के खाते',
+    recentAccountsDesc: 'इस अवलोकन से नवीनतम खातों को खोजें, फ़िल्टर करें और समीक्षा करें।',
+    userDirectory: 'उपयोगकर्ता निर्देशिका',
+    userDirectoryDesc: 'खाते बनाएं, अपडेट करें या हटाएं।',
+    myEmployees: 'मेरे कर्मचारी',
+    myEmployeesDesc: 'आपके दायरे में कर्मचारी। खोजें, फ़िल्टर करें और प्रबंधित करें।',
+    attendanceLogs: 'उपस्थिति लॉग',
+    attendanceLogsDesc: 'कर्मचारियों के चेक-इन और चेक-आउट रिकॉर्ड की निगरानी करें।',
+    myAttendance: 'मेरी उपस्थिति',
+    myAttendanceDesc: 'आपका व्यक्तिगत चेक-इन और चेक-आउट इतिहास।',
+    managerEmployeeLeave: 'प्रबंधकों और कर्मचारियों के अवकाश रिकॉर्ड',
+    managerEmployeeLeaveDesc: 'व्यवस्थापक को दिखाई देने वाले सभी अवकाश अनुरोधों को खोजें और समीक्षा करें।',
+    teamLeaveRequests: 'टीम अवकाश अनुरोध',
+    teamLeaveRequestsDesc: 'अपने कर्मचारियों के लंबित अवकाश अनुरोधों को स्वीकृत या अस्वीकार करें।',
+    noManagedUsers: 'कोई प्रबंधित उपयोगकर्ता नहीं',
+    noManagedUsersMsg: 'फ़ॉर्म से पहला खाता बनाएं।',
+    noEmployeesYet: 'अभी तक कोई कर्मचारी नहीं',
+    noEmployeesYetMsg: 'ऊपर दिए बटन का उपयोग करके अपना पहला कर्मचारी जोड़ें।',
+    noLeaveRequests: 'अभी तक कोई अवकाश अनुरोध नहीं',
+    noLeaveRequestsMsg: 'आपकी टीम के अवकाश अनुरोध यहाँ दिखाई देंगे।',
+    noManagerEmployeeLeave: 'कोई अवकाश रिकॉर्ड नहीं',
+    noManagerEmployeeLeaveMsg: 'एक बार कर्मचारी अनुरोध सबमिट करें, वे यहाँ दिखाई देंगे।',
+    noUsersAvailable: 'कोई उपयोगकर्ता उपलब्ध नहीं',
+    noUsersAvailableMsg: 'शुरू करने के लिए एक प्रबंधक या कर्मचारी बनाएं।'
   }
 };

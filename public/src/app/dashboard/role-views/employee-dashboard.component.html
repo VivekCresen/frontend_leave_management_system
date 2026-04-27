@@ -7,66 +7,22 @@
   <ng-container [ngSwitch]="pageId">
 
     <!-- PROFILE -->
+    <!-- PROFILE -->
     <section *ngSwitchCase="'profile'" class="panel-grid">
-      <article class="surface surface-full">
+      <app-dashboard-profile 
+        [user]="user" 
+        [actor]="dashboard?.actor ?? null"
+        (editProfileRequested)="editProfileRequested.emit()">
+      </app-dashboard-profile>
+    </section>
 
-        <div class="profile-card-header">
-          <div>
-            <p class="eyebrow">My Profile</p>
-            <h3>Account details</h3>
-            <p class="body-copy">Your personal information and account settings.</p>
-          </div>
-          <button type="button" class="edit-profile-btn" (click)="editProfileRequested.emit()">
-            <i class="fas fa-user-pen"></i>
-            <span>Edit profile</span>
-          </button>
-        </div>
-
-        <div class="profile-banner">
-          <div class="profile-banner-avatar">{{ profileInitials }}</div>
-          <div class="profile-banner-info">
-            <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
-            <span>{{ user.email }}</span>
-            <div class="profile-banner-badges">
-              <span class="profile-role-badge">{{ dashboard?.actor?.role || user.role }}</span>
-              <span class="profile-status-badge"
-                [class.active-badge]="user.active"
-                [class.inactive-badge]="!user.active">
-                <i class="fas fa-circle"></i>
-                {{ user.active ? 'Active' : 'Inactive' }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="profile-grid">
-          <div class="profile-field-card">
-            <span>Full name</span>
-            <strong>{{ dashboard?.actor?.fullName || user.username }}</strong>
-          </div>
-          <div class="profile-field-card">
-            <span>Username</span>
-            <strong>{{ user.username }}</strong>
-          </div>
-          <div class="profile-field-card">
-            <span>Email</span>
-            <strong>{{ user.email }}</strong>
-          </div>
-          <div class="profile-field-card">
-            <span>Company ID</span>
-            <strong>{{ dashboard?.actor?.companyId || 'Not assigned' }}</strong>
-          </div>
-          <div class="profile-field-card">
-            <span>Gender</span>
-            <strong>{{ dashboard?.actor?.gender || 'Not provided' }}</strong>
-          </div>
-          <div class="profile-field-card">
-            <span>Assigned manager</span>
-            <strong>{{ dashboard?.actor?.createdBy || 'System' }}</strong>
-          </div>
-        </div>
-
-      </article>
+    <!-- ATTENDANCE -->
+    <section *ngSwitchCase="'attendance'" class="panel-grid">
+      <app-dashboard-attendance-table
+        [logs]="myAttendanceLogs"
+        [title]="'tableTitles.myAttendance' | translate"
+        [description]="'tableTitles.myAttendanceDesc' | translate"
+      ></app-dashboard-attendance-table>
     </section>
 
     <!-- LEAVE REQUESTS -->

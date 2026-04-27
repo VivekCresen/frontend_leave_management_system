@@ -272,6 +272,46 @@ export const TRANSLATIONS_TH = {
     requests: 'คำขอลา',
     requestsDesc: 'พื้นที่ทำงานคำขอ',
     history: 'ประวัติ',
-    historyDesc: 'ดูประวัติคำขอ'
+    historyDesc: 'ดูประวัติคำขอ',
+    attendance: 'การเข้างาน',
+    attendanceDesc: 'ดูบันทึกการเข้าและออกงาน'
+  },
+  attendanceTable: {
+    employee: 'พนักงาน',
+    role: 'บทบาท',
+    date: 'วันที่',
+    checkIn: 'เข้างาน',
+    checkOut: 'ออกงาน',
+    duration: 'ระยะเวลา',
+    status: 'สถานะ',
+    complete: 'เสร็จสิ้น',
+    inProgress: 'กำลังดำเนินการ',
+    active: 'ใช้งานอยู่'
+  },
+  tableTitles: {
+    recentAccounts: 'บัญชีล่าสุด',
+    recentAccountsDesc: 'ค้นหา กรอง และตรวจสอบบัญชีล่าสุด',
+    userDirectory: 'ไดเรกทอรีผู้ใช้',
+    userDirectoryDesc: 'สร้าง อัปเดต หรือลบบัญชี',
+    myEmployees: 'พนักงานของฉัน',
+    myEmployeesDesc: 'พนักงานในขอบเขตของคุณ ค้นหา กรอง และจัดการ',
+    attendanceLogs: 'บันทึกการเข้างาน',
+    attendanceLogsDesc: 'ติดตามบันทึกการเข้าและออกงานของพนักงาน',
+    myAttendance: 'การเข้างานของฉัน',
+    myAttendanceDesc: 'ประวัติการเข้าและออกงานส่วนตัวของคุณ',
+    managerEmployeeLeave: 'บันทึกการลาของผู้จัดการและพนักงาน',
+    managerEmployeeLeaveDesc: 'ค้นหาและตรวจสอบคำขอลาทั้งหมดที่ผู้ดูแลระบบมองเห็น',
+    teamLeaveRequests: 'คำขอลาของทีม',
+    teamLeaveRequestsDesc: 'อนุมัติหรือปฏิเสธคำขอลาที่รอดำเนินการ',
+    noManagedUsers: 'ไม่มีผู้ใช้ที่จัดการ',
+    noManagedUsersMsg: 'สร้างบัญชีแรกจากแบบฟอร์ม',
+    noEmployeesYet: 'ยังไม่มีพนักงาน',
+    noEmployeesYetMsg: 'เพิ่มพนักงานคนแรกโดยใช้ปุ่มด้านบน',
+    noLeaveRequests: 'ยังไม่มีคำขอลา',
+    noLeaveRequestsMsg: 'คำขอลาของทีมจะปรากฏที่นี่',
+    noManagerEmployeeLeave: 'ไม่มีบันทึกการลา',
+    noManagerEmployeeLeaveMsg: 'เมื่อพนักงานส่งคำขอ จะปรากฏที่นี่',
+    noUsersAvailable: 'ไม่มีผู้ใช้ที่พร้อมใช้งาน',
+    noUsersAvailableMsg: 'สร้างผู้จัดการหรือพนักงานเพื่อเริ่มต้น'
   }
 };

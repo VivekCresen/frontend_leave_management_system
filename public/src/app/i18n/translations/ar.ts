@@ -268,6 +268,46 @@ export const TRANSLATIONS_AR = {
     requests: 'طلبات الإجازة',
     requestsDesc: 'مساحة عمل الطلبات.',
     history: 'السجل',
-    historyDesc: 'عرض سجل الطلبات.'
+    historyDesc: 'عرض سجل الطلبات.',
+    attendance: 'الحضور',
+    attendanceDesc: 'عرض سجلات تسجيل الدخول والخروج.'
+  },
+  attendanceTable: {
+    employee: 'الموظف',
+    role: 'الدور',
+    date: 'التاريخ',
+    checkIn: 'تسجيل الدخول',
+    checkOut: 'تسجيل الخروج',
+    duration: 'المدة',
+    status: 'الحالة',
+    complete: 'مكتمل',
+    inProgress: 'قيد التنفيذ',
+    active: 'نشط'
+  },
+  tableTitles: {
+    recentAccounts: 'الحسابات الأخيرة',
+    recentAccountsDesc: 'ابحث وصفّ وراجع أحدث الحسابات.',
+    userDirectory: 'دليل المستخدمين',
+    userDirectoryDesc: 'إنشاء الحسابات أو تحديثها أو حذفها.',
+    myEmployees: 'موظفوي',
+    myEmployeesDesc: 'الموظفون ضمن نطاقك. ابحث وصفّ وأدر حساباتهم.',
+    attendanceLogs: 'سجلات الحضور',
+    attendanceLogsDesc: 'مراقبة سجلات تسجيل الدخول والخروج للموظفين.',
+    myAttendance: 'حضوري',
+    myAttendanceDesc: 'سجل تسجيل الدخول والخروج الشخصي.',
+    managerEmployeeLeave: 'إجازات المديرين والموظفين',
+    managerEmployeeLeaveDesc: 'ابحث وصفّ وراجع جميع طلبات الإجازة المرئية للمسؤول.',
+    teamLeaveRequests: 'طلبات إجازة الفريق',
+    teamLeaveRequestsDesc: 'الموافقة على طلبات الإجازة المعلقة أو رفضها.',
+    noManagedUsers: 'لا يوجد مستخدمون مُدارون',
+    noManagedUsersMsg: 'أنشئ الحساب الأول من النموذج.',
+    noEmployeesYet: 'لا يوجد موظفون بعد',
+    noEmployeesYetMsg: 'أضف موظفك الأول باستخدام الزر أعلاه.',
+    noLeaveRequests: 'لا توجد طلبات إجازة بعد',
+    noLeaveRequestsMsg: 'ستظهر طلبات إجازة فريقك هنا.',
+    noManagerEmployeeLeave: 'لا توجد سجلات إجازة',
+    noManagerEmployeeLeaveMsg: 'بمجرد تقديم الموظفين لطلباتهم، ستظهر هنا.',
+    noUsersAvailable: 'لا يوجد مستخدمون متاحون',
+    noUsersAvailableMsg: 'أنشئ مديراً أو موظفاً للبدء.'
   }
 };

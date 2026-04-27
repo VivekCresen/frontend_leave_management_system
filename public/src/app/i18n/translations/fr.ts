@@ -272,6 +272,46 @@ export const TRANSLATIONS_FR = {
     requests: 'Demandes de Congés',
     requestsDesc: 'Espace de travail des demandes.',
     history: 'Historique',
-    historyDesc: 'Voir l\'historique des demandes.'
+    historyDesc: 'Voir l\'historique des demandes.',
+    attendance: 'Présence',
+    attendanceDesc: 'Voir les enregistrements d\'entrée et de sortie.'
+  },
+  attendanceTable: {
+    employee: 'Employé',
+    role: 'Rôle',
+    date: 'Date',
+    checkIn: 'Entrée',
+    checkOut: 'Sortie',
+    duration: 'Durée',
+    status: 'Statut',
+    complete: 'Terminé',
+    inProgress: 'En cours',
+    active: 'Actif'
+  },
+  tableTitles: {
+    recentAccounts: 'Comptes récents',
+    recentAccountsDesc: 'Recherchez, filtrez et examinez les comptes les plus récents.',
+    userDirectory: 'Répertoire des utilisateurs',
+    userDirectoryDesc: 'Créer, mettre à jour ou supprimer des comptes.',
+    myEmployees: 'Mes employés',
+    myEmployeesDesc: 'Employés dans votre périmètre. Recherchez, filtrez et gérez leurs comptes.',
+    attendanceLogs: 'Journaux de présence',
+    attendanceLogsDesc: 'Surveiller les enregistrements d\'entrée et de sortie des employés.',
+    myAttendance: 'Ma présence',
+    myAttendanceDesc: 'Votre historique personnel d\'entrées et de sorties.',
+    managerEmployeeLeave: 'Congés des responsables et employés',
+    managerEmployeeLeaveDesc: 'Recherchez, filtrez et examinez toutes les demandes de congé visibles par l\'administrateur.',
+    teamLeaveRequests: 'Demandes de congé de l\'équipe',
+    teamLeaveRequestsDesc: 'Approuver ou rejeter les demandes de congé en attente de vos employés.',
+    noManagedUsers: 'Aucun utilisateur géré',
+    noManagedUsersMsg: 'Créez le premier compte depuis le formulaire.',
+    noEmployeesYet: 'Aucun employé pour l\'instant',
+    noEmployeesYetMsg: 'Ajoutez votre premier employé en utilisant le bouton ci-dessus.',
+    noLeaveRequests: 'Aucune demande de congé pour l\'instant',
+    noLeaveRequestsMsg: 'Les demandes de congé de votre équipe apparaîtront ici.',
+    noManagerEmployeeLeave: 'Aucun congé de responsable ou d\'employé',
+    noManagerEmployeeLeaveMsg: 'Une fois que le personnel soumet des demandes, elles apparaîtront ici.',
+    noUsersAvailable: 'Aucun utilisateur disponible',
+    noUsersAvailableMsg: 'Créez un responsable ou un employé pour commencer.'
   }
 };

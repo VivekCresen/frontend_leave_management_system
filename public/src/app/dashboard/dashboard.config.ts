@@ -14,7 +14,8 @@ export type DashboardPageId =
   | 'calendar'
   | 'profile'
   | 'requests'
-  | 'history';
+  | 'history'
+  | 'attendance';
 
 export type DashboardMenuItem = {
   path: DashboardPageId;
@@ -58,6 +59,8 @@ const DASHBOARD_MENUS: Record<DashboardRole, DashboardMenuItem[]> = {
     { path: 'team', label: 'Team Members', icon: 'fa-user-group' },
     { path: 'approvals', label: 'Approvals', icon: 'fa-circle-check' },
     { path: 'calendar', label: 'Team Calendar', icon: 'fa-calendar-days' },
+    { path: 'profile', label: 'My Profile', icon: 'fa-id-card' },
+    { path: 'attendance', label: 'Attendance', icon: 'fa-clock' },
     { path: 'history', label: 'My Leave History', icon: 'fa-clock-rotate-left' },
     { path: 'reports', label: 'Reports', icon: 'fa-chart-line' },
     { path: 'settings', label: 'Settings', icon: 'fa-sliders' }
@@ -66,6 +69,7 @@ const DASHBOARD_MENUS: Record<DashboardRole, DashboardMenuItem[]> = {
     { path: 'overview', label: 'Overview', icon: 'fa-house' },
     { path: 'profile', label: 'My Profile', icon: 'fa-id-card' },
     { path: 'requests', label: 'Leave Requests', icon: 'fa-paper-plane'},
+    { path: 'attendance', label: 'Attendance', icon: 'fa-clock' },
     { path: 'history', label: 'History', icon: 'fa-clock-rotate-left' },
     { path: 'calendar', label: 'Calendar', icon: 'fa-calendar' },
     { path: 'settings', label: 'Settings', icon: 'fa-sliders' }
@@ -246,7 +250,8 @@ function getAdminView(user: LoginResponse, pageId: DashboardPageId): DashboardVi
     calendar: buildUnavailableView('Calendar', 'The admin workspace uses leave operations instead of the shared calendar route.'),
     profile: buildUnavailableView('My Profile', 'This section belongs to the employee workspace.'),
     requests: buildUnavailableView('Leave Requests', 'This section belongs to the employee workspace.'),
-    history: buildUnavailableView('History', 'This section belongs to the employee workspace.')
+    history: buildUnavailableView('History', 'This section belongs to the employee workspace.'),
+    attendance: { eyebrow: 'Attendance', title: 'Attendance logs', description: 'Monitor employee check-in and check-out records across the organization.', metrics: [], focusTitle: '', focusItems: [], workTitle: '', workItems: [] }
   };
 
   return views[pageId];
@@ -368,8 +373,30 @@ function getManagerView(user: LoginResponse, pageId: DashboardPageId): Dashboard
     roles: buildUnavailableView('Roles And Access', 'This section belongs to the admin workspace.'),
     leaves: buildUnavailableView('Leave Operations', 'This section belongs to the admin workspace.'),
     settings: buildUnavailableView('Settings', 'This section belongs to the admin workspace.'),
-    profile: buildUnavailableView('My Profile', 'This section belongs to the employee workspace.'),
     requests: buildUnavailableView('Leave Requests', 'This section belongs to the employee workspace.'),
+    attendance: { eyebrow: 'Attendance', title: 'My Attendance', description: 'Your personal check-in and check-out history.', metrics: [], focusTitle: '', focusItems: [], workTitle: '', workItems: [] },
+    profile: {
+      eyebrow: 'My Profile',
+      title: 'Account details',
+      description: 'Use your profile area to keep personal information and login details accurate.',
+      metrics: [
+        { label: 'Profile owner', value: user.username, note: 'This profile belongs to your signed-in account' },
+        { label: 'Email record', value: user.email, note: 'Keep it current for alerts' },
+        { label: 'Security action', value: 'Password update', note: 'Available any time from the sidebar' }
+      ],
+      focusTitle: 'Profile upkeep',
+      focusItems: [
+        'Review your email and account information so approval updates reach you without delay.',
+        'Use strong password practices and update credentials whenever needed.',
+        'Raise profile mismatches early so access or notification issues do not block requests.'
+      ],
+      workTitle: 'Profile actions',
+      workItems: [
+        { label: 'Personal details', detail: 'Confirm the account information shown in the system is correct.', status: 'Check' },
+        { label: 'Password hygiene', detail: 'Rotate your password if you suspect old or weak credentials.', status: 'Available' },
+        { label: 'Support follow-up', detail: 'Contact an admin if core account details need correction.', status: 'As needed' }
+      ]
+    },
     history: {
       eyebrow: 'My Leave History',
       title: 'Your leave records',
@@ -515,7 +542,8 @@ function getEmployeeView(user: LoginResponse, pageId: DashboardPageId): Dashboar
     reports: buildUnavailableView('Reports', 'This section belongs to the admin or manager workspace.'),
     settings: buildUnavailableView('Settings', 'This section belongs to the admin workspace.'),
     team: buildUnavailableView('Team Members', 'This section belongs to the manager workspace.'),
-    approvals: buildUnavailableView('Approvals', 'This section belongs to the manager workspace.')
+    approvals: buildUnavailableView('Approvals', 'This section belongs to the manager workspace.'),
+    attendance: { eyebrow: 'Attendance', title: 'My Attendance', description: 'Your personal check-in and check-out history.', metrics: [], focusTitle: '', focusItems: [], workTitle: '', workItems: [] }
   };
 
   return views[pageId];

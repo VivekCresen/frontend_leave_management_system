@@ -268,6 +268,46 @@ export const TRANSLATIONS_RU = {
     requests: 'Заявки на отпуск',
     requestsDesc: 'Рабочее пространство заявок.',
     history: 'История',
-    historyDesc: 'Просмотр истории заявок.'
+    historyDesc: 'Просмотр истории заявок.',
+    attendance: 'Посещаемость',
+    attendanceDesc: 'Просмотр записей входа и выхода.'
+  },
+  attendanceTable: {
+    employee: 'Сотрудник',
+    role: 'Роль',
+    date: 'Дата',
+    checkIn: 'Приход',
+    checkOut: 'Уход',
+    duration: 'Продолжительность',
+    status: 'Статус',
+    complete: 'Завершено',
+    inProgress: 'В процессе',
+    active: 'Активен'
+  },
+  tableTitles: {
+    recentAccounts: 'Последние аккаунты',
+    recentAccountsDesc: 'Поиск, фильтрация и просмотр последних аккаунтов.',
+    userDirectory: 'Каталог пользователей',
+    userDirectoryDesc: 'Создание, обновление или удаление аккаунтов.',
+    myEmployees: 'Мои сотрудники',
+    myEmployeesDesc: 'Сотрудники в вашей зоне ответственности.',
+    attendanceLogs: 'Журнал посещаемости',
+    attendanceLogsDesc: 'Мониторинг записей прихода и ухода сотрудников.',
+    myAttendance: 'Моя посещаемость',
+    myAttendanceDesc: 'Ваша личная история прихода и ухода.',
+    managerEmployeeLeave: 'Отпуска менеджеров и сотрудников',
+    managerEmployeeLeaveDesc: 'Поиск, фильтрация и просмотр всех заявок на отпуск.',
+    teamLeaveRequests: 'Заявки на отпуск команды',
+    teamLeaveRequestsDesc: 'Одобрение или отклонение ожидающих заявок на отпуск.',
+    noManagedUsers: 'Нет управляемых пользователей',
+    noManagedUsersMsg: 'Создайте первый аккаунт из формы.',
+    noEmployeesYet: 'Пока нет сотрудников',
+    noEmployeesYetMsg: 'Добавьте первого сотрудника с помощью кнопки выше.',
+    noLeaveRequests: 'Пока нет заявок на отпуск',
+    noLeaveRequestsMsg: 'Заявки вашей команды появятся здесь.',
+    noManagerEmployeeLeave: 'Нет записей об отпусках',
+    noManagerEmployeeLeaveMsg: 'После подачи заявок они появятся здесь.',
+    noUsersAvailable: 'Нет доступных пользователей',
+    noUsersAvailableMsg: 'Создайте менеджера или сотрудника для начала.'
   }
 };
