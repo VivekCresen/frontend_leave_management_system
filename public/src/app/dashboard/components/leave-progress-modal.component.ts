@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { AdminLeaveTableRow } from './dashboard-leave-table.component';
+import { LeaveAuditCacheService } from '../../services/leave-audit-cache.service';
 
 type LeaveAuditTrailEntry = {
   event: string;
@@ -42,9 +43,17 @@ type ReviewStageView = {
   templateUrl: './leave-progress-modal.component.html',
   styleUrls: ['./leave-progress-modal.component.css']
 })
-export class LeaveProgressModalComponent {
+export class LeaveProgressModalComponent implements OnInit {
   @Input({ required: true }) leave!: AdminLeaveTableRow;
   @Output() closed = new EventEmitter<void>();
+
+  constructor(private readonly auditCache: LeaveAuditCacheService) {}
+
+  ngOnInit(): void {
+    if (this.leave?.id && this.leave.trail) {
+      this.auditCache.addLeaveToCache(this.leave.id);
+    }
+  }
 
   get workflowEntries(): WorkflowEntryView[] {
     const rawTrail = this.getTrailSource();

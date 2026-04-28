@@ -2,7 +2,7 @@ import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { from } from 'rxjs';
+import { from, retry, timer } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
 import { AuthApiService } from '../services/auth-api.service';
 import { LeaveApiService } from '../services/leave-api.service';
@@ -27,6 +27,7 @@ import { ManagerDashboardComponent } from './role-views/manager-dashboard.compon
 import { DashboardUserSubmitEvent } from './components/dashboard-user-form.component';
 import { AdminLeaveTableRow } from './components/dashboard-leave-table.component';
 import { DashboardLeaveFormComponent, LeaveFormSubmitEvent } from './components/dashboard-leave-form.component';
+import { ChatbotComponent } from './components/chatbot.component';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { TranslateService, Language } from '../i18n/translate.service';
 
@@ -40,6 +41,7 @@ import { TranslateService, Language } from '../i18n/translate.service';
     ManagerDashboardComponent,
     EmployeeDashboardComponent,
     DashboardLeaveFormComponent,
+    ChatbotComponent,
     TranslatePipe
   ],
   templateUrl: './dashboard-page.component.html',
@@ -767,42 +769,58 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     }
     this.errorMessage = '';
 
-    this.authService.getDashboard().subscribe({
-      next: (response) => {
-        this.isLoading = false;
-        this.dashboard = response;
-        this.syncEditingUser(response);
-        if (!this.isProfileModalOpen) {
-          this.syncProfileModel();
+    this.authService.getDashboard()
+      .pipe(
+        retry({
+          count: 2,
+          delay: (error, retryCount) => {
+            // Only retry on 500/503 errors (gateway/service issues)
+            if (error.status === 500 || error.status === 503) {
+              const delayMs = retryCount * 1000; // 1s, 2s
+              console.log(`Dashboard load failed (${error.status}), retrying in ${delayMs}ms...`);
+              return timer(delayMs);
+            }
+            // Don't retry on other errors (401, 404, etc)
+            throw error;
+          }
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.isLoading = false;
+          this.dashboard = response;
+          this.syncEditingUser(response);
+          if (!this.isProfileModalOpen) {
+            this.syncProfileModel();
+          }
+          if (this.normalizedRole === 'ADMIN') {
+            this.loadLeaves(response, silent);
+            this.loadAttendanceLogs(true);
+          }
+          if (this.normalizedRole === 'MANAGER') {
+            this.loadManagerLeaves(response, silent);
+            this.loadAttendanceLogs(true);
+          }
+          if (this.normalizedRole === 'EMPLOYEE') {
+            this.loadMyLeaves(response, silent);
+            this.loadAttendanceLogs(true);
+            this.leaveService.getNotifyUsers(this.user.username).subscribe({
+              next: (users) => { this.notifyUsers = users; },
+              error: () => { this.notifyUsers = []; }
+            });
+          }
+          this.loadLeaveTypes(silent);
+          this.loadHolidays(silent);
+        },
+        error: (err: { error?: ApiErrorResponse }) => {
+          this.isLoading = false;
+          if (!silent) {
+            this.dashboard = null;
+            this.errorMessage = err.error?.message || 'Unable to load dashboard data.';
+            this.toastService.error(this.errorMessage);
+          }
         }
-        if (this.normalizedRole === 'ADMIN') {
-          this.loadLeaves(response, silent);
-          this.loadAttendanceLogs(true);
-        }
-        if (this.normalizedRole === 'MANAGER') {
-          this.loadManagerLeaves(response, silent);
-          this.loadAttendanceLogs(true);
-        }
-        if (this.normalizedRole === 'EMPLOYEE') {
-          this.loadMyLeaves(response, silent);
-          this.loadAttendanceLogs(true);
-          this.leaveService.getNotifyUsers(this.user.username).subscribe({
-            next: (users) => { this.notifyUsers = users; },
-            error: () => { this.notifyUsers = []; }
-          });
-        }
-        this.loadLeaveTypes(silent);
-        this.loadHolidays(silent);
-      },
-      error: (err: { error?: ApiErrorResponse }) => {
-        this.isLoading = false;
-        if (!silent) {
-          this.dashboard = null;
-          this.errorMessage = err.error?.message || 'Unable to load dashboard data.';
-          this.toastService.error(this.errorMessage);
-        }
-      }
-    });
+      });
   }
 
   private restoreFromCache(cached: import('../services/dashboard-cache.service').DashboardCacheEntry): void {

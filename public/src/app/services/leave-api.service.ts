@@ -1,25 +1,30 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { map, shareReplay } from 'rxjs/operators';
+import { map, shareReplay, tap } from 'rxjs/operators';
 import { CreateHolidayPayload, CreateLeavePayload, CreateLeaveTypePayload, Holiday, LeaveRecord, LeaveService, LeaveType, MailLeaveDecisionPayload, NotifyUser, PartialLeaveStatusPayload, UpdateLeavePayload, UpdateLeaveStatusPayload } from './leave.service';
 import { resolveApiUrl } from '../shared/api-url.util';
+import { LeaveAuditCacheService } from './leave-audit-cache.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LeaveApiService implements LeaveService {
-  private readonly apiUrl = resolveApiUrl('__LEAVE_APP_LEAVE_API_URL__', 'leave-app-leave-api-url', ':8082/api/leaves');
+  private readonly apiUrl = resolveApiUrl('__LEAVE_APP_LEAVE_API_URL__', 'leave-app-leave-api-url', ':8080/api/leaves');
   private readonly holidayUrl = this.apiUrl.replace(/\/api\/leaves.*$/, '/api/holidays');
   private readonly cacheTtlMs = 60_000;
   private readonly responseCache = new Map<string, { expiresAt: number; stream$: Observable<unknown> }>();
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly auditCache: LeaveAuditCacheService
+  ) {}
 
   getLeaves(): Observable<LeaveRecord[]> {
     return this.cachedGet('leaves:all', () =>
       this.http.get<{ content: LeaveRecord[] }>(this.apiUrl).pipe(
-        map((response) => response.content ?? [])
+        map((response) => response.content ?? []),
+        tap((leaves) => this.cacheLeaveIds(leaves))
       )
     );
   }
@@ -29,7 +34,10 @@ export class LeaveApiService implements LeaveService {
     return this.cachedGet(`leaves:user:${normalizedUsername}`, () =>
       this.http.get<{ content: LeaveRecord[] }>(
         `${this.apiUrl}/by-username/${encodeURIComponent(username)}?size=200`
-      ).pipe(map((response) => response.content ?? []))
+      ).pipe(
+        map((response) => response.content ?? []),
+        tap((leaves) => this.cacheLeaveIds(leaves))
+      )
     );
   }
 
@@ -38,7 +46,10 @@ export class LeaveApiService implements LeaveService {
     return this.cachedGet(`leaves:manager:${normalizedUsername}`, () =>
       this.http.get<{ content: LeaveRecord[] }>(
         `${this.apiUrl}/by-manager/${encodeURIComponent(managerUsername)}?size=200`
-      ).pipe(map((response) => response.content ?? []))
+      ).pipe(
+        map((response) => response.content ?? []),
+        tap((leaves) => this.cacheLeaveIds(leaves))
+      )
     );
   }
 
@@ -224,6 +235,22 @@ export class LeaveApiService implements LeaveService {
           complete: () => observer.complete()
         })
       );
+  }
+
+  /**
+   * Cache leave IDs in local storage for audit trail optimization
+   */
+  private cacheLeaveIds(leaves: LeaveRecord[]): void {
+    if (!leaves || !Array.isArray(leaves)) {
+      return;
+    }
+
+    leaves.forEach(leave => {
+      if (leave.id && leave.trail) {
+        // Only cache leaves that have audit trail data
+        this.auditCache.addLeaveToCache(leave.id);
+      }
+    });
   }
 
 }

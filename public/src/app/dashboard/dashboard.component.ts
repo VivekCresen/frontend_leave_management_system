@@ -8,11 +8,12 @@ import { LoginResponse } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 import { getDashboardMenuItems, getDefaultDashboardPage, isDashboardPageAllowed } from './dashboard.config';
 import { TranslatePipe } from '../i18n/translate.pipe';
+import { ChatbotComponent } from './components/chatbot.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, ChatbotComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })

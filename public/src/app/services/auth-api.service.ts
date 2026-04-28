@@ -21,7 +21,7 @@ import { TranslateService } from '../i18n/translate.service';
   providedIn: 'root'
 })
 export class AuthApiService implements AuthService {
-  private readonly apiUrl = resolveApiUrl('__LEAVE_APP_API_URL__', 'leave-app-api-url', ':8081/api/users');
+  private readonly apiUrl = resolveApiUrl('__LEAVE_APP_API_URL__', 'leave-app-api-url', ':8080/api/users');
   private readonly baseApiUrl = this.apiUrl.replace('/api/users', '/api');
   private readonly storageKey = 'leave-app-user';
   private readonly currentUserState = signal<LoginResponse | null>(this.readStoredUser());
