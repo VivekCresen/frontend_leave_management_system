@@ -1,14 +1,23 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NgForm, NgModel } from '@angular/forms';
+import { of } from 'rxjs';
 import { DashboardUserFormComponent } from './dashboard-user-form.component';
+import { AUTH_SERVICE } from '../../services/auth.service';
 
 describe('DashboardUserFormComponent', () => {
   let component: DashboardUserFormComponent;
   let fixture: ComponentFixture<DashboardUserFormComponent>;
 
   beforeEach(async () => {
+    const authServiceMock = jasmine.createSpyObj('AuthService', ['getCountries', 'getPhoneCodes']);
+    authServiceMock.getCountries.and.returnValue(of([]));
+    authServiceMock.getPhoneCodes.and.returnValue(of([]));
+
     await TestBed.configureTestingModule({
-      imports: [DashboardUserFormComponent]
+      imports: [DashboardUserFormComponent],
+      providers: [
+        { provide: AUTH_SERVICE, useValue: authServiceMock }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(DashboardUserFormComponent);
@@ -71,7 +80,10 @@ describe('DashboardUserFormComponent', () => {
       role: 'EMPLOYEE',
       managerUsername: ' manager.one ',
       active: true,
-      gender: 'Female'
+      gender: 'Female',
+      countryId: null,
+      phoneCodeId: null,
+      phoneNumber: ''
     };
 
     component.submit({ invalid: false } as NgForm);
@@ -103,7 +115,10 @@ describe('DashboardUserFormComponent', () => {
       role: 'EMPLOYEE',
       managerUsername: '',
       active: true,
-      gender: 'Female'
+      gender: 'Female',
+      countryId: null,
+      phoneCodeId: null,
+      phoneNumber: ''
     };
 
     component.submit({ invalid: false } as NgForm);
@@ -123,7 +138,10 @@ describe('DashboardUserFormComponent', () => {
       role: 'EMPLOYEE',
       managerUsername: '',
       active: true,
-      gender: 'Female'
+      gender: 'Female',
+      countryId: null,
+      phoneCodeId: null,
+      phoneNumber: ''
     };
 
     component.submit({ invalid: false } as NgForm);

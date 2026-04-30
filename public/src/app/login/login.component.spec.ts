@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LoginComponent } from './login.component';
 import { of, throwError } from 'rxjs';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { AuthApiService } from '../services/auth-api.service';
 import { AuthService } from '../services/auth.service';
 import { LeaveApiService } from '../services/leave-api.service';
@@ -16,7 +18,11 @@ describe('LoginComponent', () => {
   let toastService: jasmine.SpyObj<ToastService>;
 
   beforeEach(async () => {
-    authService = jasmine.createSpyObj<AuthService>('AuthService', ['login', 'setCurrentUser']);
+    authService = jasmine.createSpyObj<AuthService>('AuthService', [
+      'login', 'setCurrentUser', 'clearCurrentUser', 'getDashboard', 'checkIn'
+    ]);
+    (authService as any).currentUser = signal(null);
+    authService.getDashboard.and.returnValue(throwError(() => new Error('skip')));
     leaveService = jasmine.createSpyObj<LeaveApiService>('LeaveApiService', ['reviewLeaveFromMail']);
     toastService = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error', 'info']);
 
@@ -24,6 +30,7 @@ describe('LoginComponent', () => {
       imports: [LoginComponent],
       providers: [
         provideRouter([]),
+        provideHttpClient(),
         { provide: AuthApiService, useValue: authService },
         { provide: LeaveApiService, useValue: leaveService },
         { provide: ToastService, useValue: toastService }

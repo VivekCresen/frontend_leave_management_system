@@ -99,7 +99,7 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
       </div>
 
       <div class="chatbot-content-wrapper">
-        <!-- History Sidebar -->
+
         <div class="chatbot-history-panel" role="region" aria-label="Chat history" [class.chatbot-history-panel--collapsed]="!isHistoryOpen">
           <div class="chatbot-history-panel-header">
             <div>
@@ -164,7 +164,6 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
           </div>
         </div>
 
-        <!-- Messages Area -->
         <div #messagesContainer class="chatbot-messages">
 
         <div *ngIf="messages.length === 0" class="chatbot-welcome">
@@ -219,7 +218,6 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
           class="chatbot-input"
           maxlength="500" />
 
-        <!-- Stop button — shown while loading -->
         <button
           *ngIf="isLoading"
           (click)="stopRequest()"

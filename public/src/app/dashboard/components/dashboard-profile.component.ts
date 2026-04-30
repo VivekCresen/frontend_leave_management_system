@@ -18,10 +18,10 @@ import { ToastService } from '../../services/toast.service';
         </div>
         <div class="profile-header-actions">
           <button type="button" class="check-in-btn primary-button" 
-                  [disabled]="isCheckingIn || !!todayStatus"
+                  [disabled]="isCheckingIn || (!!todayStatus && !todayStatus.checkOutTime)"
                   (click)="checkIn()">
             <i class="fas fa-sign-in-alt"></i>
-            <span>{{ !!todayStatus ? 'Checked In' : 'Check In' }}</span>
+            <span>{{ (!!todayStatus && !todayStatus.checkOutTime) ? 'Checked In' : 'Check In' }}</span>
           </button>
           
           <button type="button" class="check-out-btn secondary-button" 

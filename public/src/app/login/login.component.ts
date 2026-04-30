@@ -33,7 +33,6 @@ export class LoginComponent implements OnInit {
   fieldErrors: Record<string, string> = {};
   showPassword = false;
 
-  // Language popup state
   showLanguagePopup = false;
   detectedLang: Language = 'en';
   detectedCountry = '';
@@ -61,7 +60,6 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    // Already logged in — handle mail decision or redirect to dashboard
     if (!this.hasMailDecisionParams()) {
       this.router.navigate(['/dashboard']);
       return;
@@ -104,21 +102,8 @@ export class LoginComponent implements OnInit {
 
         this.isSubmitting = false;
         this.authService.setCurrentUser(response);
-        
-        // Trigger auto check-in upon login
-        this.authService.checkIn(response.username).subscribe({
-          next: () => {
-            this.detectAndMaybeShowLanguagePopup(response.username, () => {
-              this.completeMailDecisionAfterLogin(response.username);
-            });
-          },
-          error: (err) => {
-            console.error('Auto check-in failed:', err);
-            // Proceed to dashboard regardless of check-in error
-            this.detectAndMaybeShowLanguagePopup(response.username, () => {
-              this.completeMailDecisionAfterLogin(response.username);
-            });
-          }
+        this.detectAndMaybeShowLanguagePopup(response.username, () => {
+          this.completeMailDecisionAfterLogin(response.username);
         });
       },
       error: (err: { error?: ApiErrorResponse & { error?: string } }) => {
@@ -185,10 +170,7 @@ export class LoginComponent implements OnInit {
     this.showPassword = !this.showPassword;
   }
 
-  // ── Language popup ───────────────────────────────────────────
-
   onKeepLanguage(): void {
-    // Persist the detected language as the user's explicit choice
     this.translateService.setLanguage(this.detectedLang);
     this.countryLangService.markPopupShown();
     this.showLanguagePopup = false;
@@ -205,22 +187,18 @@ export class LoginComponent implements OnInit {
   }
 
   private detectAndMaybeShowLanguagePopup(username: string, navigateFn: () => void): void {
-    // If the user already has a saved language preference, skip detection entirely
     if (this.countryLangService.hasSavedPreference(username)) {
       navigateFn();
       return;
     }
 
-    // If the popup was already shown this session, skip
     if (this.countryLangService.popupAlreadyShown()) {
       navigateFn();
       return;
     }
 
-    // ── Fetch user profile from backend (DB-country as Priority 1) ────────────
     this.authService.getDashboard().subscribe({
       next: (dashboardData) => {
-        // Warm up the dashboard cache so the dashboard page loads instantly
         this.dashboardCache.set({
           username,
           dashboard: dashboardData,
@@ -242,7 +220,6 @@ export class LoginComponent implements OnInit {
         );
       },
       error: () => {
-        // If the dashboard call fails (e.g. network error), fall back to IP
         this.runLanguageDetection(null, null, navigateFn);
       }
     });
@@ -257,13 +234,11 @@ export class LoginComponent implements OnInit {
       .detectLanguageFromDbOrIp(dbCountryCode, dbCountryName)
       .subscribe(result => {
         if (result.lang === 'en') {
-          // English-speaking region — set silently and navigate
           this.translateService.setLanguage('en');
           navigateFn();
           return;
         }
 
-        // Apply language temporarily before user confirms
         this.translateService.setLanguageTemp(result.lang);
         this.detectedLang = result.lang;
         this.detectedCountry = result.countryName;
