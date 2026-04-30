@@ -74,6 +74,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   @Input() initialRole = '';
   @Input() initialStatus = '';
   @Input() deletingUserId: number | null = null;
+  @Input() isLoading = false;
 
   @Output() editRequested = new EventEmitter<ManagedUser>();
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
@@ -90,7 +91,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
 
   constructor() {
     effect(() => {
-      this.translate.currentLang(); // track signal
+      this.translate.currentLang(); 
       if (this.gridApi) {
         this.gridApi.setGridOption('columnDefs', this.agColumnDefsWithActions);
         this.gridApi.setGridOption('rowData', this.filteredUsers);
@@ -277,6 +278,17 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
     if ((changes['users'] || changes['deletingUserId']) && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.filteredUsers);
       this.gridApi.setGridOption('columnDefs', this.agColumnDefsWithActions);
+      // If data arrived and we're no longer loading, clear any overlay
+      if (!this.isLoading) {
+        this.gridApi.hideOverlay();
+      }
+    }
+    if (changes['isLoading'] && this.gridApi) {
+      if (this.isLoading) {
+        this.gridApi.showLoadingOverlay();
+      } else {
+        this.gridApi.hideOverlay();
+      }
     }
   }
 

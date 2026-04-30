@@ -17,7 +17,6 @@ import { ToastService } from '../../services/toast.service';
           <p class="body-copy">Your personal information and account settings.</p>
         </div>
         <div class="profile-header-actions">
-          <!-- Check In Button -->
           <button type="button" class="check-in-btn primary-button" 
                   [disabled]="isCheckingIn || !!todayStatus"
                   (click)="checkIn()">
@@ -25,7 +24,6 @@ import { ToastService } from '../../services/toast.service';
             <span>{{ !!todayStatus ? 'Checked In' : 'Check In' }}</span>
           </button>
           
-          <!-- Check Out Button -->
           <button type="button" class="check-out-btn secondary-button" 
                   [disabled]="isCheckingOut || !todayStatus || !!todayStatus.checkOutTime"
                   (click)="checkOut()">
@@ -84,7 +82,6 @@ import { ToastService } from '../../services/toast.service';
         </div>
       </div>
       
-      <!-- Attendance Summary -->
       <div class="attendance-summary-card" *ngIf="todayStatus">
         <div class="attendance-info">
           <i class="fas fa-clock text-blue"></i>
@@ -259,7 +256,6 @@ import { ToastService } from '../../services/toast.service';
     }
     .attendance-info p { margin: 0.1rem 0 0; font-weight: 700; font-size: 0.9rem; color: #0f172a; }
 
-    /* Dark mode */
     [data-theme="dark"] .profile-card { background: var(--surface-bg); border-color: var(--surface-border); box-shadow: var(--surface-shadow); }
     [data-theme="dark"] .profile-card-header { border-bottom-color: var(--surface-border); }
     [data-theme="dark"] .profile-card-header h3 { color: var(--surface-heading); }

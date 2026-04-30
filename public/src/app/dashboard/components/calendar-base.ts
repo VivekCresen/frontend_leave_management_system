@@ -1,6 +1,5 @@
 import { Directive, OnDestroy } from '@angular/core';
 
-/** Shared calendar navigation state and helpers for dashboard role views. */
 @Directive()
 export abstract class CalendarBase implements OnDestroy {
   calendarYear = new Date().getFullYear();

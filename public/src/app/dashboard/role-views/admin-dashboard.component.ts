@@ -60,6 +60,7 @@ export class AdminDashboardComponent implements OnChanges {
   @Input() isHolidaySaving = false;
   @Input() lastHolidaySavedAt = 0;
   @Input() processingLeaveId: number | null = null;
+  @Input() isLoading = false;
 
   constructor(public translateService: TranslateService, public themeService: ThemeService) {}
 
@@ -77,6 +78,7 @@ export class AdminDashboardComponent implements OnChanges {
   @Output() holidayUpdateRequested = new EventEmitter<{ id: number; payload: CreateHolidayPayload }>();
   @Output() holidayDeleteRequested = new EventEmitter<number>();
   @Output() importCompleted = new EventEmitter<void>();
+  @Output() leaveTabChangeRequested = new EventEmitter<'records' | 'types' | 'holidays'>();
 
   isImportPanelOpen = false;
   leaveTab: 'records' | 'types' | 'holidays' = 'records';
@@ -86,7 +88,6 @@ export class AdminDashboardComponent implements OnChanges {
   leaveUniqueNameTouched = false;
   leaveTypeModel = this.createLeaveTypeModel();
 
-  // Holiday form state
   isHolidayModalOpen = false;
   editingHoliday: Holiday | null = null;
   holidaySubmitted = false;
@@ -172,6 +173,7 @@ export class AdminDashboardComponent implements OnChanges {
 
   selectLeaveTab(tab: 'records' | 'types' | 'holidays'): void {
     this.leaveTab = tab;
+    this.leaveTabChangeRequested.emit(tab);
   }
 
   submitLeaveType(form: NgForm): void {

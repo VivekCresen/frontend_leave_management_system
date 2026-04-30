@@ -1,18 +1,15 @@
 <div class="excel-import-panel">
 
-  <!-- Oracle XStream-style LCR Pipeline -->
   <div class="lcr-pipeline">
     <div class="lcr-pipeline-label">LCR Stream — Local Customer Repository</div>
     <div class="lcr-pipeline-track">
 
-      <!-- Source -->
       <div class="lcr-source" [class.active]="lcrStep === 'load'" [class.done]="lcrStep !== 'load'">
         <i class="fas fa-file-excel"></i>
         <span>Local Repo</span>
         <span class="lcr-source-sub">Excel (LCR)</span>
       </div>
 
-      <!-- Stream pipe -->
       <div class="lcr-pipe" [class.flowing]="lcrStep !== 'load'">
         <div class="lcr-pipe-line">
           <div class="lcr-pipe-dot"></div>
@@ -21,7 +18,6 @@
         </div>
       </div>
 
-      <!-- L — Load capture -->
       <div class="lcr-stage lcr-stage-load"
            [class.stage-active]="lcrStep === 'load'"
            [class.stage-done]="lcrStep !== 'load'">
@@ -36,7 +32,6 @@
         <div class="lcr-stage-desc">Capture template</div>
       </div>
 
-      <!-- Stream pipe -->
       <div class="lcr-pipe" [class.flowing]="lcrStep === 'check' || lcrStep === 'resolve' || isSuccess">
         <div class="lcr-pipe-line">
           <div class="lcr-pipe-dot"></div>
@@ -45,7 +40,6 @@
         </div>
       </div>
 
-      <!-- C — Check apply -->
       <div class="lcr-stage lcr-stage-check"
            [class.stage-active]="lcrStep === 'check'"
            [class.stage-done]="lcrStep === 'resolve' || isSuccess"
@@ -61,7 +55,6 @@
         <div class="lcr-stage-desc">Validate rows</div>
       </div>
 
-      <!-- Stream pipe -->
       <div class="lcr-pipe" [class.flowing]="lcrStep === 'resolve' || isSuccess">
         <div class="lcr-pipe-line">
           <div class="lcr-pipe-dot"></div>
@@ -70,7 +63,6 @@
         </div>
       </div>
 
-      <!-- R — Resolve apply -->
       <div class="lcr-stage lcr-stage-resolve"
            [class.stage-active]="lcrStep === 'resolve' && !isSuccess"
            [class.stage-done]="isSuccess"
@@ -91,7 +83,6 @@
         <div class="lcr-stage-desc">Apply / fix</div>
       </div>
 
-      <!-- Target -->
       <div class="lcr-pipe" [class.flowing]="isSuccess">
         <div class="lcr-pipe-line">
           <div class="lcr-pipe-dot"></div>
@@ -111,7 +102,6 @@
 
   <div class="import-divider"></div>
 
-  <!-- Step 1: Download template -->
   <div class="import-step">
     <div class="step-header">
       <span class="step-badge">1</span>
@@ -128,7 +118,6 @@
 
   <div class="import-divider"></div>
 
-  <!-- Step 2: Upload filled file -->
   <div class="import-step">
     <div class="step-header">
       <span class="step-badge">2</span>
@@ -171,7 +160,6 @@
     </div>
   </div>
 
-  <!-- Success result -->
   <div *ngIf="isSuccess" class="import-result success">
     <i class="fas fa-circle-check"></i>
     <div>
@@ -180,7 +168,6 @@
     </div>
   </div>
 
-  <!-- Error result -->
   <div *ngIf="isError" class="import-result error">
     <i class="fas fa-triangle-exclamation"></i>
     <div>

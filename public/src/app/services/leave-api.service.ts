@@ -237,9 +237,7 @@ export class LeaveApiService implements LeaveService {
       );
   }
 
-  /**
-   * Cache leave IDs in local storage for audit trail optimization
-   */
+
   private cacheLeaveIds(leaves: LeaveRecord[]): void {
     if (!leaves || !Array.isArray(leaves)) {
       return;
@@ -247,7 +245,6 @@ export class LeaveApiService implements LeaveService {
 
     leaves.forEach(leave => {
       if (leave.id && leave.trail) {
-        // Only cache leaves that have audit trail data
         this.auditCache.addLeaveToCache(leave.id);
       }
     });

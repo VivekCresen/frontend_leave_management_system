@@ -1,7 +1,6 @@
 <div class="lp-backdrop" role="dialog" aria-modal="true" aria-labelledby="lp-title">
   <div class="lp-card" [class.lp-rtl]="isRtl">
 
-    <!-- Globe icon -->
     <div class="lp-icon-wrap" aria-hidden="true">
       <svg class="lp-globe" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="2.5"/>
@@ -13,10 +12,8 @@
       <span class="lp-pulse"></span>
     </div>
 
-    <!-- Headline in detected language -->
     <h2 class="lp-title" id="lp-title">{{ labels.headline }}</h2>
 
-    <!-- Detected language badge -->
     <div class="lp-badge-group">
       <div class="lp-badge">
         <span class="lp-lang-dot"></span>
@@ -28,17 +25,13 @@
         <span>{{ source === 'db' ? 'FROM PROFILE' : 'FROM LOCATION' }}</span>
       </div>
     </div>
-
-    <!-- Subline in detected language -->
     <p class="lp-subline">{{ sublineText }}</p>
 
-    <!-- English sub-message (always in English so user understands) -->
     <p class="lp-eng-note">
       We detected your region as <strong>{{ countryName }}</strong>.<br>
       Language has been auto-set to <strong>{{ langName }}</strong>.
     </p>
 
-    <!-- Actions -->
     <div class="lp-actions">
       <button
         id="lp-btn-keep"
@@ -56,7 +49,6 @@
       </button>
     </div>
 
-    <!-- English label on switch button -->
     <p class="lp-switch-hint">Switch to English</p>
   </div>
 </div>

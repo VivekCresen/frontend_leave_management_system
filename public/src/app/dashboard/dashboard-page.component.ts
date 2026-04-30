@@ -27,9 +27,10 @@ import { ManagerDashboardComponent } from './role-views/manager-dashboard.compon
 import { DashboardUserSubmitEvent } from './components/dashboard-user-form.component';
 import { AdminLeaveTableRow } from './components/dashboard-leave-table.component';
 import { DashboardLeaveFormComponent, LeaveFormSubmitEvent } from './components/dashboard-leave-form.component';
-import { ChatbotComponent } from './components/chatbot.component';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { TranslateService, Language } from '../i18n/translate.service';
+
+type AdminLeaveTab = 'records' | 'types' | 'holidays';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -41,7 +42,6 @@ import { TranslateService, Language } from '../i18n/translate.service';
     ManagerDashboardComponent,
     EmployeeDashboardComponent,
     DashboardLeaveFormComponent,
-    ChatbotComponent,
     TranslatePipe
   ],
   templateUrl: './dashboard-page.component.html',
@@ -72,8 +72,6 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   isCheckingOut = false;
   attendanceLogs: AttendanceLogDto[] = [];
   myAttendanceLogs: AttendanceLogDto[] = [];
-  private attendanceLoadedAt = 0;
-  private readonly ATTENDANCE_TTL_MS = 60_000; // 1 minute
   leaveTypes: LeaveType[] = [];
   leaves: AdminLeaveTableRow[] = [];
   isLeaveTypesLoading = false;
@@ -124,13 +122,15 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       this.filterStatus = params['status'] ?? '';
     });
 
-    // Restore from cache instantly — no spinner, no API call
     const cached = this.dashboardCache.get(this.user.username);
     if (cached) {
       this.restoreFromCache(cached);
-      // If stale, silently refresh in background
       if (this.dashboardCache.isStale(this.user.username)) {
         this.loadDashboard(true);
+      } else {
+        // Cache is fresh but page-specific resources (e.g. attendance logs) are
+        // never stored in the cache, so we must load them explicitly.
+        this.loadPageResources(cached.dashboard, true);
       }
     } else {
       this.loadDashboard();
@@ -147,7 +147,6 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         prev?.active !== curr?.active;
       if (identityChanged) {
         this.dashboardCache.invalidate();
-        this.attendanceLoadedAt = 0; // invalidate attendance cache
         this.loadDashboard();
       }
     }
@@ -156,8 +155,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       this.syncProfileModel();
     }
 
-    if (changes['pageId'] && (this.pageId === 'profile' || this.pageId === 'reports' || this.pageId === 'attendance')) {
-      this.loadAttendanceLogs();
+    if (changes['pageId'] && !changes['pageId'].firstChange && this.dashboard) {
+      this.loadPageResources(this.dashboard, true);
     }
   }
 
@@ -334,7 +333,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         });
         this.toastService.success('Profile updated successfully');
         this.dashboardCache.invalidate();
-        this.loadDashboard();
+        this.loadDashboard(true);
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isProfileSaving = false;
@@ -377,7 +376,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.isUserFormOpen = false;
         this.toastService.success(event.userId ? 'User updated successfully' : 'User created successfully');
         this.dashboardCache.invalidate();
-        this.loadDashboard();
+        this.loadDashboard(true);
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.isSaving = false;
@@ -402,7 +401,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         }
         this.toastService.success('User deleted successfully');
         this.dashboardCache.invalidate();
-        this.loadDashboard();
+        this.loadDashboard(true);
       },
       error: (err: { error?: ApiErrorResponse }) => {
         this.deletingUserId = null;
@@ -435,8 +434,6 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   handleApproveLeave(leave: AdminLeaveTableRow): void {
-    // Manager approves → MANAGER_APPROVED (goes to admin for final approval)
-    // Admin approves → APPROVED (final)
     const status = this.user.role === 'MANAGER' ? 'MANAGER_APPROVED' : 'APPROVED';
     this.updateLeaveStatus(leave.id, status);
   }
@@ -508,10 +505,6 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     this.isLeaveSaving = true;
     this.leaveFieldErrors = {};
 
-    // Group selections by session type → up to 3 separate requests:
-    //   FULL days → one request
-    //   MORNING half-days → one request
-    //   AFTERNOON half-days → one request
     const groups: { dayType: string; dates: { date: string; dayType: string }[] }[] = [];
 
     const fullDates = event.daySelections
@@ -558,7 +551,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           : 'Leave request submitted successfully';
         this.toastService.success(msg);
         this.dashboardCache.invalidate();
-        this.loadDashboard();
+        this.loadDashboard(true);
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.isLeaveSaving = false;
@@ -598,13 +591,33 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         }
         this.toastService.success('Leave request deleted successfully');
         this.dashboardCache.invalidate();
-        this.loadDashboard();
+        this.loadDashboard(true);
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.deletingLeaveId = null;
         this.toastService.error(this.buildLeaveTypeErrorMessage(err.error, 'Unable to delete leave request right now.'));
       }
     });
+  }
+
+  handleAdminLeaveTabChange(tab: AdminLeaveTab): void {
+    if (!this.dashboard || this.normalizedRole !== 'ADMIN' || this.pageId !== 'leaves') {
+      return;
+    }
+
+    if (tab === 'records' && this.leaves.length === 0) {
+      this.loadLeaves(this.dashboard, true);
+      return;
+    }
+
+    if (tab === 'types' && this.leaveTypes.length === 0) {
+      this.loadLeaveTypes(true);
+      return;
+    }
+
+    if (tab === 'holidays' && this.holidays.length === 0) {
+      this.loadHolidays(true);
+    }
   }
 
   private handleUpdateLeave(event: LeaveFormSubmitEvent): void {
@@ -635,7 +648,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         this.editingLeave = null;
         this.toastService.success('Leave request updated successfully');
         this.dashboardCache.invalidate();
-        this.loadDashboard();
+        this.loadDashboard(true);
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
         this.isLeaveSaving = false;
@@ -742,8 +755,18 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   loadAttendanceLogs(force = false): void {
-    const now = Date.now();
-    const isFresh = (now - this.attendanceLoadedAt) < this.ATTENDANCE_TTL_MS;
+    // Restore from cache first if we have nothing in memory
+    const cached = this.dashboardCache.get(this.user.username);
+    if (cached) {
+      if (!this.attendanceLogs.length && cached.attendanceLogs?.length) {
+        this.attendanceLogs = cached.attendanceLogs;
+      }
+      if (!this.myAttendanceLogs.length && cached.myAttendanceLogs?.length) {
+        this.myAttendanceLogs = cached.myAttendanceLogs;
+      }
+    }
+
+    const isFresh = !this.dashboardCache.isAttendanceStale(this.user.username);
     const hasData = this.normalizedRole === 'ADMIN'
       ? this.attendanceLogs.length > 0
       : this.myAttendanceLogs.length > 0;
@@ -752,12 +775,18 @@ export class DashboardPageComponent implements OnInit, OnChanges {
 
     if (this.normalizedRole === 'ADMIN') {
       this.authService.getAllAttendanceLogs().subscribe({
-        next: (logs) => { this.attendanceLogs = logs; this.attendanceLoadedAt = Date.now(); },
+        next: (logs) => {
+          this.attendanceLogs = logs;
+          this.dashboardCache.setAttendance(this.user.username, logs, this.myAttendanceLogs);
+        },
         error: () => { this.attendanceLogs = []; }
       });
     } else {
       this.authService.getAttendanceLogsByUser(this.user.username).subscribe({
-        next: (logs) => { this.myAttendanceLogs = logs; this.attendanceLoadedAt = Date.now(); },
+        next: (logs) => {
+          this.myAttendanceLogs = logs;
+          this.dashboardCache.setAttendance(this.user.username, this.attendanceLogs, logs);
+        },
         error: () => { this.myAttendanceLogs = []; }
       });
     }
@@ -774,13 +803,11 @@ export class DashboardPageComponent implements OnInit, OnChanges {
         retry({
           count: 2,
           delay: (error, retryCount) => {
-            // Only retry on 500/503 errors (gateway/service issues)
             if (error.status === 500 || error.status === 503) {
-              const delayMs = retryCount * 1000; // 1s, 2s
+              const delayMs = retryCount * 1000;
               console.log(`Dashboard load failed (${error.status}), retrying in ${delayMs}ms...`);
               return timer(delayMs);
             }
-            // Don't retry on other errors (401, 404, etc)
             throw error;
           }
         })
@@ -793,24 +820,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           if (!this.isProfileModalOpen) {
             this.syncProfileModel();
           }
-          if (this.normalizedRole === 'ADMIN') {
-            this.loadLeaves(response, silent);
-            this.loadAttendanceLogs(true);
-          }
-          if (this.normalizedRole === 'MANAGER') {
-            this.loadManagerLeaves(response, silent);
-            this.loadAttendanceLogs(true);
-          }
-          if (this.normalizedRole === 'EMPLOYEE') {
-            this.loadMyLeaves(response, silent);
-            this.loadAttendanceLogs(true);
-            this.leaveService.getNotifyUsers(this.user.username).subscribe({
-              next: (users) => { this.notifyUsers = users; },
-              error: () => { this.notifyUsers = []; }
-            });
-          }
-          this.loadLeaveTypes(silent);
-          this.loadHolidays(silent);
+          this.loadPageResources(response, silent);
         },
         error: (err: { error?: ApiErrorResponse }) => {
           this.isLoading = false;
@@ -830,20 +840,96 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     this.leaves = cached.leaves;
     this.managerLeaves = cached.managerLeaves;
     this.myLeaves = cached.myLeaves;
+    this.attendanceLogs = cached.attendanceLogs ?? [];
+    this.myAttendanceLogs = cached.myAttendanceLogs ?? [];
     if (!this.isProfileModalOpen) {
       this.syncProfileModel();
     }
-    if (this.normalizedRole === 'EMPLOYEE') {
-      this.leaveService.getNotifyUsers(this.user.username).subscribe({
-        next: (users) => { this.notifyUsers = users; },
-        error: () => { this.notifyUsers = []; }
-      });
+  }
+
+  private loadPageResources(response: UserDashboardResponse, silent = false): void {
+    switch (this.normalizedRole) {
+      case 'ADMIN':
+        this.loadAdminPageResources(response, silent);
+        break;
+      case 'MANAGER':
+        this.loadManagerPageResources(response, silent);
+        break;
+      case 'EMPLOYEE':
+        this.loadEmployeePageResources(response, silent);
+        break;
     }
   }
 
+  private loadAdminPageResources(response: UserDashboardResponse, silent = false): void {
+    if (this.pageId === 'overview' || this.pageId === 'leaves') {
+      this.loadLeaves(response, silent);
+      return;
+    }
+
+    if (this.pageId === 'reports' || this.pageId === 'attendance') {
+      this.loadAttendanceLogs(silent ? false : !this.attendanceLogs.length);
+    }
+  }
+
+  private loadManagerPageResources(response: UserDashboardResponse, silent = false): void {
+    if (this.pageId === 'overview' || this.pageId === 'approvals' || this.pageId === 'reports') {
+      this.loadManagerLeaves(response, silent);
+      return;
+    }
+
+    if (this.pageId === 'calendar') {
+      this.loadManagerLeaves(response, silent);
+      this.loadMyLeaves(response, silent);
+      this.loadHolidays(silent);
+      return;
+    }
+
+    if (this.pageId === 'history') {
+      this.loadMyLeaves(response, silent);
+      this.loadLeaveTypes(silent);
+      this.loadHolidays(silent);
+      return;
+    }
+
+    if (this.pageId === 'attendance') {
+      this.loadAttendanceLogs(silent ? false : !this.myAttendanceLogs.length);
+    }
+  }
+
+  private loadEmployeePageResources(response: UserDashboardResponse, silent = false): void {
+    if (this.pageId === 'overview') {
+      this.loadMyLeaves(response, silent);
+      return;
+    }
+
+    if (this.pageId === 'requests' || this.pageId === 'history') {
+      this.loadMyLeaves(response, silent);
+      this.loadLeaveTypes(silent);
+      this.loadHolidays(silent);
+      this.loadNotifyUsers();
+      return;
+    }
+
+    if (this.pageId === 'calendar') {
+      this.loadMyLeaves(response, silent);
+      this.loadHolidays(silent);
+      return;
+    }
+
+    if (this.pageId === 'attendance') {
+      this.loadAttendanceLogs(silent ? false : !this.myAttendanceLogs.length);
+    }
+  }
+
+  private loadNotifyUsers(): void {
+    this.leaveService.getNotifyUsers(this.user.username).subscribe({
+      next: (users) => { this.notifyUsers = users; },
+      error: () => { this.notifyUsers = []; }
+    });
+  }
+
   private writeCacheWhenReady(): void {
-    // Write to cache once all async loads have settled
-    // We use a short debounce so all parallel loads complete first
     setTimeout(() => {
       if (this.dashboard) {
         this.dashboardCache.set({
@@ -854,6 +940,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           leaves: this.leaves,
           managerLeaves: this.managerLeaves,
           myLeaves: this.myLeaves,
+          attendanceLogs: this.attendanceLogs,
+          myAttendanceLogs: this.myAttendanceLogs,
           cachedAt: Date.now()
         });
       }

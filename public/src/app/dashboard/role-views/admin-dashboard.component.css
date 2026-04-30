@@ -920,7 +920,6 @@
   white-space: nowrap;
 }
 
-/* ── Import Excel modal ───────────────────────────────────────────────────── */
 .import-modal-card {
   width: min(600px, 100%);
   max-height: calc(100vh - 48px);
@@ -973,7 +972,6 @@
   overflow-y: auto;
 }
 
-/* ── Settings page ── */
 .settings-page {
   display: flex;
   flex-direction: column;

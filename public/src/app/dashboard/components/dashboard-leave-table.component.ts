@@ -42,8 +42,8 @@ export type AdminLeaveTableRow = {
   role: string;
   leaveType: string;
   leaveDates: { date: string; dayType: string }[];
-  fromDate: string;   // derived: earliest date in leaveDates
-  toDate: string;     // derived: latest date in leaveDates
+  fromDate: string;
+  toDate: string;
   reason: string;
   comments: string;
   trail: string | null;
@@ -113,6 +113,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   @Input() compactView = false;
   @Input() viewerRole: 'ADMIN' | 'MANAGER' | 'EMPLOYEE' | '' = '';
   @Input() processingLeaveId: number | null = null;
+  @Input() isLoading = false;
 
   @Output() approveRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() rejectRequested = new EventEmitter<{ leave: AdminLeaveTableRow; reason: string }>();
@@ -130,7 +131,6 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   rejectionReason = '';
   rejectionSubmitted = false;
 
-  // Partial approval state
   partialLeave: AdminLeaveTableRow | null = null;
   partialDecisions: Record<string, 'APPROVED' | 'REJECTED'> = {};
   partialRejectionReason = '';
@@ -402,11 +402,21 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
 
     if (changes['leaves'] && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.agRowData);
+      if (!this.isLoading) {
+        this.gridApi.hideOverlay();
+      }
     }
 
-    // Restore progress leave when leaves data becomes available
     if (changes['leaves'] && this.leaves.length > 0 && !this._progressLeave) {
       this.restoreProgressLeave();
+    }
+
+    if (changes['isLoading'] && this.gridApi) {
+      if (this.isLoading) {
+        this.gridApi.showLoadingOverlay();
+      } else {
+        this.gridApi.hideOverlay();
+      }
     }
   }
 
@@ -415,7 +425,6 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   }
 
   ngOnDestroy(): void {
-    // Don't clear localStorage on destroy — we want it to persist across navigation
   }
 
   private restoreProgressLeave(): void {
@@ -477,7 +486,6 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
     if (this.gridApi) this.gridApi.setGridOption('rowData', this.agRowData);
   }
 
-  // Legacy table methods
   get displayedLeaves(): AdminLeaveTableRow[] {
     const sorted = [...this.filteredLeaves].sort((a, b) => this.compareRows(a, b));
     const start = (this.currentPage - 1) * this.pageSize;
@@ -512,7 +520,6 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
     this.partialDecisions = {};
     this.partialRejectionReason = '';
     this.partialSubmitted = false;
-    // Default all dates to APPROVED
     for (const d of leave.leaveDates) {
       this.partialDecisions[this.dateKey(d.date, d.dayType)] = 'APPROVED';
     }

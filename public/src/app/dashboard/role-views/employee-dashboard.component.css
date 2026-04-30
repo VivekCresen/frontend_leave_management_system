@@ -45,14 +45,12 @@
   grid-column: 1 / -1;
 }
 
-/* ── Overview grid ── */
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
-/* Quick actions */
 .quick-action-list {
   display: grid;
   gap: 10px;
@@ -189,7 +187,6 @@
   background: rgba(15, 139, 141, 0.14);
 }
 
-/* Leave summary */
 .leave-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -226,7 +223,6 @@
   text-align: center;
 }
 
-/* ── Status badges ── */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -253,7 +249,6 @@
   color: #b91c1c;
 }
 
-/* ── Profile ── */
 .panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -303,7 +298,6 @@
   transform: translateY(-1px);
 }
 
-/* Profile banner */
 .profile-banner {
   display: flex;
   align-items: center;
@@ -430,7 +424,6 @@
 .status-active { color: #15803d; }
 .status-inactive { color: #b91c1c; }
 
-/* ── Management grid ── */
 .management-grid {
   display: flex;
   flex-direction: column;
@@ -496,7 +489,7 @@
   transform: translateY(-1px);
 }
 
-/* Leave count pill */
+
 .leave-count-pill {
   display: inline-flex;
   align-items: center;
@@ -510,7 +503,6 @@
   white-space: nowrap;
 }
 
-/* Leave status bar */
 .leave-status-bar {
   display: flex;
   gap: 14px;
@@ -547,12 +539,10 @@
 .leave-status-item.approved strong { color: #15803d; }
 .leave-status-item.rejected strong { color: #b91c1c; }
 
-/* Leave form wrapper */
 .leave-form-wrapper {
   width: 100%;
 }
 
-/* Leave type breakdown */
 .leave-type-breakdown {
   display: grid;
   gap: 12px;
@@ -595,7 +585,6 @@
   font-weight: 800;
 }
 
-/* Calendar */
 .calendar-leave-list {
   display: grid;
   gap: 10px;
@@ -661,7 +650,6 @@
   font-size: 0.76rem;
 }
 
-/* Empty state */
 .leave-empty-state {
   margin-top: 18px;
   padding: 20px;
@@ -758,7 +746,6 @@
   }
 }
 
-/* ── Requests page ── */
 .requests-empty-state {
   display: flex;
   flex-direction: column;
@@ -892,7 +879,6 @@
   max-width: 400px;
 }
 
-/* ── Notify section inside card ── */
 .notify-section {
   display: flex;
   align-items: center;
@@ -1028,7 +1014,6 @@
   background: linear-gradient(180deg, rgba(254, 242, 242, 1), rgba(252, 165, 165, 0.28));
 }
 
-/* ── Public holidays strip on employee calendar ── */
 .emp-holiday-strip {
   margin-bottom: 18px;
   padding: 14px 16px;
@@ -1077,7 +1062,6 @@
   color: #78350f;
 }
 
-/* ── Employee Calendar ── */
 .calendar-page {
   display: flex;
   flex-direction: column;

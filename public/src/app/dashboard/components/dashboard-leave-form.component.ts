@@ -267,8 +267,6 @@ export class DashboardLeaveFormComponent implements OnChanges {
   }
 
   get exceedsRequestDurationLimit(): boolean {
-    // Only apply the global 21-day cap when no leave type is selected
-    // (leave type's own maxDays takes priority when a type is chosen)
     if (this.selectedLeaveType) return false;
     return this.durationDays > this.maxRequestDurationDays;
   }

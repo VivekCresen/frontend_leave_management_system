@@ -408,14 +408,12 @@
   font-size: 0.8rem;
 }
 
-/* ─── Duration note (calendar vs working days) ───────────── */
 .duration-note {
   color: #64748b;
   font-size: 0.8rem;
   font-weight: 500;
 }
 
-/* ─── Duration Type Toggle (Full Day / Half Day) ─────────── */
 .duration-type-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -457,7 +455,6 @@
   background: rgba(15, 139, 141, 0.05);
 }
 
-/* ─── Half Day Session Picker ────────────────────────────── */
 .session-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -526,7 +523,7 @@
   background: rgba(15, 139, 141, 0.05);
 }
 
-/* ── Notify teammates multi-select ── */
+
 .field-optional {
   font-size: 0.78rem;
   color: #94a3b8;

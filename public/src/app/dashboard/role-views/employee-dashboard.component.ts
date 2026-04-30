@@ -56,6 +56,7 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
   @Input() notifyUsers: NotifyUser[] = [];
   @Input() holidays: Holiday[] = [];
   @Input() myAttendanceLogs: AttendanceLogDto[] = [];
+  @Input() isLeavesLoading = false;
 
   @Output() openLeaveFormRequested = new EventEmitter<void>();
   @Output() leaveSubmitRequested = new EventEmitter<LeaveFormSubmitEvent>();
@@ -206,7 +207,6 @@ export class EmployeeDashboardComponent extends CalendarBase implements OnChange
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || fullName.slice(0, 2).toUpperCase();
   }
 
-  // ── Calendar state ──────────────────────────────────────
   calendarWeeks: EmpCalendarDay[][] = [];
   selectedDay: EmpCalendarDay | null = null;
 

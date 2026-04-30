@@ -162,14 +162,12 @@ export class UserExcelImportComponent {
   }
 
   private parseErrorHeaders(headers: any): void {
-    // Backend can optionally send X-Error-Rows header as JSON summary
     try {
       const raw = headers?.get('X-Error-Rows');
       if (raw) {
         this.rowErrors = JSON.parse(raw) as RowError[];
       }
     } catch {
-      // no-op — error table stays empty, user relies on downloaded file
     }
   }
 

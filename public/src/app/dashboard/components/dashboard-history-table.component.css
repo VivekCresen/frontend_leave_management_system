@@ -1,4 +1,3 @@
-/* ─── Table Card ─────────────────────────────────────────── */
 .table-card {
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 20px;
@@ -12,7 +11,6 @@
   min-height: 0;
 }
 
-/* ─── Heading ────────────────────────────────────────────── */
 .table-heading {
   display: flex;
   align-items: flex-start;
@@ -51,7 +49,6 @@
   line-height: 1.45;
 }
 
-/* ─── Count Pill ─────────────────────────────────────────── */
 .count-pill {
   min-height: 36px;
   display: inline-flex;
@@ -68,7 +65,6 @@
   letter-spacing: 0.02em;
 }
 
-/* ─── Empty State ────────────────────────────────────────── */
 .empty-state {
   margin-top: 24px;
   padding: 32px;
@@ -96,7 +92,6 @@
   font-size: 0.9rem;
 }
 
-/* ─── AG Grid Shell ──────────────────────────────────────── */
 .ag-shell {
   margin-top: 10px;
   border: 1px solid rgba(226, 232, 240, 0.8);
@@ -109,7 +104,6 @@
   width: 100%;
 }
 
-/* ─── Header ─────────────────────────────────────────────── */
 :host ::ng-deep .history-ag-grid .ag-header-cell-label {
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -118,7 +112,6 @@
   color: #64748b;
 }
 
-/* ─── Cells ──────────────────────────────────────────────── */
 :host ::ng-deep .history-ag-grid .ag-cell {
   display: flex;
   align-items: center;
@@ -126,7 +119,6 @@
   font-size: 0.88rem;
 }
 
-/* Leave name cell */
 :host ::ng-deep .history-ag-grid .ag-leave-name-cell {
   display: flex;
   align-items: center;
@@ -138,7 +130,6 @@
   font-weight: 700;
 }
 
-/* Date range cell */
 :host ::ng-deep .history-ag-grid .ag-date-cell {
   display: flex;
   flex-direction: column;
@@ -160,7 +151,6 @@
   font-weight: 600;
 }
 
-/* Duration pill */
 :host ::ng-deep .history-ag-grid .ag-duration-pill {
   display: inline-flex;
   align-items: center;
@@ -174,7 +164,6 @@
   white-space: nowrap;
 }
 
-/* Status badge */
 :host ::ng-deep .history-ag-grid .ag-status-badge {
   
   align-items: center;
@@ -208,7 +197,6 @@
   color: #b42318;
 }
 
-/* Pagination bar */
 :host ::ng-deep .history-ag-grid .ag-paging-panel {
   border-top: 1px solid rgba(226, 232, 240, 0.85);
   background: rgba(248, 250, 252, 0.7);
@@ -219,7 +207,6 @@
   min-height: 44px;
 }
 
-/* ─── Responsive ─────────────────────────────────────────── */
 @media (max-width: 720px) {
   .table-card {
     padding: 18px;

@@ -1,13 +1,11 @@
 <section class="role-dashboard">
 
-  <!-- OVERVIEW -->
   <ng-container *ngIf="pageId === 'overview'">
     <app-dashboard-stat-cards [cards]="stats" [compact]="true"></app-dashboard-stat-cards>
   </ng-container>
 
   <ng-container [ngSwitch]="pageId">
 
-    <!-- PROFILE -->
     <section *ngSwitchCase="'profile'" class="panel-grid">
       <app-dashboard-profile 
         [user]="user" 
@@ -16,7 +14,6 @@
       </app-dashboard-profile>
     </section>
 
-    <!-- ATTENDANCE -->
     <section *ngSwitchCase="'attendance'" class="panel-grid">
       <app-dashboard-attendance-table
         [logs]="myAttendanceLogs"
@@ -25,7 +22,6 @@
       ></app-dashboard-attendance-table>
     </section>
 
-    <!-- TEAM MANAGEMENT -->
     <section *ngSwitchCase="'team'" class="management-grid">
       <div class="management-toolbar">
         <div>
@@ -65,7 +61,6 @@
       </div>
     </section>
 
-    <!-- APPROVALS -->
     <section *ngSwitchCase="'approvals'" class="management-grid">
       <div class="management-toolbar">
         <div>
@@ -74,7 +69,6 @@
         </div>
       </div>
 
-      <!-- Pending summary banner -->
       <div class="pending-summary-banner" *ngIf="pendingLeaves.length > 0">
         <div class="pending-summary-icon">
           <i class="fas fa-clock"></i>
@@ -107,16 +101,15 @@
         [initialStatus]="'PENDING'"
         [showStatusFilter]="true"
         [processingLeaveId]="processingLeaveId"
+        [isLoading]="isLeavesLoading"
         (approveRequested)="leaveApproveRequested.emit($event)"
         (rejectRequested)="leaveRejectRequested.emit($event)"
         (partialStatusRequested)="leavePartialStatusRequested.emit($event)">
       </app-dashboard-leave-table>
     </section>
 
-    <!-- CALENDAR -->
     <section *ngSwitchCase="'calendar'" class="calendar-page">
 
-      <!-- Header -->
       <div class="management-toolbar">
         <div>
           <h3>Team Calendar</h3>
@@ -128,10 +121,8 @@
         </div>
       </div>
 
-      <!-- Calendar card -->
       <article class="surface cal-surface">
 
-        <!-- Month nav -->
         <div class="cal-nav">
           <button type="button" class="cal-nav-btn" (click)="prevMonth()">
             <i class="fas fa-chevron-left"></i>
@@ -143,12 +134,10 @@
           <button type="button" class="cal-today-btn" (click)="goToToday()">Today</button>
         </div>
 
-        <!-- Day headers -->
         <div class="cal-grid cal-header-row">
           <div *ngFor="let d of weekDays" class="cal-header-cell">{{ d }}</div>
         </div>
 
-        <!-- Weeks -->
         <div *ngFor="let week of calendarWeeks" class="cal-grid cal-week-row">
           <div
             *ngFor="let day of week"
@@ -172,7 +161,6 @@
         </div>
       </article>
 
-      <!-- Selected day detail panel -->
       <article *ngIf="selectedDay" class="surface cal-detail-panel">
         <div class="cal-detail-header">
           <span class="eyebrow">{{ selectedDay.date | date:'EEEE, MMMM d, y' }}</span>
@@ -203,7 +191,6 @@
 
     </section>
 
-    <!-- HISTORY (Manager's own leave history) -->
     <section *ngSwitchCase="'history'" class="management-grid">
       <div class="management-toolbar">
         <div>
@@ -233,7 +220,6 @@
       </app-dashboard-history-table>
     </section>
 
-    <!-- REPORTS -->
     <section *ngSwitchCase="'reports'" class="panel-grid">
       <article class="surface">
         <p class="eyebrow">Team Summary</p>
@@ -296,7 +282,6 @@
       </article>
     </section>
 
-    <!-- SETTINGS -->
     <section *ngSwitchCase="'settings'" class="panel-grid">
       <article class="surface">
         <h3>{{ 'adminSettings.accountControls' | translate }}</h3>

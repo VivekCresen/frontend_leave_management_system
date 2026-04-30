@@ -2,7 +2,6 @@ import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Language, LANGUAGE_NAMES } from '../i18n/translate.service';
 
-/** Bilingual label pairs shown inside the popup for each language. */
 const POPUP_LABELS: Record<Language, { headline: string; subline: string; keepBtn: string; switchBtn: string }> = {
   hi: {
     headline: 'भाषा स्वचालित रूप से सेट की गई',

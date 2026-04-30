@@ -109,10 +109,6 @@ export class TranslateService {
     }
   }
 
-  /**
-   * Sets the language in memory only — does NOT persist to localStorage.
-   * Used during the auto-detect flow before the user confirms their choice.
-   */
   setLanguageTemp(lang: Language): void {
     if (!this.dictionaries[lang]) return;
     this.currentLang.set(lang);

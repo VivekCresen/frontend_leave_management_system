@@ -37,7 +37,6 @@
       </small>
     </label>
 
-    <!-- Duration Type: Full Day / Half Day -->
     <div *ngIf="!usesDaySpecificCalendar" class="field field-full">
       <span>Duration type <span class="required-mark">*</span></span>
       <div class="duration-type-toggle">
@@ -91,7 +90,6 @@
       </small>
     </div>
 
-    <!-- Half Day Session Picker -->
     <div *ngIf="isHalfDay && !usesDaySpecificCalendar" class="field field-full">
       <span>Session <span class="required-mark">*</span></span>
       <div class="session-toggle">
@@ -157,7 +155,6 @@
       <span *ngIf="weekendDaysCount > 0 || publicHolidayCount > 0" class="duration-note">
         ({{ totalCalendarDays }} calendar day{{ totalCalendarDays === 1 ? '' : 's' }})
       </span>
-      <!-- Show only one warning: leave type limit takes priority, then request limit -->
       <ng-container *ngIf="selectedLeaveType && durationDays > selectedLeaveType.maxDays; else requestLimitWarning">
         <span class="duration-warning">— exceeds max {{ selectedLeaveType.maxDays }} days for {{ selectedLeaveType.leaveName }}</span>
       </ng-container>
@@ -165,7 +162,7 @@
         <span *ngIf="exceedsRequestDurationLimit" class="duration-warning">— exceeds max {{ maxRequestDurationDays }} days per request</span>
       </ng-template>
     </div>
-    <!-- Reason -->
+    
     <label class="field field-full">
       <span>Reason <span class="required-mark">*</span></span>
       <textarea
@@ -194,24 +191,19 @@
     </label>
 
     
-    <!-- Notify teammates (multi-select) -->
     <div class="field field-full">
       <span>Notify teammates <span class="field-optional">(optional)</span></span>
       <p class="field-hint">Select team members who should receive an email notification about this leave.</p>
-
-      <!-- Loading skeleton -->
       <div *ngIf="notifyUsersLoading" class="notify-loading">
         <i class="fas fa-spinner fa-spin"></i>
         <span>Loading teammates...</span>
       </div>
 
-      <!-- No teammates available -->
       <div *ngIf="!notifyUsersLoading && notifyUsers.length === 0" class="notify-empty">
         <i class="fas fa-users-slash"></i>
         <span>No teammates found to notify.</span>
       </div>
 
-      <!-- Teammate list -->
       <div *ngIf="!notifyUsersLoading && notifyUsers.length > 0" class="notify-users-list">
         <label
           *ngFor="let u of notifyUsers"

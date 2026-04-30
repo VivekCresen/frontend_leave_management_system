@@ -198,6 +198,7 @@
       [filterRole]="filterRole"
       [filterStatus]="filterStatus"
       [isLeavesLoading]="isLeavesLoading"
+      [isLoading]="isLoading"
       [isLeaveTypeSaving]="isLeaveTypeSaving"
       [isSaving]="isSaving"
       [isLeaveTypesLoading]="isLeaveTypesLoading"
@@ -229,6 +230,7 @@
       (holidayCreateRequested)="handleCreateHoliday($event)"
       (holidayUpdateRequested)="handleUpdateHoliday($event)"
       (holidayDeleteRequested)="handleDeleteHoliday($event)"
+      (leaveTabChangeRequested)="handleAdminLeaveTabChange($event)"
       (importCompleted)="loadDashboard()"
       (saveRequested)="handleSave($event)"></app-admin-dashboard>
 
@@ -250,6 +252,7 @@
       [myLeaves]="myLeaves"
       [holidays]="holidays"
       [myAttendanceLogs]="myAttendanceLogs"
+      [isLeavesLoading]="isLeavesLoading"
       [pageId]="pageId"
       [user]="user"
       (cancelEditRequested)="cancelEdit()"
@@ -279,6 +282,7 @@
       [notifyUsers]="notifyUsers"
       [holidays]="holidays"
       [myAttendanceLogs]="myAttendanceLogs"
+      [isLeavesLoading]="isLeavesLoading"
       [pageId]="pageId"
       [user]="user"
       (openLeaveFormRequested)="openLeaveForm()"
@@ -289,6 +293,3 @@
       (deleteLeaveRequested)="handleDeleteLeave($event)"></app-employee-dashboard>
   </ng-container>
 </section>
-
-<!-- Chatbot Component -->
-<app-chatbot></app-chatbot>

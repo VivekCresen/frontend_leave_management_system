@@ -6,8 +6,7 @@
 
   <ng-container [ngSwitch]="pageId">
 
-    <!-- PROFILE -->
-    <!-- PROFILE -->
+    
     <section *ngSwitchCase="'profile'" class="panel-grid">
       <app-dashboard-profile 
         [user]="user" 
@@ -16,7 +15,6 @@
       </app-dashboard-profile>
     </section>
 
-    <!-- ATTENDANCE -->
     <section *ngSwitchCase="'attendance'" class="panel-grid">
       <app-dashboard-attendance-table
         [logs]="myAttendanceLogs"
@@ -25,7 +23,6 @@
       ></app-dashboard-attendance-table>
     </section>
 
-    <!-- LEAVE REQUESTS -->
     <section *ngSwitchCase="'requests'" class="management-grid">
       <div class="management-toolbar">
         <div>
@@ -52,6 +49,7 @@
         [leaveTypes]="leaveTypes"
         [showRequestActions]="true"
         [deletingLeaveId]="deletingLeaveId"
+        [isLoading]="isLeavesLoading"
         [title]="'Pending requests'"
         [description]="'Your leave requests awaiting approval. Edit or delete before they are reviewed.'"
         (editRequested)="editLeaveRequested.emit($event)"
@@ -59,7 +57,6 @@
       </app-dashboard-history-table>
     </section>
 
-    <!-- HISTORY -->
     <section *ngSwitchCase="'history'" class="management-grid">
       <div style="margin-bottom: 2rem;">
         <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
@@ -69,12 +66,12 @@
         [leaveTypes]="leaveTypes"
         [showRequestActions]="true"
         [deletingLeaveId]="deletingLeaveId"
+        [isLoading]="isLeavesLoading"
         (editRequested)="editLeaveRequested.emit($event)"
         (deleteRequested)="deleteLeaveRequested.emit($event)">
       </app-dashboard-history-table>
     </section>
 
-    <!-- CALENDAR -->
     <section *ngSwitchCase="'calendar'" class="calendar-page">
 
     
@@ -214,7 +211,6 @@
 
     </section>
 
-    <!-- SETTINGS -->
     <section *ngSwitchCase="'settings'" class="panel-grid">
       <article class="surface">
         <h3>{{ 'adminSettings.localization' | translate }}</h3>

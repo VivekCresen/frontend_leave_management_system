@@ -37,14 +37,13 @@
     <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">{{ 'table.reset' | translate }}</button>
   </div>
 
-  <!-- AG Grid mode -->
   <ng-container *ngIf="useAgGrid">
-    <div *ngIf="filteredUsers.length === 0" class="empty-state">
+    <div *ngIf="filteredUsers.length === 0 && !isLoading" class="empty-state">
       <h4>{{ resolvedEmptyTitle }}</h4>
       <p>{{ resolvedEmptyMessage }}</p>
     </div>
 
-    <div *ngIf="filteredUsers.length > 0 && agGridMounted" class="ag-shell">
+    <div [hidden]="!agGridMounted" class="ag-shell">
       <ag-grid-angular
         class="user-ag-grid"
         [theme]="agTheme"
@@ -62,7 +61,6 @@
     </div>
   </ng-container>
 
-  <!-- Native table mode -->
   <ng-container *ngIf="!useAgGrid">
     <div *ngIf="filteredUsers.length === 0" class="empty-state">
       <h4>{{ resolvedEmptyTitle }}</h4>

@@ -45,7 +45,6 @@ const attendanceTheme = themeQuartz.withParams({
   template: `
     <div class="table-card">
 
-      <!-- Header -->
       <div class="table-heading">
         <div>
           <p class="eyebrow">Attendance</p>
@@ -55,13 +54,11 @@ const attendanceTheme = themeQuartz.withParams({
         <span class="count-pill">{{ logs.length }} records</span>
       </div>
 
-      <!-- Empty -->
       <div *ngIf="logs.length === 0" class="empty-state">
         <h4>No attendance records</h4>
         <p>{{ emptyMessage }}</p>
       </div>
 
-      <!-- AG Grid -->
       <div *ngIf="logs.length > 0 && agGridMounted" class="ag-shell">
         <ag-grid-angular
           class="att-ag-grid"
@@ -118,7 +115,6 @@ const attendanceTheme = themeQuartz.withParams({
       overflow: hidden;
     }
 
-    /* ── AG Grid cell styles ── */
     :host ::ng-deep .att-ag-grid .ag-employee-cell {
       display: flex; flex-direction: column; justify-content: center; gap: 2px;
       padding: 8px 0; line-height: 1.4;
@@ -154,7 +150,6 @@ const attendanceTheme = themeQuartz.withParams({
       padding: 0 16px; min-height: 44px;
     }
 
-    /* ── Dark mode ── */
     [data-theme="dark"] .table-card { background: var(--surface-bg); border-color: var(--surface-border); box-shadow: var(--surface-shadow); }
     [data-theme="dark"] .table-heading { border-bottom-color: var(--surface-border); }
     [data-theme="dark"] .table-heading h3 { color: var(--surface-heading); }

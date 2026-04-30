@@ -229,6 +229,8 @@ export class LoginComponent implements OnInit {
           leaves: [],
           managerLeaves: [],
           myLeaves: [],
+          attendanceLogs: [],
+          myAttendanceLogs: [],
           cachedAt: Date.now()
         });
 

@@ -70,6 +70,7 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
   @Input() myLeaves: AdminLeaveTableRow[] = [];
   @Input() holidays: Holiday[] = [];
   @Input() myAttendanceLogs: AttendanceLogDto[] = [];
+  @Input() isLeavesLoading = false;
 
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();

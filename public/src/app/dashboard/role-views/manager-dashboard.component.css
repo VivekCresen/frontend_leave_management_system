@@ -56,7 +56,6 @@
   grid-column: 1 / -1;
 }
 
-/* Quick actions */
 .quick-action-list {
   display: grid;
   gap: 10px;
@@ -214,7 +213,6 @@
   background: rgba(249, 115, 22, 0.14);
 }
 
-/* Team status */
 .team-status-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -317,7 +315,6 @@
   transform: translateY(-1px);
 }
 
-/* Team stats bar */
 .team-stats-bar {
   display: flex;
   gap: 12px;
@@ -350,7 +347,6 @@
   color: #b91c1c;
 }
 
-/* Leave status bar */
 .leave-status-bar {
   display: flex;
   gap: 14px;
@@ -387,7 +383,6 @@
 .leave-status-item.approved strong { color: #15803d; }
 .leave-status-item.rejected strong { color: #b91c1c; }
 
-/* Status badges */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -414,7 +409,6 @@
   color: #b91c1c;
 }
 
-/* Leave count pill */
 .leave-count-pill {
   display: inline-flex;
   align-items: center;
@@ -428,7 +422,6 @@
   white-space: nowrap;
 }
 
-/* ── Panel grid ── */
 .panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -443,7 +436,6 @@
   grid-column: 1 / -1;
 }
 
-/* Calendar */
 .calendar-leave-list {
   display: grid;
   gap: 10px;
@@ -510,7 +502,6 @@
   font-size: 0.76rem;
 }
 
-/* Reports */
 .report-metric-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -547,7 +538,6 @@
 .report-metric.approved-metric strong { color: #15803d; }
 .report-metric.rejected-metric strong { color: #b91c1c; }
 
-/* Leave type breakdown */
 .leave-type-breakdown {
   display: grid;
   gap: 12px;
@@ -590,7 +580,6 @@
   font-weight: 800;
 }
 
-/* Empty state */
 .leave-empty-state {
   margin-top: 18px;
   padding: 20px;
@@ -614,7 +603,6 @@
   line-height: 1.5;
 }
 
-/* Modal */
 .form-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -702,7 +690,6 @@
   }
 }
 
-/* ── Team Calendar ── */
 .calendar-page {
   display: flex;
   flex-direction: column;
@@ -717,7 +704,6 @@
   overflow: hidden;
 }
 
-/* Month navigation */
 .cal-nav {
   display: flex;
   align-items: center;
@@ -774,7 +760,6 @@
   color: #c2410c;
 }
 
-/* Grid */
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -794,7 +779,6 @@
   text-transform: uppercase;
 }
 
-/* Day cells */
 .cal-week-row {
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
@@ -855,7 +839,6 @@
   line-height: 1;
 }
 
-/* Dots */
 .cal-dots {
   display: flex;
   flex-wrap: wrap;
@@ -885,7 +868,6 @@
   line-height: 7px;
 }
 
-/* Legend */
 .cal-legend-dot {
   width: 10px;
   height: 10px;
@@ -903,7 +885,6 @@
   margin-right: 10px;
 }
 
-/* Detail panel */
 .cal-detail-panel {
   padding: 20px;
 }
@@ -983,7 +964,6 @@
   }
 }
 
-/* ── Public holiday calendar markers ── */
 .cal-day.is-holiday {
   background: rgba(251, 191, 36, 0.08);
   border-color: rgba(251, 191, 36, 0.4);
@@ -1004,7 +984,6 @@
   max-width: 100%;
 }
 
-/* Pending summary banner */
 .pending-summary-banner {
   display: flex;
   align-items: flex-start;

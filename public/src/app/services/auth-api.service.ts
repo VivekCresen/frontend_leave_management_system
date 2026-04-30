@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timer } from 'rxjs';
+import { map, shareReplay, switchMap } from 'rxjs/operators';
 import {
   AuthService,
   CountryOption,
@@ -25,6 +26,10 @@ export class AuthApiService implements AuthService {
   private readonly baseApiUrl = this.apiUrl.replace('/api/users', '/api');
   private readonly storageKey = 'leave-app-user';
   private readonly currentUserState = signal<LoginResponse | null>(this.readStoredUser());
+  private readonly dashboardStartupGate$ = timer(this.dashboardWarmupDelayMs()).pipe(
+    map(() => void 0),
+    shareReplay({ bufferSize: 1, refCount: false })
+  );
 
   readonly currentUser = this.currentUserState.asReadonly();
 
@@ -32,7 +37,6 @@ export class AuthApiService implements AuthService {
     private readonly http: HttpClient,
     private readonly translateService: TranslateService
   ) {
-    // Restore language for any already-stored user (e.g. page refresh)
     const stored = this.currentUserState();
     if (stored?.username) {
       this.translateService.initForUser(stored.username);
@@ -47,7 +51,11 @@ export class AuthApiService implements AuthService {
   }
 
   getDashboard(): Observable<UserDashboardResponse> {
-    return this.http.get<UserDashboardResponse>(`${this.apiUrl}/dashboard/${this.actorUsernameOrThrow()}`);
+    return this.dashboardStartupGate$.pipe(
+      switchMap(() =>
+        this.http.get<UserDashboardResponse>(`${this.apiUrl}/dashboard/${this.actorUsernameOrThrow()}`)
+      )
+    );
   }
 
   getCountries(): Observable<CountryOption[]> {
@@ -134,8 +142,6 @@ export class AuthApiService implements AuthService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('actorUsername', this.actorUsernameOrThrow());
-    // Must use responseType: 'blob' so Angular never tries to JSON-parse
-    // a binary Excel error response. On success we parse the blob as JSON manually.
     return new Observable(observer => {
       this.http.post(`${this.apiUrl}/import`, formData, {
         responseType: 'blob',
@@ -152,7 +158,6 @@ export class AuthApiService implements AuthService {
           }
         },
         error: (err) => {
-          // Pass the blob through so the component can trigger download
           observer.error({ status: err.status, error: err.error, headers: err.headers });
         }
       });
@@ -220,6 +225,17 @@ export class AuthApiService implements AuthService {
 
   private normalizeEmail(value: string): string {
     return value.trim().toLowerCase();
+  }
+
+  private dashboardWarmupDelayMs(): number {
+    try {
+      const url = new URL(this.apiUrl);
+      const isLocalGateway =
+        url.port === '8080' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1');
+      return isLocalGateway ? 1500 : 0;
+    } catch {
+      return 0;
+    }
   }
 
   private actorUsernameOrThrow(): string {

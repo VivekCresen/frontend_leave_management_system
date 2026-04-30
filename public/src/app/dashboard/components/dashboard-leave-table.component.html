@@ -44,13 +44,12 @@
     <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">{{ 'table.reset' | translate }}</button>
   </div>
 
-  <!-- ── AG Grid (compactView) ── -->
   <ng-container *ngIf="compactView">
-    <div *ngIf="agFilteredCount === 0" class="empty-state">
+    <div *ngIf="agFilteredCount === 0 && !isLoading" class="empty-state">
       <h4>{{ resolvedEmptyTitle }}</h4>
       <p>{{ resolvedEmptyMessage }}</p>
     </div>
-    <div *ngIf="agFilteredCount > 0 && gridMounted" class="ag-shell">
+    <div [hidden]="!gridMounted" class="ag-shell">
       <ag-grid-angular
         class="leave-ag-grid"
         [theme]="agTheme"
@@ -67,7 +66,6 @@
     </div>
   </ng-container>
 
-  <!-- ── Legacy table (non-compactView) ── -->
   <ng-container *ngIf="!compactView">
     <div *ngIf="displayedLeaves.length === 0" class="empty-state">
       <h4>{{ resolvedEmptyTitle }}</h4>
@@ -195,7 +193,6 @@
   </ng-container>
 </section>
 
-<!-- Rejection reason modal -->
 <div *ngIf="rejectingLeave" class="reject-modal-backdrop" (click)="closeRejectModal()">
   <div class="reject-modal-card" (click)="$event.stopPropagation()">
     <div class="reject-modal-header">
@@ -228,7 +225,6 @@
   </div>
 </div>
 
-<!-- Partial approval modal -->
 <div *ngIf="partialLeave" class="reject-modal-backdrop" (click)="closePartialModal()">
   <div class="reject-modal-card partial-modal-card" (click)="$event.stopPropagation()">
     <div class="reject-modal-header">
@@ -294,14 +290,12 @@
   </div>
 </div>
 
-<!-- Leave Progress Modal -->
 <app-leave-progress-modal
   *ngIf="progressLeave"
   [leave]="progressLeave"
   (closed)="progressLeave = null">
 </app-leave-progress-modal>
 
-<!-- Dates popup -->
 <div *ngIf="popupLeave" class="dates-popup-backdrop" (click)="popupLeave = null">
   <div class="dates-popup-card" (click)="$event.stopPropagation()">
     <div class="dates-popup-header">

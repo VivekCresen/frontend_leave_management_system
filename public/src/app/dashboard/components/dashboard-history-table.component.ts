@@ -59,7 +59,6 @@ const historyTheme = themeQuartz.withParams({
   standalone: true,
   imports: [CommonModule, AgGridAngular, LeaveProgressModalComponent],
   template: `
-<!-- Table Card -->
 <section class="table-card">
   <div class="table-heading">
     <div>
@@ -72,12 +71,12 @@ const historyTheme = themeQuartz.withParams({
     </div>
   </div>
 
-  <div *ngIf="leaves.length === 0" class="empty-state">
+  <div *ngIf="leaves.length === 0 && !isLoading" class="empty-state">
     <h4>{{ translate.getTranslation('tableActions.noLeaveHistory') }}</h4>
     <p>{{ translate.getTranslation('tableActions.submitFirstLeave') }}</p>
   </div>
 
-  <div *ngIf="leaves.length > 0 && gridMounted" class="ag-shell">
+  <div [hidden]="!gridMounted" class="ag-shell">
     <ag-grid-angular
       class="history-ag-grid"
       [theme]="agTheme"
@@ -94,14 +93,13 @@ const historyTheme = themeQuartz.withParams({
   </div>
 </section>
 
-<!-- Progress modal -->
 <app-leave-progress-modal
   *ngIf="progressLeave"
   [leave]="progressLeave"
   (closed)="progressLeave = null">
 </app-leave-progress-modal>
 
-<!-- Dates popup -->
+
 <div *ngIf="popupLeave" class="dates-popup-backdrop" (click)="popupLeave = null">
   <div class="dates-popup-card" (click)="$event.stopPropagation()">
     <div class="dates-popup-header">
@@ -322,7 +320,6 @@ const historyTheme = themeQuartz.withParams({
       font-weight: 600;
     }
 
-    /* ── Individual date chips ───────────────────────────── */
     :host ::ng-deep .history-ag-grid .ag-dates-cell {
       display: flex;
       flex-direction: column;
@@ -367,7 +364,6 @@ const historyTheme = themeQuartz.withParams({
       .table-heading { flex-direction: column; }
     }
 
-    /* ─── Leave Balance Row ──────────────────────────────── */
     .balance-row {
       display: flex;
       gap: 12px;
@@ -478,7 +474,6 @@ const historyTheme = themeQuartz.withParams({
       .balance-card { flex: 1 1 100%; }
     }
 
-    /* ── Dates popup ─────────────────────────────────────── */
     .dates-popup-backdrop {
       position: fixed;
       inset: 0;
@@ -591,6 +586,7 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges,
   @Input() description = 'Your complete leave request history.';
   @Input() showRequestActions = false;
   @Input() deletingLeaveId: number | null = null;
+  @Input() isLoading = false;
 
   @Output() editRequested = new EventEmitter<AdminLeaveTableRow>();
   @Output() deleteRequested = new EventEmitter<AdminLeaveTableRow>();
@@ -618,7 +614,7 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges,
 
   constructor() {
     effect(() => {
-      this.translate.currentLang(); // track signal
+      this.translate.currentLang();
       if (this.gridApi) {
         this.gridApi.setGridOption('columnDefs', this.columnDefs);
         this.gridApi.setGridOption('rowData', this.leaves);
@@ -633,7 +629,6 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges,
           .filter((l) => {
             if (l.status !== 'APPROVED') return false;
             const t = l.leaveType?.trim().toLowerCase() ?? '';
-            // match against both display name and unique name
             return t === lt.leaveName?.trim().toLowerCase()
                 || t === lt.leaveUniqueName?.trim().toLowerCase();
           })
@@ -887,7 +882,6 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges,
   }
 
   ngOnDestroy(): void {
-    // Don't clear localStorage on destroy — we want it to persist across navigation
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -897,11 +891,21 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges,
 
     if (changes['leaves'] && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.leaves);
+      if (!this.isLoading) {
+        this.gridApi.hideOverlay();
+      }
     }
 
-    // Restore progress leave when leaves data becomes available
     if (changes['leaves'] && this.leaves.length > 0 && !this._progressLeave) {
       this.restoreProgressLeave();
+    }
+
+    if (changes['isLoading'] && this.gridApi) {
+      if (this.isLoading) {
+        this.gridApi.showLoadingOverlay();
+      } else {
+        this.gridApi.hideOverlay();
+      }
     }
   }
 
@@ -934,7 +938,6 @@ export class DashboardHistoryTableComponent implements AfterViewInit, OnChanges,
       iso = String(value).trim();
     }
     if (!iso) return '—';
-    // Parse as local date to avoid UTC offset shifting the day
     const parts = iso.split('-');
     if (parts.length === 3) {
       const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
