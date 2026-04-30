@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Output, inject } from '@angular/core';
 import { AuthApiService } from '../../services/auth-api.service';
 import { ToastService } from '../../services/toast.service';
+import { downloadBlob } from '../../commons/api.util';
 
 type ImportState = 'idle' | 'uploading' | 'success' | 'error';
 type LcrStep = 'load' | 'check' | 'resolve';
@@ -49,17 +50,11 @@ export class UserExcelImportComponent {
 
   downloadTemplate(): void {
     if (this.isDownloading) return;
-
     this.isDownloading = true;
     this.authService.downloadImportTemplate().subscribe({
       next: (blob) => {
         this.isDownloading = false;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'user_import_template.xlsx';
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadBlob(blob, 'user_import_template.xlsx');
         this.toastService.success('Template downloaded');
       },
       error: () => {
@@ -172,12 +167,7 @@ export class UserExcelImportComponent {
   }
 
   private downloadErrorBlob(blob: Blob): void {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'user_import_errors.xlsx';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, 'user_import_errors.xlsx');
     this.toastService.warn('Error file downloaded. Fix the highlighted rows and re-upload.');
   }
 }

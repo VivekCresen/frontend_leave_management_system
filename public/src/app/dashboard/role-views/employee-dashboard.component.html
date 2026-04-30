@@ -58,9 +58,64 @@
     </section>
 
     <section *ngSwitchCase="'history'" class="management-grid">
-      <div style="margin-bottom: 2rem;">
-        <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
+      <div class="management-toolbar">
+        <div>
+          <h3>My leave history</h3>
+          <p class="body-copy">Your personal leave history and available balances.</p>
+        </div>
+        <div class="toolbar-actions">
+          <button
+            type="button"
+            class="primary-toolbar-button"
+            (click)="openLeaveFormRequested.emit()">
+            <i class="fas fa-plus"></i>
+            <span>Request leave</span>
+          </button>
+        </div>
       </div>
+
+      <div class="attendance-today-card" *ngIf="todayAttendanceLog">
+        <div class="att-card-left">
+          <div class="att-card-icon" [class.att-icon-active]="!todayAttendanceLog.checkOutTime" [class.att-icon-auto]="todayAttendanceLog.autoCheckedOut">
+            <i class="fas" [class.fa-user-clock]="!todayAttendanceLog.checkOutTime" [class.fa-clock-rotate-left]="todayAttendanceLog.autoCheckedOut" [class.fa-circle-check]="todayAttendanceLog.checkOutTime && !todayAttendanceLog.autoCheckedOut"></i>
+          </div>
+          <div class="att-card-info">
+            <p class="att-card-eyebrow">Today's Attendance</p>
+            <h3 class="att-card-title">
+              <ng-container *ngIf="!todayAttendanceLog.checkOutTime">Currently checked in</ng-container>
+              <ng-container *ngIf="todayAttendanceLog.checkOutTime && !todayAttendanceLog.autoCheckedOut">Checked out</ng-container>
+              <ng-container *ngIf="todayAttendanceLog.autoCheckedOut">Auto checked-out</ng-container>
+            </h3>
+            <p class="att-card-sub" *ngIf="todayAttendanceLog.autoCheckedOut">
+              <i class="fas fa-robot"></i> System automatically checked you out after 12 hours since you forgot to check out.
+            </p>
+          </div>
+        </div>
+        <div class="att-card-times">
+          <div class="att-time-item">
+            <span class="att-time-label"><i class="fas fa-sign-in-alt"></i> Check-in</span>
+            <strong class="att-time-value">{{ todayAttendanceLog.checkInTime | date:'h:mm a' }}</strong>
+          </div>
+          <div class="att-time-divider"></div>
+          <div class="att-time-item">
+            <span class="att-time-label"><i class="fas fa-sign-out-alt"></i> Check-out</span>
+            <strong class="att-time-value" [class.att-time-active]="!todayAttendanceLog.checkOutTime">
+              {{ todayAttendanceLog.checkOutTime ? (todayAttendanceLog.checkOutTime | date:'h:mm a') : 'Active' }}
+            </strong>
+          </div>
+          <div class="att-time-divider"></div>
+          <div class="att-time-item">
+            <span class="att-time-label"><i class="fas fa-hourglass-half"></i> Duration</span>
+            <strong class="att-time-value">{{ todayDuration }}</strong>
+          </div>
+        </div>
+        <div class="att-auto-badge" *ngIf="todayAttendanceLog.autoCheckedOut">
+          <i class="fas fa-triangle-exclamation"></i> Auto checkout
+        </div>
+      </div>
+
+      <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
+
       <app-dashboard-history-table
         [leaves]="myLeaves"
         [leaveTypes]="leaveTypes"

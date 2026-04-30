@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LeaveAuditCacheService } from './leave-audit-cache.service';
+import { formatDateTime } from '../commons/date.util';
 
 
 @Component({
@@ -187,12 +188,6 @@ export class LeaveAuditCacheManagerComponent implements OnInit {
   }
 
   formatDate(timestamp: number): string {
-    return new Date(timestamp).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDateTime(new Date(timestamp).toISOString());
   }
 }

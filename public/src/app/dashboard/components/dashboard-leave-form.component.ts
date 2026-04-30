@@ -4,6 +4,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { AdminLeaveTableRow } from '../components/dashboard-leave-table.component';
 import { Holiday, LeaveType, NotifyUser } from '../../services/leave.service';
 import { ToastService } from '../../services/toast.service';
+import { toDateKey } from '../../commons/date.util';
 
 export interface LeaveFormSubmitEvent {
   leaveTypeId: number;
@@ -304,14 +305,14 @@ export class DashboardLeaveFormComponent implements OnChanges {
     endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayKey = this.toDateKey(today);
+    const todayKey = toDateKey(today);
 
     const weeks: SelectionCalendarDay[][] = [];
     let week: SelectionCalendarDay[] = [];
     const cursor = new Date(startDate);
 
     while (cursor <= endDate) {
-      const dateKey = this.toDateKey(cursor);
+      const dateKey = toDateKey(cursor);
       const holiday = this.holidays.find((item) => item.date === dateKey) ?? null;
       week.push({
         date: new Date(cursor),
@@ -523,15 +524,7 @@ export class DashboardLeaveFormComponent implements OnChanges {
   }
 
   private isHolidayDate(date: Date): boolean {
-    const dateKey = this.toDateKey(date);
-    return this.holidays.some((holiday) => holiday.date === dateKey);
-  }
-
-  private toDateKey(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return this.holidays.some((holiday) => holiday.date === toDateKey(date));
   }
 
   private createDefaultModel(): LeaveFormModel {

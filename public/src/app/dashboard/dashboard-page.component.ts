@@ -29,6 +29,12 @@ import { AdminLeaveTableRow } from './components/dashboard-leave-table.component
 import { DashboardLeaveFormComponent, LeaveFormSubmitEvent } from './components/dashboard-leave-form.component';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { TranslateService, Language } from '../i18n/translate.service';
+import { LangSwitcherMixin } from '../commons/lang-switcher.mixin';
+import { toDateString, calculateDurationDays } from '../commons/date.util';
+import { getInitials } from '../commons/string.util';
+import { buildUserDirectory, extractApiError } from '../commons/api.util';
+import { validateUsername } from '../commons/form.util';
+import { sortByDate } from '../commons/array.util';
 
 type AdminLeaveTab = 'records' | 'types' | 'holidays';
 
@@ -47,10 +53,9 @@ type AdminLeaveTab = 'records' | 'types' | 'holidays';
   templateUrl: './dashboard-page.component.html',
   styleUrls: ['./dashboard-page.component.css']
 })
-export class DashboardPageComponent implements OnInit, OnChanges {
+export class DashboardPageComponent extends LangSwitcherMixin implements OnInit, OnChanges {
   private readonly authService: AuthApiService;
   private readonly leaveService: LeaveApiService;
-  private readonly usernameRegex = /^[A-Za-z0-9._-]+$/;
 
   readonly genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
   readonly usernameMinLength = 3;
@@ -112,6 +117,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
     private readonly router: Router,
     private readonly toastService: ToastService
   ) {
+    super();
     this.authService = authService;
     this.leaveService = leaveService;
   }
@@ -128,8 +134,6 @@ export class DashboardPageComponent implements OnInit, OnChanges {
       if (this.dashboardCache.isStale(this.user.username)) {
         this.loadDashboard(true);
       } else {
-        // Cache is fresh but page-specific resources (e.g. attendance logs) are
-        // never stored in the cache, so we must load them explicitly.
         this.loadPageResources(cached.dashboard, true);
       }
     } else {
@@ -211,10 +215,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   get profileInitials(): string {
-    const source = this.profileDisplayName.trim() || this.user.username.trim() || 'User';
-    const parts = source.split(/\s+/).filter((value) => value.length > 0);
-    const initials = (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '');
-    return (initials || source.slice(0, 2)).toUpperCase();
+    return getInitials(this.profileDisplayName || this.user.username);
   }
 
   get profileRoleLabel(): string {
@@ -1075,8 +1076,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
           .map((leave) => {
             const role = response.users.find((u) => u.id === leave.userId)?.role ?? 'EMPLOYEE';
             return this.mapLeaveToRow(leave, role, undefined, undefined, userDirectory);
-          })
-          .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+          });
+        this.managerLeaves = sortByDate(this.managerLeaves, 'fromDate');
         this.writeCacheWhenReady();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -1100,8 +1101,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             response.actor?.fullName || 'Me',
             response.actor?.email || '',
             userDirectory
-          ))
-          .sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+          ));
+        this.myLeaves = sortByDate(this.myLeaves, 'fromDate');
         this.writeCacheWhenReady();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -1229,8 +1230,8 @@ export class DashboardPageComponent implements OnInit, OnChanges {
             if (!role) return null;
             return this.mapLeaveToRow(leave, role, undefined, undefined, userDirectory);
           })
-          .filter((leave): leave is AdminLeaveTableRow => leave !== null)
-          .sort((left, right) => new Date(right.fromDate).getTime() - new Date(left.fromDate).getTime());
+          .filter((leave): leave is AdminLeaveTableRow => leave !== null);
+        this.leaves = sortByDate(this.leaves, 'fromDate');
         this.writeCacheWhenReady();
       },
       error: (err: { error?: LeaveApiErrorResponse }) => {
@@ -1250,12 +1251,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   private buildUserDirectory(response: UserDashboardResponse): Record<string, string> {
-    const entries = [response.actor, ...(response.users ?? [])]
-      .filter((user): user is ManagedUser => !!user)
-      .map((user) => [user.username?.trim().toLowerCase(), user.fullName?.trim()] as const)
-      .filter((entry): entry is readonly [string, string] => !!entry[0] && !!entry[1]);
-
-    return Object.fromEntries(entries);
+    return buildUserDirectory([response.actor, ...(response.users ?? [])]);
   }
 
   private createProfileModel() {
@@ -1300,21 +1296,7 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   private getProfileUsernameMessage(): string | null {
-    const username = this.profileModel.username.trim();
-
-    if (!username) {
-      return null;
-    }
-
-    if (username.length < this.usernameMinLength || username.length > this.usernameMaxLength) {
-      return `Username must be ${this.usernameMinLength} to ${this.usernameMaxLength} characters`;
-    }
-
-    if (!this.usernameRegex.test(username)) {
-      return 'Username must use letters, numbers, dot, underscore, or hyphen only';
-    }
-
-    return null;
+    return validateUsername(this.profileModel.username.trim(), this.usernameMinLength, this.usernameMaxLength);
   }
 
   private shouldShowProfileError(control: NgModel | null): boolean {
@@ -1359,70 +1341,26 @@ export class DashboardPageComponent implements OnInit, OnChanges {
   }
 
   private buildLeaveTypeErrorMessage(
-    error?: LeaveApiErrorResponse,
+    error?: { details?: string[] },
     fallback = 'Unable to save the leave type right now.'
   ): string {
-    return error?.details?.[0] || fallback;
+    return extractApiError(error, fallback);
   }
 
   private toDateString(val: string | number[] | unknown): string {
-    if (!val) return '';
-    if (Array.isArray(val) && val.length >= 3) {
-      const [y, m, d] = val as number[];
-      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    }
-    return String(val);
+    return toDateString(val);
   }
 
   private calculateDurationDays(leaveDates: { date: string | number[] | unknown; dayType: string }[]): number {
-    return leaveDates.reduce((sum, d) => sum + (d.dayType && d.dayType.includes('HALF') ? 0.5 : 1.0), 0);
+    return calculateDurationDays(leaveDates);
   }
 
-  isLangDropdownOpen = false;
-  availableLangs = [
-    { code: 'en', label: 'English (US)' },
-    { code: 'es', label: 'Español (ES)' },
-    { code: 'fr', label: 'Français (FR)' },
-    { code: 'de', label: 'Deutsch (DE)' },
-    { code: 'zh', label: '中文 (ZH)' },
-    { code: 'ru', label: 'Русский (RU)' },
-    { code: 'ja', label: '日本語 (JA)' },
-    { code: 'ar', label: 'العربية (AR)' },
-    { code: 'hi', label: 'हिन्दी (HI)' },
-    { code: 'pt', label: 'Português (PT)' },
-    { code: 'ko', label: '한국어 (KO)' },
-    { code: 'it', label: 'Italiano (IT)' },
-    { code: 'tr', label: 'Türkçe (TR)' },
-    { code: 'nl', label: 'Nederlands (NL)' },
-    { code: 'pl', label: 'Polski (PL)' },
-    { code: 'th', label: 'ไทย (TH)' },
-    { code: 'vi', label: 'Tiếng Việt (VI)' },
-    { code: 'id', label: 'Bahasa Indonesia (ID)' },
-    { code: 'sv', label: 'Svenska (SV)' },
-    { code: 'bn', label: 'বাংলা (BN)' }
-  ];
+  override isLangDropdownOpen = false;
 
-  getSelectedLangLabel(): string {
-    const code = this.translateService.currentLang() || 'en';
-    const lang = this.availableLangs.find(l => l.code === code);
-    return lang ? lang.label : 'Select language';
-  }
-
-  toggleLangDropdown(event: Event): void {
-    event.stopPropagation();
-    this.isLangDropdownOpen = !this.isLangDropdownOpen;
-  }
-
-  selectLang(code: string): void {
-    this.translateService.setLanguage(code as Language);
+  @HostListener('document:click', ['$event'])
+  override onDocumentClick(): void {
     this.isLangDropdownOpen = false;
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClickLang(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.custom-dropdown-container') && !target.closest('.profile-trigger')) {
-      this.isLangDropdownOpen = false;
-    }
-  }
+  protected override buildCalendar(): void {}
 }

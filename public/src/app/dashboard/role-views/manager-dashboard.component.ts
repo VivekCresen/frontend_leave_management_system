@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges, HostListener } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
@@ -13,13 +13,15 @@ import { LeaveFormSubmitEvent } from '../components/dashboard-leave-form.compone
 import { AdminLeaveTableRow, DashboardLeaveTableComponent } from '../components/dashboard-leave-table.component';
 import { DashboardHistoryTableComponent } from '../components/dashboard-history-table.component';
 import { LeaveType, Holiday } from '../../services/leave.service';
-import { CalendarBase } from '../components/calendar-base';
-import { TranslateService, Language } from '../../i18n/translate.service';
+import { TranslateService } from '../../i18n/translate.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
 import { ThemeService } from '../../services/theme.service';
 import { DashboardProfileComponent } from '../components/dashboard-profile.component';
 import { DashboardAttendanceTableComponent } from '../components/dashboard-attendance-table.component';
 import { AttendanceLogDto } from '../../services/auth.service';
+import { LangSwitcherMixin } from '../../commons/lang-switcher.mixin';
+import { computeLeaveBalanceCards, computeLeaveByType } from '../../commons/leave-balance.util';
+import { getInitials } from '../../commons/string.util';
 
 export type CalendarDay = {
   date: Date;
@@ -49,7 +51,7 @@ export type CalendarDay = {
   templateUrl: './manager-dashboard.component.html',
   styleUrls: ['./manager-dashboard.component.css']
 })
-export class ManagerDashboardComponent extends CalendarBase implements OnChanges {
+export class ManagerDashboardComponent extends LangSwitcherMixin implements OnChanges {
   readonly translateService = inject(TranslateService);
   readonly themeService = inject(ThemeService);
   @Input({ required: true }) pageId!: DashboardPageId;
@@ -208,96 +210,19 @@ export class ManagerDashboardComponent extends CalendarBase implements OnChanges
   }
 
   get leaveByType(): { type: string; count: number; pct: number }[] {
-    const map = new Map<string, number>();
-    for (const leave of this.managerLeaves) {
-      map.set(leave.leaveType, (map.get(leave.leaveType) ?? 0) + 1);
-    }
-    const total = this.managerLeaves.length || 1;
-    return Array.from(map.entries())
-      .map(([type, count]) => ({ type, count, pct: Math.round((count / total) * 100) }))
-      .sort((a, b) => b.count - a.count);
+    return computeLeaveByType(this.managerLeaves);
   }
 
   get leaveBalanceCards(): DashboardStatCard[] {
-    if (!this.leaveTypes || this.leaveTypes.length === 0) {
-      return [];
-    }
-    const t = (k: string, fb: string) => { const v = this.translateService.getTranslation(k); return v !== k ? v : fb; };
-    const userGender = this.dashboard?.actor?.gender?.toUpperCase() || '';
-    const relevantTypes = this.leaveTypes.filter(lt => {
-      if (!lt.genderRestriction) return true;
-      if (!userGender) return true;
-      return lt.genderRestriction.toUpperCase() === userGender;
-    });
-
-    const myApproved = this.myLeaves.filter(l => l.status === 'APPROVED');
-    return relevantTypes.map((leaveType) => {
-      const takenDays = myApproved
-        .filter((l) => l.leaveTypeId === leaveType.id || l.leaveType === leaveType.leaveName)
-        .reduce((sum, l) => sum + (l.durationDays ?? 0), 0);
-      const remaining = Math.max(0, leaveType.maxDays - takenDays);
-      const remainingFmt = Number.isInteger(remaining) ? String(remaining) : remaining.toFixed(1);
-      const usedFmt = Number.isInteger(takenDays) ? String(takenDays) : takenDays.toFixed(1);
-      const trKey = 'leaveTypes.' + (leaveType.leaveUniqueName || leaveType.leaveName);
-      const translatedName = this.translateService.getTranslation(trKey) !== trKey ? this.translateService.getTranslation(trKey) : leaveType.leaveName;
-
-      return {
-        label: translatedName,
-        value: `${remainingFmt} ${t('stats.available', 'available')}`,
-        note: `${t('stats.used', 'Used')} ${usedFmt} ${t('stats.of', 'of')} ${leaveType.maxDays} ${t('stats.days', 'days')}`,
-        tone: remaining > 0 ? 'teal' : 'orange',
-        icon: 'fa-calendar-minus'
-      };
-    });
+    return computeLeaveBalanceCards(
+      this.leaveTypes,
+      this.myLeaves.filter(l => l.status === 'APPROVED'),
+      this.dashboard?.actor?.gender ?? '',
+      this.translateService
+    );
   }
 
   getInitials(name: string): string {
-    const parts = (name || 'U').trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U';
-  }
-
-  isLangDropdownOpen = false;
-  availableLangs = [
-    { code: 'en', label: 'English (US)' },
-    { code: 'es', label: 'Español (ES)' },
-    { code: 'fr', label: 'Français (FR)' },
-    { code: 'de', label: 'Deutsch (DE)' },
-    { code: 'zh', label: '中文 (ZH)' },
-    { code: 'ru', label: 'Русский (RU)' },
-    { code: 'ja', label: '日本語 (JA)' },
-    { code: 'ar', label: 'العربية (AR)' },
-    { code: 'hi', label: 'हिन्दी (HI)' },
-    { code: 'pt', label: 'Português (PT)' },
-    { code: 'ko', label: '한국어 (KO)' },
-    { code: 'it', label: 'Italiano (IT)' },
-    { code: 'tr', label: 'Türkçe (TR)' },
-    { code: 'nl', label: 'Nederlands (NL)' },
-    { code: 'pl', label: 'Polski (PL)' },
-    { code: 'th', label: 'ไทย (TH)' },
-    { code: 'vi', label: 'Tiếng Việt (VI)' },
-    { code: 'id', label: 'Bahasa Indonesia (ID)' },
-    { code: 'sv', label: 'Svenska (SV)' },
-    { code: 'bn', label: 'বাংলা (BN)' }
-  ];
-
-  getSelectedLangLabel(): string {
-    const code = this.translateService.currentLang() || 'en';
-    const lang = this.availableLangs.find(l => l.code === code);
-    return lang ? lang.label : 'Select language';
-  }
-
-  toggleLangDropdown(event: Event): void {
-    event.stopPropagation();
-    this.isLangDropdownOpen = !this.isLangDropdownOpen;
-  }
-
-  selectLang(code: string): void {
-    this.translateService.setLanguage(code as Language);
-    this.isLangDropdownOpen = false;
-  }
-
-  @HostListener('document:click')
-  onDocumentClick(): void {
-    this.isLangDropdownOpen = false;
+    return getInitials(name);
   }
 }

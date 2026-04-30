@@ -12,6 +12,7 @@ import { CountryLanguageService } from '../i18n/country-language.service';
 import { TranslateService, Language } from '../i18n/translate.service';
 import { LanguagePopupComponent } from '../language-popup/language-popup.component';
 import { DashboardCacheService } from '../services/dashboard-cache.service';
+import { shouldShowControlError, firstFieldError } from '../commons/form.util';
 
 @Component({
   selector: 'app-login',
@@ -157,13 +158,11 @@ export class LoginComponent implements OnInit {
   }
 
   private shouldShowControlError(control: NgModel): boolean {
-    return control.invalid === true
-      && (control.touched === true || control.dirty === true || this.submitted);
+    return shouldShowControlError(control, this.submitted);
   }
 
   private firstFieldError(): string | null {
-    const [firstError] = Object.values(this.fieldErrors);
-    return firstError ?? null;
+    return firstFieldError(this.fieldErrors);
   }
 
   togglePasswordVisibility(): void {

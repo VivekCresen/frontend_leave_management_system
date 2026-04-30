@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild, HostListener } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { ManagedUser, UserManagementPayload, CountryOption, PhoneCodeOption } from '../../services/auth.service';
 import { injectAuthService } from '../../services/auth.service';
 import {
@@ -8,6 +9,9 @@ import {
   STRICT_PASSWORD_MESSAGE,
   getStrictPasswordError
 } from '../../shared/password-policy';
+import { shouldShowControlError, validateUsername, validatePhoneNumber } from '../../commons/form.util';
+import { titleCase } from '../../commons/string.util';
+import { normalizeEmail } from '../../commons/api.util';
 
 type UserFormModel = {
   companyId: string;
@@ -41,7 +45,6 @@ export interface DashboardUserSubmitEvent {
 export class DashboardUserFormComponent implements OnChanges, OnInit {
   private readonly companyIdPrefix = 'CRESEN';
   private readonly minimumNextCompanyId = 4;
-  private readonly usernameRegex = /^[A-Za-z0-9._-]+$/;
   private readonly authService = injectAuthService();
 
   readonly usernameMinLength = 3;
@@ -219,7 +222,7 @@ export class DashboardUserFormComponent implements OnChanges, OnInit {
         companyId: this.model.companyId.trim(),
         fullName: this.model.fullName.trim(),
         username: this.model.username.trim(),
-        email: this.model.email.trim().toLowerCase(),
+        email: normalizeEmail(this.model.email),
         password: this.model.password ? btoa(this.model.password) : '',
         role: this.model.role,
         managerUsername: this.shouldShowManagerField ? (this.model.managerUsername.trim() || undefined) : undefined,
@@ -327,7 +330,7 @@ export class DashboardUserFormComponent implements OnChanges, OnInit {
   }
 
   roleLabel(role: string): string {
-    return role.charAt(0) + role.slice(1).toLowerCase();
+    return titleCase(role);
   }
 
   getManagerError(): string | null {
@@ -423,13 +426,11 @@ export class DashboardUserFormComponent implements OnChanges, OnInit {
   }
 
   private shouldShowControlError(control: NgModel): boolean {
-    return control.invalid === true && this.shouldShowFieldFeedback(control);
+    return shouldShowControlError(control, this.submitted);
   }
 
   private shouldShowFieldFeedback(control: NgModel | null): boolean {
-    return control
-      ? control.touched === true || control.dirty === true || this.submitted
-      : this.submitted;
+    return control ? shouldShowControlError(control, this.submitted) : this.submitted;
   }
 
   private shouldShowTrimmedRequired(field: TrimmedField, control: NgModel | null): boolean {
@@ -453,31 +454,11 @@ export class DashboardUserFormComponent implements OnChanges, OnInit {
   }
 
   private getUsernameValidationMessage(): string | null {
-    const username = this.model.username.trim();
-
-    if (!username) {
-      return null;
-    }
-
-    if (username.length < this.usernameMinLength || username.length > this.usernameMaxLength) {
-      return `Username must be ${this.usernameMinLength} to ${this.usernameMaxLength} characters`;
-    }
-
-    if (!this.usernameRegex.test(username)) {
-      return 'Username must use letters, numbers, dot, underscore, or hyphen only';
-    }
-
-    return null;
+    return validateUsername(this.model.username.trim(), this.usernameMinLength, this.usernameMaxLength);
   }
 
   private getPhoneNumberValidationMessage(): string | null {
-    const phoneNumber = this.model.phoneNumber?.trim();
-    if (!phoneNumber) return null;
-
-    if (!/^[\d\s+\-\(\)]+$/.test(phoneNumber)) {
-      return 'Phone number can only contain numbers, spaces, and + - ( )';
-    }
-    return null;
+    return validatePhoneNumber(this.model.phoneNumber?.trim() ?? '');
   }
 
   private normalizeTrimmedFields(): void {
@@ -524,33 +505,17 @@ export class DashboardUserFormComponent implements OnChanges, OnInit {
 
   private loadCountriesAndPhoneCodes(): void {
     this.isLoading = true;
-    let requestsPending = 2;
-    const checkComplete = () => {
-      requestsPending--;
-      if (requestsPending === 0) {
-        this.isLoading = false;
-      }
-    };
-
-    this.authService.getCountries().subscribe({
-      next: (countries) => {
+    forkJoin({
+      countries: this.authService.getCountries(),
+      phoneCodes: this.authService.getPhoneCodes()
+    }).subscribe({
+      next: ({ countries, phoneCodes }) => {
         this.countries = countries;
-        checkComplete();
-      },
-      error: () => {
-        console.error('Failed to load countries');
-        checkComplete();
-      }
-    });
-
-    this.authService.getPhoneCodes().subscribe({
-      next: (phoneCodes) => {
         this.phoneCodes = phoneCodes;
-        checkComplete();
+        this.isLoading = false;
       },
       error: () => {
-        console.error('Failed to load phone codes');
-        checkComplete();
+        this.isLoading = false;
       }
     });
   }

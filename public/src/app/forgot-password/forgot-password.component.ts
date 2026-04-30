@@ -16,6 +16,7 @@ import {
 } from '../shared/password-policy';
 import { ToastService } from '../services/toast.service';
 import { LoaderService } from '../shared/services/loader.service';
+import { shouldShowControlError, firstFieldError, normalizeOtp, clearFormMessages } from '../commons/form.util';
 
 @Component({
   selector: 'app-forgot-password',
@@ -203,7 +204,7 @@ export class ForgotPasswordComponent {
   }
 
   onOtpInput(): void {
-    this.otp = this.normalizeOtp(this.otp);
+    this.otp = normalizeOtp(this.otp, this.otpLength);
   }
 
   goToEmailStep(): void {
@@ -320,27 +321,23 @@ export class ForgotPasswordComponent {
   }
 
   private shouldShowControlError(control: NgModel, submitted: boolean): boolean {
-    return control.invalid === true
-      && (control.touched === true || control.dirty === true || submitted);
+    return shouldShowControlError(control, submitted);
   }
 
   private normalizeEmail(value: string): string {
     return value.trim().toLowerCase();
   }
 
-  private normalizeOtp(value: string): string {
-    return value.replace(/\D/g, '').slice(0, this.otpLength);
-  }
-
   private firstFieldError(): string | null {
-    const [firstError] = Object.values(this.fieldErrors);
-    return firstError ?? null;
+    return firstFieldError(this.fieldErrors);
   }
 
   private clearMessages(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
-    this.fieldErrors = {};
+    clearFormMessages(this);
+  }
+
+  private normalizeOtp(value: string): string {
+    return normalizeOtp(value, this.otpLength);
   }
 
   private clearSensitiveFields(): void {

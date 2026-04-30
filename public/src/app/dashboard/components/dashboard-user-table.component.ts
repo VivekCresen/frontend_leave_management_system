@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, isPlatformBrowser, TitleCasePipe } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, ChangeDetectorRef, Component, effect, EventEmitter, inject, Input, OnChanges, OnInit, Output, PLATFORM_ID, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AgGridAngular } from 'ag-grid-angular';
@@ -17,6 +17,12 @@ import {
 import { ManagedUser } from '../../services/auth.service';
 import { TranslateService } from '../../i18n/translate.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
+import { escHtml } from '../../commons/html.util';
+import { formatDateTime } from '../../commons/date.util';
+import { titleCase } from '../../commons/string.util';
+import { DEFAULT_COL_DEF, mountAgGrid, syncGridOverlay, safeGoToPage } from '../../commons/ag-grid.util';
+import { makeTr } from '../../commons/translate.util';
+import { filterByTerm, sortByField, paginate, totalPages as calcTotalPages, uniqueFieldValues } from '../../commons/array.util';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -44,7 +50,7 @@ const userTableTheme = themeQuartz.withParams({
 @Component({
   selector: 'app-dashboard-user-table',
   standalone: true,
-  imports: [CommonModule, DatePipe, TitleCasePipe, FormsModule, AgGridAngular, TranslatePipe],
+  imports: [CommonModule, FormsModule, AgGridAngular, TranslatePipe],
   templateUrl: './dashboard-user-table.component.html',
   styleUrls: ['./dashboard-user-table.component.css']
 })
@@ -101,15 +107,10 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
 
   readonly agTheme = userTableTheme;
   readonly agPageSize = 7;
-  readonly defaultColDef: ColDef<ManagedUser> = {
-    sortable: true,
-    resizable: true,
-    suppressHeaderMenuButton: true,
-    suppressMovable: true
-  };
+  readonly defaultColDef: ColDef<ManagedUser> = DEFAULT_COL_DEF;
 
   get agColumnDefs(): ColDef<ManagedUser>[] {
-    const tr = (k: string, fb: string) => { const v = this.translate.getTranslation(k); return v !== k ? v : fb; };
+    const tr = makeTr(this.translate);
     return [
       {
         headerName: tr('userTable.user', 'User'),
@@ -198,43 +199,28 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   }
 
   get roleOptions(): string[] {
-    return Array.from(new Set(this.users.map((u) => u.role).filter(Boolean))).sort((a, b) =>
-      a.localeCompare(b)
-    );
+    return uniqueFieldValues(this.users, 'role');
   }
 
   get filteredUsers(): ManagedUser[] {
-    const term = this.searchTerm.trim().toLowerCase();
-    return this.users.filter((u) => {
-      const matchSearch =
-        !term ||
-        [u.fullName, u.username, u.email, u.companyId, u.createdBy]
-          .filter((v): v is string => !!v)
-          .some((v) => v.toLowerCase().includes(term));
+    const byTerm = filterByTerm(this.users, this.searchTerm, ['fullName', 'username', 'email', 'companyId', 'createdBy']);
+    return byTerm.filter((u) => {
       const matchRole = this.selectedRole === 'ALL' || u.role === this.selectedRole;
       const matchStatus =
         this.selectedStatus === 'ALL' ||
         (this.selectedStatus === 'ACTIVE' && u.active) ||
         (this.selectedStatus === 'INACTIVE' && !u.active);
-      return matchSearch && matchRole && matchStatus;
+      return matchRole && matchStatus;
     });
   }
 
   get sortedUsers(): ManagedUser[] {
-    return [...this.filteredUsers].sort((a, b) => {
-      const f = this.sortKey as keyof ManagedUser;
-      const av = (a[f] ?? '').toString().toLowerCase();
-      const bv = (b[f] ?? '').toString().toLowerCase();
-      if (av < bv) return this.sortDirection === 'asc' ? -1 : 1;
-      if (av > bv) return this.sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+    return sortByField(this.filteredUsers, this.sortKey as keyof ManagedUser, this.sortDirection);
   }
 
   get displayedUsers(): ManagedUser[] {
     if (this.useAgGrid) return this.filteredUsers;
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.sortedUsers.slice(start, start + this.pageSize);
+    return paginate(this.sortedUsers, this.currentPage, this.pageSize);
   }
 
   get filteredCount(): number {
@@ -258,7 +244,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   }
 
   get totalPages(): number {
-    return Math.ceil(this.filteredCount / this.pageSize);
+    return calcTotalPages(this.filteredCount, this.pageSize);
   }
 
   ngOnInit(): void {
@@ -268,28 +254,16 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
 
   ngAfterViewInit(): void {
     if (!isPlatformBrowser(this.platformId) || !this.useAgGrid) return;
-    queueMicrotask(() => {
-      this.agGridMounted = true;
-      this.cdr.detectChanges();
-    });
+    mountAgGrid(() => { this.agGridMounted = true; this.cdr.detectChanges(); });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if ((changes['users'] || changes['deletingUserId']) && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.filteredUsers);
       this.gridApi.setGridOption('columnDefs', this.agColumnDefsWithActions);
-      // If data arrived and we're no longer loading, clear any overlay
-      if (!this.isLoading) {
-        this.gridApi.hideOverlay();
-      }
+      if (!this.isLoading) this.gridApi.hideOverlay();
     }
-    if (changes['isLoading'] && this.gridApi) {
-      if (this.isLoading) {
-        this.gridApi.showLoadingOverlay();
-      } else {
-        this.gridApi.hideOverlay();
-      }
-    }
+    if (changes['isLoading'] && this.gridApi) syncGridOverlay(this.gridApi, this.isLoading);
   }
 
   onGridReady(event: GridReadyEvent<ManagedUser>): void {
@@ -321,7 +295,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   }
 
   goToPage(page: number): void {
-    if (page >= 1 && page <= this.totalPages) this.currentPage = page;
+    safeGoToPage(page, this.totalPages, (p) => { this.currentPage = p; });
   }
 
   onFilterChange(): void {
@@ -332,26 +306,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
     return user.id;
   }
 
-  private titleCase(value: unknown): string {
-    return typeof value === 'string' && value
-      ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
-      : '';
-  }
-
-  private fmtDate(value: unknown): string {
-    if (typeof value !== 'string' || !value) return 'Never';
-    const d = new Date(value);
-    return isNaN(d.getTime())
-      ? 'Never'
-      : new Intl.DateTimeFormat('en-IN', {
-          day: '2-digit', month: 'short', year: 'numeric',
-          hour: 'numeric', minute: '2-digit'
-        }).format(d);
-  }
-
-  private esc(v: string | null | undefined): string {
-    return (v ?? '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
+  private titleCase = (v: unknown): string => typeof v === 'string' ? titleCase(v) : '';
+  private fmtDate = formatDateTime;
+  private esc = escHtml;
 }

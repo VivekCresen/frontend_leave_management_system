@@ -427,7 +427,7 @@
 .management-grid {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
   height: 100%;
 }
 
@@ -1716,5 +1716,183 @@
     width: 24px;
     height: 24px;
     font-size: 0.76rem;
+  }
+}
+
+/* ── Attendance Today Card ─────────────────────────────────────────── */
+.attendance-today-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 22px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,253,250,0.92));
+  border: 1px solid rgba(15,139,141,0.18);
+  box-shadow: 0 4px 24px -12px rgba(15,23,42,0.14), 0 1px 4px rgba(15,23,42,0.06);
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.att-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.att-card-icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.att-icon-active {
+  background: rgba(245,158,11,0.12);
+  color: #b45309;
+}
+
+.att-icon-auto {
+  background: rgba(124,58,237,0.1);
+  color: #7c3aed;
+}
+
+.att-card-icon:not(.att-icon-active):not(.att-icon-auto) {
+  background: rgba(15,139,141,0.1);
+  color: #0f766e;
+}
+
+.att-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.att-card-eyebrow {
+  margin: 0;
+  color: #0f8b8d;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.att-card-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.att-card-sub {
+  margin: 4px 0 0;
+  color: #7c3aed;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.att-card-times {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(248,250,252,0.9);
+  border: 1px solid rgba(226,232,240,0.85);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.att-time-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 18px;
+}
+
+.att-time-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(226,232,240,0.9);
+  flex-shrink: 0;
+}
+
+.att-time-label {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.att-time-label .fa-sign-in-alt { color: #0f8b8d; }
+.att-time-label .fa-sign-out-alt { color: #f97316; }
+.att-time-label .fa-hourglass-half { color: #8b5cf6; }
+
+.att-time-value {
+  color: #0f172a;
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+.att-time-active {
+  color: #b45309;
+}
+
+.att-auto-badge {
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(124,58,237,0.12);
+  border: 1px solid rgba(124,58,237,0.28);
+  color: #7c3aed;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .attendance-today-card {
+  background: linear-gradient(135deg, var(--surface-bg), rgba(15,23,42,0.6));
+  border-color: rgba(45,212,191,0.15);
+}
+[data-theme="dark"] .att-card-title { color: var(--surface-heading); }
+[data-theme="dark"] .att-card-times {
+  background: rgba(15,23,42,0.4);
+  border-color: var(--surface-border);
+}
+[data-theme="dark"] .att-time-divider { background: var(--surface-border); }
+[data-theme="dark"] .att-time-value { color: var(--surface-heading); }
+[data-theme="dark"] .att-auto-badge {
+  background: rgba(124,58,237,0.18);
+  border-color: rgba(124,58,237,0.35);
+}
+
+@media (max-width: 720px) {
+  .attendance-today-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .att-card-times {
+    width: 100%;
+    justify-content: space-around;
   }
 }

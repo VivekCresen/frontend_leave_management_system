@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { AdminLeaveTableRow } from './dashboard-leave-table.component';
 import { LeaveAuditCacheService } from '../../services/leave-audit-cache.service';
+import { titleCase, toSentenceCase } from '../../commons/string.util';
+import { formatDateTime } from '../../commons/date.util';
 
 type LeaveAuditTrailEntry = {
   event: string;
@@ -92,22 +94,9 @@ export class LeaveProgressModalComponent implements OnInit {
   }
 
   formatTimestamp(value: string | null | undefined): string {
-    if (!value) {
-      return 'Pending';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    if (!value) return 'Pending';
+    const result = formatDateTime(value);
+    return result === 'Never' ? value : result;
   }
 
   closeModal(): void {
@@ -597,23 +586,10 @@ export class LeaveProgressModalComponent implements OnInit {
   }
 
   private titleCase(value: string | null | undefined): string {
-    if (!value) {
-      return 'Unknown';
-    }
-
-    return value
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ');
+    return titleCase(value);
   }
 
   private toSentenceCase(value: string): string {
-    if (!value) {
-      return '';
-    }
-
-    return value.charAt(0).toUpperCase() + value.slice(1);
+    return toSentenceCase(value);
   }
 }

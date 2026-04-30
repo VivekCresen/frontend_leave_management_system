@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, HostListener } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule, NgForm, NgModel } from '@angular/forms';
 import { DashboardPageId } from '../dashboard.config';
 import { DashboardStatCard, DashboardStatCardsComponent } from '../components/dashboard-stat-cards.component';
@@ -14,8 +14,10 @@ import { DashboardAttendanceTableComponent } from '../components/dashboard-atten
 import { LoginResponse, ManagedUser, UserDashboardResponse, AttendanceLogDto } from '../../services/auth.service';
 import { LeaveType, LeaveTypeSavePayload, Holiday, CreateHolidayPayload } from '../../services/leave.service';
 import { TranslatePipe } from '../../i18n/translate.pipe';
-import { TranslateService, Language } from '../../i18n/translate.service';
+import { TranslateService } from '../../i18n/translate.service';
 import { ThemeService } from '../../services/theme.service';
+import { LangSwitcherMixin } from '../../commons/lang-switcher.mixin';
+import { shouldShowControlError } from '../../commons/form.util';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -34,7 +36,7 @@ import { ThemeService } from '../../services/theme.service';
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
-export class AdminDashboardComponent implements OnChanges {
+export class AdminDashboardComponent extends LangSwitcherMixin implements OnChanges {
   @Input({ required: true }) pageId!: DashboardPageId;
   @Input({ required: true }) user!: LoginResponse;
   @Input() dashboard: UserDashboardResponse | null = null;
@@ -62,8 +64,7 @@ export class AdminDashboardComponent implements OnChanges {
   @Input() processingLeaveId: number | null = null;
   @Input() isLoading = false;
 
-  constructor(public translateService: TranslateService, public themeService: ThemeService) {}
-
+  constructor(public translateService: TranslateService, public themeService: ThemeService) { super(); }
   @Output() saveRequested = new EventEmitter<DashboardUserSubmitEvent>();
   @Output() createRequested = new EventEmitter<void>();
   @Output() editRequested = new EventEmitter<ManagedUser>();
@@ -385,9 +386,7 @@ export class AdminDashboardComponent implements OnChanges {
   }
 
   private shouldShowLeaveTypeError(control: NgModel | null): boolean {
-    return control
-      ? control.touched === true || control.dirty === true || this.leaveTypeSubmitted
-      : this.leaveTypeSubmitted;
+    return control ? shouldShowControlError(control, this.leaveTypeSubmitted) : this.leaveTypeSubmitted;
   }
 
   private resetLeaveTypeEditor(): void {
@@ -412,48 +411,9 @@ export class AdminDashboardComponent implements OnChanges {
     };
   }
 
-  isLangDropdownOpen = false;
-  availableLangs = [
-    { code: 'en', label: 'English (US)' },
-    { code: 'es', label: 'Español (ES)' },
-    { code: 'fr', label: 'Français (FR)' },
-    { code: 'de', label: 'Deutsch (DE)' },
-    { code: 'zh', label: '中文 (ZH)' },
-    { code: 'ru', label: 'Русский (RU)' },
-    { code: 'ja', label: '日本語 (JA)' },
-    { code: 'ar', label: 'العربية (AR)' },
-    { code: 'hi', label: 'हिन्दी (HI)' },
-    { code: 'pt', label: 'Português (PT)' },
-    { code: 'ko', label: '한국어 (KO)' },
-    { code: 'it', label: 'Italiano (IT)' },
-    { code: 'tr', label: 'Türkçe (TR)' },
-    { code: 'nl', label: 'Nederlands (NL)' },
-    { code: 'pl', label: 'Polski (PL)' },
-    { code: 'th', label: 'ไทย (TH)' },
-    { code: 'vi', label: 'Tiếng Việt (VI)' },
-    { code: 'id', label: 'Bahasa Indonesia (ID)' },
-    { code: 'sv', label: 'Svenska (SV)' },
-    { code: 'bn', label: 'বাংলা (BN)' }
-  ];
-
-  getSelectedLangLabel(): string {
-    const code = this.translateService.currentLang() || 'en';
-    const lang = this.availableLangs.find(l => l.code === code);
-    return lang ? lang.label : 'Select language';
+  override getSelectedLangLabel(): string {
+    return super.getSelectedLangLabel();
   }
 
-  toggleLangDropdown(event: Event): void {
-    event.stopPropagation();
-    this.isLangDropdownOpen = !this.isLangDropdownOpen;
-  }
-
-  selectLang(code: string): void {
-    this.translateService.setLanguage(code as Language);
-    this.isLangDropdownOpen = false;
-  }
-
-  @HostListener('document:click')
-  onDocumentClick(): void {
-    this.isLangDropdownOpen = false;
-  }
+  protected override buildCalendar(): void {}
 }

@@ -1,4 +1,5 @@
 import { Directive, OnDestroy } from '@angular/core';
+import { toMonthValue } from '../../commons/date.util';
 
 @Directive()
 export abstract class CalendarBase implements OnDestroy {
@@ -43,7 +44,7 @@ export abstract class CalendarBase implements OnDestroy {
   }
 
   protected toMonthValue(year: number, month: number): string {
-    return `${year}-${String(month + 1).padStart(2, '0')}`;
+    return toMonthValue(year, month);
   }
 
   protected abstract buildCalendar(): void;

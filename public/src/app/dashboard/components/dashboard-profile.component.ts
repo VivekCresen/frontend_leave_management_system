@@ -3,6 +3,7 @@ import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular
 import { AuthApiService } from '../../services/auth-api.service';
 import { LoginResponse, ManagedUser, AttendanceLogDto } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
+import { getInitials } from '../../commons/string.util';
 
 @Component({
   selector: 'app-dashboard-profile',
@@ -293,11 +294,7 @@ export class DashboardProfileComponent implements OnInit {
   isCheckingOut = false;
 
   get profileInitials(): string {
-    const defaultInitials = 'U';
-    const fullName = this.actor?.fullName || this.user.username;
-    if (!fullName) return defaultInitials;
-    const parts = fullName.trim().split(/\s+/);
-    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || defaultInitials;
+    return getInitials(this.actor?.fullName ?? this.user.username);
   }
 
   ngOnInit(): void {

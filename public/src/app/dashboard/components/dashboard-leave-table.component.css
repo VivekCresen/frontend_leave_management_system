@@ -1079,3 +1079,8 @@
 .partial-toggle-btn.is-approved:hover { background: #bbf7d0; }
 .partial-toggle-btn.is-rejected { background: #fee2e2; color: #dc2626; }
 .partial-toggle-btn.is-rejected:hover { background: #fecaca; }
+
+/* Hide AG Grid pagination bar when there are no rows */
+.ag-shell-hidden-pagination :is(.leave-ag-grid) .ag-paging-panel {
+  display: none !important;
+}

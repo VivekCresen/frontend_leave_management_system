@@ -14,6 +14,10 @@ import {
 } from 'ag-grid-community';
 import { AttendanceLogDto } from '../../services/auth.service';
 import { TranslateService } from '../../i18n/translate.service';
+import { escHtml } from '../../commons/html.util';
+import { formatTime, formatDateOnly, formatAttendanceDuration } from '../../commons/date.util';
+import { DEFAULT_COL_DEF, mountAgGrid, syncGridOverlay } from '../../commons/ag-grid.util';
+import { makeTr } from '../../commons/translate.util';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, PaginationModule]);
 
@@ -142,6 +146,16 @@ const attendanceTheme = themeQuartz.withParams({
     }
     :host ::ng-deep .att-ag-grid .ag-status-pill.complete {  color: #047857;}
     :host ::ng-deep .att-ag-grid .ag-status-pill.active { color: #b45309;}
+    :host ::ng-deep .att-ag-grid .ag-status-pill.auto-checkout { color: #7c3aed; }
+
+    :host ::ng-deep .att-ag-grid .ag-auto-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+      background: rgba(124,58,237,0.1); color: #7c3aed;
+      border: 1px solid rgba(124,58,237,0.25);
+      vertical-align: middle;
+    }
 
     :host ::ng-deep .att-ag-grid .ag-paging-panel {
       border-top: 1px solid rgba(226,232,240,0.85);
@@ -174,6 +188,7 @@ export class DashboardAttendanceTableComponent implements AfterViewInit, OnChang
   private gridApi: GridApi<AttendanceLogDto> | null = null;
 
   @Input() logs: AttendanceLogDto[] = [];
+  @Input() isLoading = false;
   @Input() title = 'Attendance Logs';
   @Input() description = 'Day-wise check-in and check-out records.';
   @Input() emptyMessage = 'No attendance logs recorded yet.';
@@ -182,26 +197,18 @@ export class DashboardAttendanceTableComponent implements AfterViewInit, OnChang
   readonly agTheme = attendanceTheme;
   readonly agPageSize = 10;
 
-  readonly defaultColDef: ColDef<AttendanceLogDto> = {
-    sortable: true,
-    resizable: true,
-    suppressHeaderMenuButton: true,
-    suppressMovable: true
-  };
+  readonly defaultColDef: ColDef<AttendanceLogDto> = DEFAULT_COL_DEF;
 
   constructor() {
     effect(() => {
-      this.translate.currentLang(); // track signal
+      this.translate.currentLang(); 
       if (this.gridApi) {
         this.gridApi.setGridOption('columnDefs', this.columnDefs);
       }
     });
   }
 
-  private tr(key: string, fallback: string): string {
-    const v = this.translate.getTranslation(key);
-    return v !== key ? v : fallback;
-  }
+  private tr = makeTr(this.translate);
 
   get columnDefs(): ColDef<AttendanceLogDto>[] {
     return [
@@ -231,14 +238,14 @@ export class DashboardAttendanceTableComponent implements AfterViewInit, OnChang
         headerName: this.tr('attendanceTable.date', 'Date'),
         field: 'dateOfLog',
         minWidth: 130, flex: 1,
-        valueFormatter: ({ value }: ValueFormatterParams<AttendanceLogDto>) => this.fmtDate(value)
+        valueFormatter: ({ value }: ValueFormatterParams<AttendanceLogDto>) => formatDateOnly(value)
       },
       {
         headerName: this.tr('attendanceTable.checkIn', 'Check-in'),
         field: 'checkInTime',
         minWidth: 110, flex: 0.9,
         cellRenderer: ({ value }: ICellRendererParams<AttendanceLogDto>) =>
-          `<div class="ag-time-cell"><i class="fas fa-sign-in-alt ic-in"></i>${this.fmtTime(value)}</div>`
+          `<div class="ag-time-cell"><i class="fas fa-sign-in-alt ic-in"></i>${formatTime(value)}</div>`
       },
       {
         headerName: this.tr('attendanceTable.checkOut', 'Check-out'),
@@ -246,8 +253,12 @@ export class DashboardAttendanceTableComponent implements AfterViewInit, OnChang
         minWidth: 110, flex: 0.9,
         cellRenderer: ({ data }: ICellRendererParams<AttendanceLogDto>) => {
           if (!data) return '';
-          if (data.checkOutTime)
-            return `<div class="ag-time-cell"><i class="fas fa-sign-out-alt ic-out"></i>${this.fmtTime(data.checkOutTime)}</div>`;
+          if (data.checkOutTime) {
+            const autoLabel = data.autoCheckedOut
+              ? `<span class="ag-auto-badge" title="System auto checked-out after 12 hours"><i class="fas fa-robot"></i> Auto</span>`
+              : '';
+            return `<div class="ag-time-cell"><i class="fas fa-sign-out-alt ic-out"></i>${formatTime(data.checkOutTime)}${autoLabel}</div>`;
+          }
           const activeLabel = this.tr('attendanceTable.active', 'Active');
           return `<span class="ag-badge-active"><i class="fas fa-circle" style="font-size:0.4rem;color:#f59e0b"></i> ${activeLabel}</span>`;
         }
@@ -255,7 +266,7 @@ export class DashboardAttendanceTableComponent implements AfterViewInit, OnChang
       {
         headerName: this.tr('attendanceTable.duration', 'Duration'),
         minWidth: 100, flex: 0.8,
-        valueGetter: ({ data }) => data ? this.getDuration(data) : '—'
+        valueGetter: ({ data }) => data ? formatAttendanceDuration(data.checkInTime, data.checkOutTime) : '—'
       },
       {
         headerName: this.tr('attendanceTable.status', 'Status'),
@@ -264,6 +275,9 @@ export class DashboardAttendanceTableComponent implements AfterViewInit, OnChang
           if (!data) return '';
           const completeLabel = this.tr('attendanceTable.complete', 'Complete');
           const inProgressLabel = this.tr('attendanceTable.inProgress', 'In progress');
+          const autoLabel = this.tr('attendanceTable.autoCheckedOut', 'Auto checkout');
+          if (data.autoCheckedOut)
+            return `<span class="ag-status-pill auto-checkout">${autoLabel}</span>`;
           return data.checkOutTime
             ? `<span class="ag-status-pill complete">${completeLabel}</span>`
             : `<span class="ag-status-pill active">${inProgressLabel}</span>`;
@@ -274,43 +288,19 @@ export class DashboardAttendanceTableComponent implements AfterViewInit, OnChang
 
   ngAfterViewInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    queueMicrotask(() => {
-      this.agGridMounted = true;
-      this.cdr.detectChanges();
-    });
+    mountAgGrid(() => { this.agGridMounted = true; this.cdr.detectChanges(); });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['logs'] && this.gridApi) {
       this.gridApi.setGridOption('rowData', this.logs);
     }
+    if (changes['isLoading'] && this.gridApi) syncGridOverlay(this.gridApi, this.isLoading);
   }
 
   onGridReady(event: GridReadyEvent<AttendanceLogDto>): void {
     this.gridApi = event.api;
   }
 
-  private getDuration(log: AttendanceLogDto): string {
-    if (!log.checkOutTime) return '—';
-    const ms = new Date(log.checkOutTime).getTime() - new Date(log.checkInTime).getTime();
-    const h = Math.floor(ms / 3600000);
-    const m = Math.floor((ms % 3600000) / 60000);
-    return `${h}h ${m}m`;
-  }
-
-  private fmtTime(value: string | null | undefined): string {
-    if (!value) return '—';
-    return new Date(value).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
-  }
-
-  private fmtDate(value: string | null | undefined): string {
-    if (!value) return '—';
-    return new Date(value + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  }
-
-  private esc(v: string | null | undefined): string {
-    return (v ?? '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
+  private esc = escHtml;
 }

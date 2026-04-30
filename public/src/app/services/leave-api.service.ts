@@ -208,12 +208,12 @@ export class LeaveApiService implements LeaveService {
     }
   }
 
-  private invalidateOnSuccess(prefix: string) {
+  private invalidateOnSuccess(...prefixes: string[]) {
     return <T>(source: Observable<T>) =>
       new Observable<T>((observer) =>
         source.subscribe({
           next: (value) => {
-            this.invalidateCache(prefix);
+            prefixes.forEach((p) => this.invalidateCache(p));
             observer.next(value);
           },
           error: (error) => observer.error(error),
@@ -223,18 +223,7 @@ export class LeaveApiService implements LeaveService {
   }
 
   private invalidateLeaveReadsOnSuccess() {
-    return <T>(source: Observable<T>) =>
-      new Observable<T>((observer) =>
-        source.subscribe({
-          next: (value) => {
-            this.invalidateCache('leaves:');
-            this.invalidateCache('booked-dates:');
-            observer.next(value);
-          },
-          error: (error) => observer.error(error),
-          complete: () => observer.complete()
-        })
-      );
+    return this.invalidateOnSuccess('leaves:', 'booked-dates:');
   }
 
 

@@ -14,6 +14,7 @@ import {
 } from '../shared/password-policy';
 import { ToastService } from '../services/toast.service';
 import { LoaderService } from '../shared/services/loader.service';
+import { shouldShowControlError, firstFieldError, normalizeOtp, clearFormMessages } from '../commons/form.util';
 
 @Component({
   selector: 'app-change-password',
@@ -102,7 +103,7 @@ export class ChangePasswordComponent {
   changePassword(form: NgForm): void {
     this.stepTwoSubmitted = true;
     this.clearMessages();
-    this.otp = this.normalizeOtp(this.otp);
+    this.otp = normalizeOtp(this.otp, this.otpLength);
 
     if (this.hasInvalidPassword()) {
       this.errorMessage = 'Please enter a valid password.';
@@ -173,7 +174,7 @@ export class ChangePasswordComponent {
   }
 
   onOtpInput(): void {
-    this.otp = this.normalizeOtp(this.otp);
+    this.otp = normalizeOtp(this.otp, this.otpLength);
   }
 
   goToOtpStep(): void {
@@ -266,19 +267,15 @@ export class ChangePasswordComponent {
   }
 
   private shouldShowControlError(control: NgModel, submitted: boolean): boolean {
-    return control.invalid === true
-      && (control.touched === true || control.dirty === true || submitted);
+    return shouldShowControlError(control, submitted);
   }
 
   private firstFieldError(): string | null {
-    const [firstError] = Object.values(this.fieldErrors);
-    return firstError ?? null;
+    return firstFieldError(this.fieldErrors);
   }
 
   private clearMessages(): void {
-    this.errorMessage = '';
-    this.successMessage = '';
-    this.fieldErrors = {};
+    clearFormMessages(this);
   }
 
   private clearSensitiveFields(): void {
@@ -286,10 +283,6 @@ export class ChangePasswordComponent {
     this.confirmPassword = '';
     this.showNewPassword = false;
     this.showConfirmPassword = false;
-  }
-
-  private normalizeOtp(value: string): string {
-    return value.replace(/\D/g, '').substring(0, this.otpLength);
   }
 
   private getPasswordRequirementsToastMessage(): string {

@@ -17,6 +17,7 @@ import {
 } from './auth.service';
 import { resolveApiUrl } from '../shared/api-url.util';
 import { TranslateService } from '../i18n/translate.service';
+import { normalizeEmail } from '../commons/api.util';
 
 @Injectable({
   providedIn: 'root'
@@ -224,7 +225,7 @@ export class AuthApiService implements AuthService {
   }
 
   private normalizeEmail(value: string): string {
-    return value.trim().toLowerCase();
+    return normalizeEmail(value);
   }
 
   private dashboardWarmupDelayMs(): number {

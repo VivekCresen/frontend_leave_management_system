@@ -49,7 +49,7 @@
       <h4>{{ resolvedEmptyTitle }}</h4>
       <p>{{ resolvedEmptyMessage }}</p>
     </div>
-    <div [hidden]="!gridMounted" class="ag-shell">
+    <div [hidden]="!gridMounted" class="ag-shell" [class.ag-shell-hidden-pagination]="agFilteredCount === 0">
       <ag-grid-angular
         class="leave-ag-grid"
         [theme]="agTheme"
@@ -59,6 +59,7 @@
         [pagination]="true"
         [paginationPageSize]="7"
         [paginationPageSizeSelector]="[7, 15, 30]"
+        [localeText]="agLocaleText"
         [suppressCellFocus]="true"
         [domLayout]="'autoHeight'"
         (gridReady)="onGridReady($event)">

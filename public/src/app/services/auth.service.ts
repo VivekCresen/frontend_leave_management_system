@@ -105,6 +105,7 @@ export interface AttendanceLogDto {
   checkInTime: string;
   checkOutTime: string | null;
   dateOfLog: string;
+  autoCheckedOut: boolean;
 }
 
 export interface AuthService {

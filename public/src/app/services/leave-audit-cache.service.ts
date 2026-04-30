@@ -10,7 +10,7 @@ export interface LeaveAuditCacheEntry {
 })
 export class LeaveAuditCacheService {
   private readonly storageKey = 'leave-audit-trail-cache';
-  private readonly maxCacheSize = 500; // Maximum number of leave IDs to store
+  private readonly maxCacheSize = 500;
 
   hasLeaveInCache(leaveId: number): boolean {
     const cache = this.getCache();

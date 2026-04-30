@@ -204,9 +204,8 @@
           </button>
         </div>
       </div>
-      <div style="margin-bottom: 2rem;">
-        <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
-      </div>
+
+      <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
 
       <app-dashboard-history-table
         [leaves]="myLeaves"
