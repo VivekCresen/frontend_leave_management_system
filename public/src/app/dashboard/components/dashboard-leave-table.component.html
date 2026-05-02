@@ -46,10 +46,11 @@
 
   <ng-container *ngIf="compactView">
     <div *ngIf="agFilteredCount === 0 && !isLoading" class="empty-state">
+      <i class="fas fa-calendar-xmark empty-state-icon"></i>
       <h4>{{ resolvedEmptyTitle }}</h4>
       <p>{{ resolvedEmptyMessage }}</p>
     </div>
-    <div [hidden]="!gridMounted" class="ag-shell" [class.ag-shell-hidden-pagination]="agFilteredCount === 0">
+    <div [hidden]="!gridMounted || agFilteredCount === 0" class="ag-shell">
       <ag-grid-angular
         class="leave-ag-grid"
         [theme]="agTheme"
