@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
 import { AuthApiService } from '../../services/auth-api.service';
 import { LoginResponse, ManagedUser, AttendanceLogDto } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
@@ -9,6 +9,7 @@ import { getInitials } from '../../commons/string.util';
   selector: 'app-dashboard-profile',
   standalone: true,
   imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="profile-card">
       <div class="profile-card-header">
@@ -18,18 +19,28 @@ import { getInitials } from '../../commons/string.util';
           <p class="body-copy">Your personal information and account settings.</p>
         </div>
         <div class="profile-header-actions">
-          <button type="button" class="check-in-btn primary-button" 
-                  [disabled]="isCheckingIn || (!!todayStatus && !todayStatus.checkOutTime)"
+          <button type="button"
+                  [class]="checkedInDone ? 'check-in-btn btn-done' : 'check-in-btn'"
+                  [disabled]="isCheckingIn || isCheckingOut || checkedInDone"
                   (click)="checkIn()">
-            <i class="fas fa-sign-in-alt"></i>
-            <span>{{ (!!todayStatus && !todayStatus.checkOutTime) ? 'Checked In' : 'Check In' }}</span>
+            <span class="btn-icon">
+              <i *ngIf="!isCheckingIn && !checkedInDone" class="fas fa-sign-in-alt"></i>
+              <i *ngIf="isCheckingIn" class="fas fa-spinner fa-spin"></i>
+              <i *ngIf="checkedInDone && !isCheckingIn" class="fas fa-check"></i>
+            </span>
+            <span>{{ isCheckingIn ? 'Checking in…' : checkedInDone ? 'Checked In' : 'Check In' }}</span>
           </button>
-          
-          <button type="button" class="check-out-btn secondary-button" 
-                  [disabled]="isCheckingOut || !todayStatus || !!todayStatus.checkOutTime"
+
+          <button type="button"
+                  [class]="checkedOutDone ? 'check-out-btn btn-done' : 'check-out-btn'"
+                  [disabled]="isCheckingOut || isCheckingIn || !todayStatus || checkedOutDone"
                   (click)="checkOut()">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>{{ !!todayStatus?.checkOutTime ? 'Checked Out' : 'Check Out' }}</span>
+            <span class="btn-icon">
+              <i *ngIf="!isCheckingOut && !checkedOutDone" class="fas fa-sign-out-alt"></i>
+              <i *ngIf="isCheckingOut" class="fas fa-spinner fa-spin"></i>
+              <i *ngIf="checkedOutDone && !isCheckingOut" class="fas fa-check"></i>
+            </span>
+            <span>{{ isCheckingOut ? 'Checking out…' : checkedOutDone ? 'Checked Out' : 'Check Out' }}</span>
           </button>
 
           <button type="button" class="edit-profile-btn" (click)="editProfileRequested.emit()">
@@ -82,22 +93,24 @@ import { getInitials } from '../../commons/string.util';
           <strong>{{ actor?.createdBy || 'System' }}</strong>
         </div>
       </div>
-      
-      <div class="attendance-summary-card" *ngIf="todayStatus">
-        <div class="attendance-info">
-          <i class="fas fa-clock text-blue"></i>
-          <div>
-            <strong>Today's Check-In</strong>
-            <p>{{ todayStatus.checkInTime | date:'shortTime' }}</p>
+
+      <div class="attendance-summary-card" [class.attendance-summary-visible]="!!todayStatus">
+        <ng-container *ngIf="todayStatus">
+          <div class="attendance-info">
+            <i class="fas fa-clock text-blue"></i>
+            <div>
+              <strong>Today's Check-In</strong>
+              <p>{{ todayStatus.checkInTime | date:'shortTime' }}</p>
+            </div>
           </div>
-        </div>
-        <div class="attendance-info" *ngIf="todayStatus.checkOutTime">
-          <i class="fas fa-check-circle text-green"></i>
-          <div>
-            <strong>Today's Check-Out</strong>
-            <p>{{ todayStatus.checkOutTime | date:'shortTime' }}</p>
+          <div class="attendance-info" *ngIf="todayStatus.checkOutTime">
+            <i class="fas fa-check-circle text-green"></i>
+            <div>
+              <strong>Today's Check-Out</strong>
+              <p>{{ todayStatus.checkOutTime | date:'shortTime' }}</p>
+            </div>
           </div>
-        </div>
+        </ng-container>
       </div>
     </div>
   `,
@@ -164,25 +177,42 @@ import { getInitials } from '../../commons/string.util';
       letter-spacing: 0.03em;
       cursor: pointer;
       white-space: nowrap;
-      transition: opacity 0.15s, box-shadow 0.15s;
+      transition: opacity 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s, border-color 0.2s;
+      min-width: 110px;
+      justify-content: center;
     }
+    .btn-icon { display: inline-flex; align-items: center; width: 14px; justify-content: center; flex-shrink: 0; }
     .check-in-btn {
       background: linear-gradient(160deg, #0f8b8d, #155e75);
       color: #fff;
-      border: none;
+      border: 1px solid transparent;
       box-shadow: 0 2px 8px rgba(15,139,141,0.25);
     }
-    .check-in-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .check-in-btn:not(:disabled):hover { box-shadow: 0 4px 14px rgba(15,139,141,0.35); }
+    .check-in-btn:disabled:not(.btn-done) { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
     .check-out-btn {
       background: transparent;
       color: #f97316;
       border: 1px solid rgba(249,115,22,0.5);
     }
-    .check-out-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .check-out-btn:not(:disabled):hover { background: rgba(249,115,22,0.07); }
+    .check-out-btn:disabled:not(.btn-done) { opacity: 0.4; cursor: not-allowed; }
+
+    /* Done state — neutral grey, clearly completed */
+    .btn-done {
+      background: rgba(148,163,184,0.12) !important;
+      color: #64748b !important;
+      border: 1px solid rgba(148,163,184,0.3) !important;
+      box-shadow: none !important;
+      cursor: default !important;
+      opacity: 1 !important;
+    }
+
     .edit-profile-btn {
       background: transparent;
       border: 1px solid rgba(148,163,184,0.4);
       color: #475569;
+      min-width: unset;
     }
     .edit-profile-btn:hover { border-color: #0f8b8d; color: #0f8b8d; background: rgba(15,139,141,0.06); }
 
@@ -246,6 +276,14 @@ import { getInitials } from '../../commons/string.util';
       border-radius: 12px;
       background: rgba(15,139,141,0.05);
       border: 1px solid rgba(15,139,141,0.12);
+      min-height: 64px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .attendance-summary-card.attendance-summary-visible {
+      opacity: 1;
+      pointer-events: auto;
     }
     .attendance-info { display: flex; align-items: center; gap: 0.625rem; }
     .attendance-info i { font-size: 1.25rem; }
@@ -288,13 +326,23 @@ export class DashboardProfileComponent implements OnInit {
 
   private readonly authService = inject(AuthApiService);
   private readonly toastService = inject(ToastService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   todayStatus: AttendanceLogDto | null = null;
   isCheckingIn = false;
   isCheckingOut = false;
+  hasCheckedIn = false;  // stays true once checked in this session
 
   get profileInitials(): string {
     return getInitials(this.actor?.fullName ?? this.user.username);
+  }
+
+  get checkedInDone(): boolean {
+    return this.hasCheckedIn;
+  }
+
+  get checkedOutDone(): boolean {
+    return !!this.todayStatus?.checkOutTime;
   }
 
   ngOnInit(): void {
@@ -307,26 +355,33 @@ export class DashboardProfileComponent implements OnInit {
     this.authService.getTodayStatus(this.user.username).subscribe({
       next: (status) => {
         this.todayStatus = status;
+        if (status) this.hasCheckedIn = true;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.todayStatus = null;
+        this.cdr.markForCheck();
       }
     });
   }
 
   checkIn(): void {
-    if (this.isCheckingIn || this.todayStatus) return;
+    if (this.isCheckingIn || this.hasCheckedIn) return;
     this.isCheckingIn = true;
+    this.cdr.markForCheck();
     this.authService.checkIn(this.user.username).subscribe({
       next: (status) => {
         this.isCheckingIn = false;
         this.todayStatus = status;
+        this.hasCheckedIn = true;
         this.toastService.success('Checked in successfully!');
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isCheckingIn = false;
         const msg = err.error?.message || 'Check in failed.';
         this.toastService.error(msg);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -334,16 +389,19 @@ export class DashboardProfileComponent implements OnInit {
   checkOut(): void {
     if (this.isCheckingOut || !this.todayStatus || this.todayStatus.checkOutTime) return;
     this.isCheckingOut = true;
+    this.cdr.markForCheck();
     this.authService.checkOut(this.user.username).subscribe({
       next: (status) => {
         this.isCheckingOut = false;
         this.todayStatus = status;
         this.toastService.success('Checked out successfully!');
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.isCheckingOut = false;
         const msg = err.error?.message || 'Check out failed.';
         this.toastService.error(msg);
+        this.cdr.markForCheck();
       }
     });
   }

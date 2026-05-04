@@ -166,11 +166,19 @@ export class AuthApiService implements AuthService {
   }
 
   checkIn(username: string): Observable<AttendanceLogDto> {
-    return this.http.post<AttendanceLogDto>(`${this.apiUrl}/attendance/check-in?username=${encodeURIComponent(username)}`, {});
+    return this.http.post<AttendanceLogDto>(
+      `${this.apiUrl}/attendance/check-in?username=${encodeURIComponent(username)}`,
+      {},
+      { headers: { 'X-Skip-Loader': '1' } }
+    );
   }
 
   checkOut(username: string): Observable<AttendanceLogDto> {
-    return this.http.put<AttendanceLogDto>(`${this.apiUrl}/attendance/check-out?username=${encodeURIComponent(username)}`, {});
+    return this.http.put<AttendanceLogDto>(
+      `${this.apiUrl}/attendance/check-out?username=${encodeURIComponent(username)}`,
+      {},
+      { headers: { 'X-Skip-Loader': '1' } }
+    );
   }
 
   getTodayStatus(username: string): Observable<AttendanceLogDto | null> {

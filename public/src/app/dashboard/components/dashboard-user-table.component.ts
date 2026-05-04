@@ -81,6 +81,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
   @Input() initialStatus = '';
   @Input() deletingUserId: number | null = null;
   @Input() isLoading = false;
+  @Input() showExtendedColumns = false;
 
   @Output() editRequested = new EventEmitter<ManagedUser>();
   @Output() deleteRequested = new EventEmitter<ManagedUser>();
@@ -111,7 +112,7 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
 
   get agColumnDefs(): ColDef<ManagedUser>[] {
     const tr = makeTr(this.translate);
-    return [
+    const base: ColDef<ManagedUser>[] = [
       {
         headerName: tr('userTable.user', 'User'),
         field: 'fullName',
@@ -164,6 +165,55 @@ export class DashboardUserTableComponent implements AfterViewInit, OnChanges, On
         valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => this.fmtDate(value)
       }
     ];
+
+    if (this.showExtendedColumns) {
+      base.push(
+        {
+          headerName: tr('userTable.companyId', 'Company ID'),
+          field: 'companyId',
+          minWidth: 130,
+          flex: 0.9,
+          valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => value || '—'
+        },
+        {
+          headerName: tr('userTable.gender', 'Gender'),
+          field: 'gender',
+          minWidth: 100,
+          flex: 0.7,
+          valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => value ? this.titleCase(value) : '—'
+        },
+        {
+          headerName: tr('userTable.country', 'Country'),
+          field: 'countryName',
+          minWidth: 130,
+          flex: 1,
+          cellRenderer: ({ data }: ICellRendererParams<ManagedUser>) => {
+            if (!data?.countryName) return '<span style="color:#94a3b8">—</span>';
+            const flag = data.countryFlagEmoji ? `${this.esc(data.countryFlagEmoji)} ` : '';
+            return `${flag}${this.esc(data.countryName)}`;
+          }
+        },
+        {
+          headerName: tr('userTable.phone', 'Phone'),
+          field: 'phoneNumber',
+          minWidth: 140,
+          flex: 1,
+          valueFormatter: ({ data }: ValueFormatterParams<ManagedUser>) => {
+            if (!data?.phoneNumber) return '—';
+            return data.dialCode ? `${data.dialCode} ${data.phoneNumber}` : data.phoneNumber;
+          }
+        },
+        {
+          headerName: tr('userTable.joined', 'Joined'),
+          field: 'createDate',
+          minWidth: 150,
+          flex: 1,
+          valueFormatter: ({ value }: ValueFormatterParams<ManagedUser>) => this.fmtDate(value)
+        }
+      );
+    }
+
+    return base;
   }
 
   get agColumnDefsWithActions(): ColDef<ManagedUser>[] {

@@ -850,6 +850,27 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
   ngOnInit() {
     this.loadResponseCache();
+    this.initQuickActions();
+  }
+
+  private initQuickActions() {
+    const role = (this.authService.currentUser()?.role ?? '').toUpperCase();
+    if (role === 'MANAGER') {
+      this.quickActions = [
+        { label: '📊 My Leave Balance', message: 'What is my current leave balance?' },
+        { label: '👥 Team on leave today', message: 'Who is on leave today?' },
+        { label: '⏳ Team pending leaves', message: 'How many pending leaves does my team have?' },
+        { label: '🗓️ Upcoming Holidays', message: 'What are the upcoming holidays?' }
+      ];
+    } else if (role === 'EMPLOYEE') {
+      this.quickActions = [
+        { label: '📊 My Leave Balance', message: 'What is my current leave balance?' },
+        { label: '⏳ My Pending Leaves', message: 'How many pending leaves do I have?' },
+        { label: '✅ My Approved Leaves', message: 'How many approved leaves do I have?' },
+        { label: '🗓️ Upcoming Holidays', message: 'What are the upcoming holidays?' }
+      ];
+    }
+    // ADMIN keeps the default quick actions
   }
 
   ngAfterViewChecked() {
@@ -1179,6 +1200,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     return this.http.post('http://localhost:8080/api/chatbot/chat', {
       message,
       username: this.authService.currentUser()?.username ?? null,
+      role: this.authService.currentUser()?.role ?? null,
       requestId: requestId ?? null,
       conversationId: conversationId ?? null,
       newConversation

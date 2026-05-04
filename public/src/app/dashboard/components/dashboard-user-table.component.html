@@ -43,7 +43,7 @@
       <p>{{ resolvedEmptyMessage }}</p>
     </div>
 
-    <div [hidden]="!agGridMounted" class="ag-shell">
+    <div [hidden]="!agGridMounted || filteredUsers.length === 0" class="ag-shell">
       <ag-grid-angular
         class="user-ag-grid"
         [theme]="agTheme"

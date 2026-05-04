@@ -182,7 +182,7 @@
 }
 
 .empty-state {
-  margin-top: 24px;
+  margin-top: 16px;
   padding: 32px;
   border-radius: 16px;
   border: 1.5px dashed rgba(148, 163, 184, 0.45);
@@ -283,9 +283,10 @@
 }
 
 :host ::ng-deep .user-ag-grid .ag-status-badge {
- 
+  display: inline-flex;
   align-items: center;
   padding: 4px 10px;
+  border-radius: 999px;
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -293,15 +294,14 @@
 }
 
 :host ::ng-deep .user-ag-grid .ag-status-badge.active {
-  background: rgba(4, 120, 87, 0.09);
+  
   color: #047857;
-  border: 1px solid rgba(4, 120, 87, 0.2);
 }
 
 :host ::ng-deep .user-ag-grid .ag-status-badge.inactive {
-  background: rgba(180, 35, 24, 0.08);
+ 
   color: #b42318;
-  border: 1px solid rgba(180, 35, 24, 0.18);
+ 
 }
 
 :host ::ng-deep .user-ag-grid .ag-action-cell {
