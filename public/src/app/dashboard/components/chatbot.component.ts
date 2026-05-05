@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Observable, Subject, finalize, takeUntil } from 'rxjs';
 import { injectAuthService } from '../../services/auth.service';
 
@@ -13,6 +14,14 @@ interface ChatMessage {
   isLoading?: boolean;
   displayedText?: string;
   isTyping?: boolean;
+  cachedHtml?: SafeHtml;       // cached so formatMessage never runs twice for the same message
+  cachedTypingText?: string;   // tracks which displayedText the cached typing HTML was built from
+}
+
+interface TableData {
+  headers: string[];
+  rows: string[][];
+  title?: string;
 }
 
 interface CachedChatResponse {
@@ -20,29 +29,34 @@ interface CachedChatResponse {
   savedAt: number;
 }
 
-interface StoredChatAnswer {
-  Text: string;
-  Table: null;
+interface StoredChatMeta {
+  conversation_id: string;
+  username: string | null;
+  user_id: number | null;
+  profile: string;
+  response_type: string;
+  chatTitle: string;
+  chatDate: string;
+}
+
+interface StoredChatMessage {
+  question: string;
+  answer: string;
+  table: { headers: string[]; rows: string[][] } | null;
+  source: string;
+  question_id: number;
+  request_id: string;
+  latency_ms: number;
+  request_timestamp: string;
+  response_timestamp: string;
 }
 
 interface StoredChatEntry {
-  answer: StoredChatAnswer[];
-  profile: string;
-  user_id: string | null;
-  chatDate: string;
-  question: string;
-  chatTitle: string;
-  request_id: string;
-  question_id: number;
-  response_type: string;
-  conversation_id: string;
-  request_timestamp: string;
-  response_timestamp: string;
-  username: string | null;
-  source: string;
+  meta: StoredChatMeta;
+  messages: StoredChatMessage[];
 }
 
-type StoredChatHistory = Record<string, StoredChatEntry[]>;
+type StoredChatHistory = Record<string, StoredChatEntry>;
 
 @Component({
   selector: 'app-chatbot',
@@ -50,8 +64,15 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
   imports: [CommonModule, FormsModule],
   template: `
     <button
-      (click)="toggleChat()"
+      #chatbotFab
+      (click)="!isDragging && toggleChat()"
+      (mousedown)="onFabMouseDown($event)"
+      (document:mousemove)="onFabMouseMove($event)"
+      (document:mouseup)="onFabMouseUp($event)"
+      [style.bottom.px]="fabPosition.bottom"
+      [style.right.px]="fabPosition.right"
       class="chatbot-fab"
+      [class.chatbot-fab--dragging]="isDragging"
       [attr.aria-label]="isOpen ? 'Close chat' : 'Open chat'">
       <svg *ngIf="!isOpen" class="chatbot-fab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -62,7 +83,12 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
       </svg>
     </button>
 
-    <div class="chatbot-window" [class.chatbot-window--open]="isOpen" role="dialog" aria-label="Leave Assistant">
+    <div class="chatbot-window" 
+         [class.chatbot-window--open]="isOpen" 
+         [style.bottom.px]="fabPosition.bottom + 64"
+         [style.right.px]="fabPosition.right"
+         role="dialog" 
+         aria-label="Leave Assistant">
 
       <div class="chatbot-header">
         <div class="chatbot-header-info">
@@ -191,7 +217,8 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
              [class.chatbot-msg-row--user]="msg.isUser">
           <div class="chatbot-bubble"
                [class.chatbot-bubble--user]="msg.isUser"
-               [class.chatbot-bubble--bot]="!msg.isUser">
+               [class.chatbot-bubble--bot]="!msg.isUser"
+               (click)="onBubbleClick($event)">
 
             <div *ngIf="msg.isLoading" class="chatbot-typing">
               <span></span><span></span><span></span>
@@ -208,6 +235,44 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
     </div>
 
     
+      <!-- Table data modal -->
+      <div *ngIf="tableModal" class="chatbot-table-modal-backdrop" (click)="closeTableModal()" role="dialog" aria-modal="true" aria-label="Data table">
+        <div class="chatbot-table-modal" (click)="$event.stopPropagation()">
+          <div class="chatbot-table-modal-header">
+            <strong>{{ tableModal.title || 'Data' }}</strong>
+            <div class="chatbot-table-modal-actions">
+              <button type="button" class="chatbot-export-btn" (click)="exportTableAsExcel()">
+                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Export as Excel
+              </button>
+              <button type="button" class="chatbot-modal-close-btn" (click)="closeTableModal()" aria-label="Close">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="chatbot-table-modal-body">
+            <div class="chatbot-table-wrapper">
+              <table class="chatbot-table">
+                <thead>
+                  <tr>
+                    <th *ngFor="let h of tableModal.headers">{{ h }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of tableModal.rows">
+                    <td *ngFor="let cell of row">{{ cell }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="chatbot-input-area">
         <input
           #messageInput
@@ -253,32 +318,34 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
 
     .chatbot-fab {
       position: fixed;
-      bottom: 28px;
-      right: 28px;
       width: 52px;
       height: 52px;
       border-radius: 50%;
       background: var(--app-primary, #0f8b8d);
       color: #fff;
       border: none;
-      cursor: pointer;
+      cursor: move;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 0 4px 16px rgba(15,139,141,0.45);
       transition: transform 0.2s, box-shadow 0.2s;
       z-index: 1001;
+      user-select: none;
     }
     .chatbot-fab:hover {
       transform: scale(1.08);
       box-shadow: 0 6px 20px rgba(15,139,141,0.55);
     }
-    .chatbot-fab-icon { width: 22px; height: 22px; }
+    .chatbot-fab--dragging {
+      cursor: grabbing;
+      transform: scale(1.1);
+      box-shadow: 0 8px 24px rgba(15,139,141,0.65);
+    }
+    .chatbot-fab-icon { width: 22px; height: 22px; pointer-events: none; }
 
     .chatbot-window {
       position: fixed;
-      bottom: 92px;
-      right: 28px;
       width: 700px;
       height: 580px;
       background: var(--surface-bg, #fff);
@@ -794,29 +861,186 @@ type StoredChatHistory = Record<string, StoredChatEntry[]>;
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 768px) {
-      .chatbot-window { width: calc(100vw - 32px); right: 16px; bottom: 84px; height: 70vh; }
-      .chatbot-fab { bottom: 20px; right: 16px; }
-      .chatbot-history-panel { width: 160px; }
+      .chatbot-window { 
+        width: calc(100vw - 32px); 
+        height: 70vh;
+        max-width: 700px;
+      }
     }
 
     @media (max-width: 480px) {
-      .chatbot-window { width: calc(100vw - 16px); right: 8px; bottom: 76px; }
-      .chatbot-fab { bottom: 16px; right: 8px; }
+      .chatbot-window { 
+        width: calc(100vw - 16px);
+        max-width: 700px;
+      }
       .chatbot-history-panel { width: 0; border-right: none; }
       .chatbot-history-panel--collapsed { display: none; }
     }
+
+    ::ng-deep .chatbot-table-wrapper {
+      overflow-x: auto;
+      margin: 6px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(148,163,184,0.4);
+    }
+    ::ng-deep .chatbot-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+      min-width: 300px;
+    }
+    ::ng-deep .chatbot-table th {
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      padding: 7px 10px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    ::ng-deep .chatbot-table td {
+      padding: 6px 10px;
+      border: 1px solid rgba(148,163,184,0.45);
+      color: var(--field-input-text, #0f172a);
+      white-space: nowrap;
+    }
+    ::ng-deep .chatbot-table tr:nth-child(even) td { background: rgba(15,139,141,0.05); }
+    ::ng-deep .chatbot-table tr:hover td { background: rgba(15,139,141,0.1); }
+
+    ::ng-deep .chatbot-view-data-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--app-primary, #0f8b8d);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      padding: 4px 0;
+      background: none;
+      border: none;
+    }
+    ::ng-deep .chatbot-view-data-link:hover {
+      opacity: 0.8;
+    }
+
+    .chatbot-table-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .chatbot-table-modal {
+      background: var(--surface-bg, #fff);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(15,23,42,0.25);
+      width: min(90vw, 800px);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chatbot-table-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--surface-border, rgba(226,232,240,0.7));
+      flex-shrink: 0;
+    }
+    .chatbot-table-modal-header strong {
+      font-size: 15px;
+      color: var(--shell-text, #10233d);
+    }
+    .chatbot-table-modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chatbot-table-modal-body {
+      overflow: auto;
+      padding: 16px 20px;
+      flex: 1;
+    }
+    .chatbot-table-modal-body .chatbot-table-wrapper {
+      margin: 0;
+      border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.4);
+      overflow: auto;
+    }
+    .chatbot-table-modal-body .chatbot-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 13px;
+    }
+    .chatbot-table-modal-body .chatbot-table th {
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    .chatbot-table-modal-body .chatbot-table td {
+      padding: 9px 14px;
+      border: 1px solid rgba(148,163,184,0.35);
+      color: var(--field-input-text, #0f172a);
+      white-space: nowrap;
+    }
+    .chatbot-table-modal-body .chatbot-table tr:nth-child(even) td { background: rgba(15,139,141,0.04); }
+    .chatbot-table-modal-body .chatbot-table tr:hover td { background: rgba(15,139,141,0.09); }
+    .chatbot-export-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .chatbot-export-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .chatbot-modal-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(148,163,184,0.15);
+      border: none;
+      color: var(--shell-text, #10233d);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .chatbot-modal-close-btn:hover { background: rgba(148,163,184,0.28); }
   `]
 })
 export class ChatbotComponent implements OnInit, AfterViewChecked {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
   @ViewChild('messageInput') messageInput!: ElementRef;
+  @ViewChild('chatbotFab') chatbotFab!: ElementRef;
 
   private http = inject(HttpClient);
   private authService = injectAuthService();
   private platformId = inject(PLATFORM_ID);
+  private sanitizer = inject(DomSanitizer);
   private isBrowser = isPlatformBrowser(this.platformId);
 
   isOpen = false;
+  fabPosition = { bottom: 28, right: 28 };
+  private isDragging = false;
+  private dragOffset = { x: 0, y: 0 };
   currentMessage = '';
   isLoading = false;
   messages: ChatMessage[] = [];
@@ -847,10 +1071,17 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   private chatHistoryStore: StoredChatHistory = {};
   currentConversationId = '';
   private pendingNewConversation = false;
+  private conversationStarted = false;
 
   ngOnInit() {
     this.loadResponseCache();
     this.initQuickActions();
+    this.loadFabPosition();
+    // Auto-create new chat for each new tab/session
+    if (this.isBrowser) {
+      this.loadChatHistoryStore();
+      this.startNewChat();
+    }
   }
 
   private initQuickActions() {
@@ -870,7 +1101,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
         { label: '🗓️ Upcoming Holidays', message: 'What are the upcoming holidays?' }
       ];
     }
-    // ADMIN keeps the default quick actions
+
   }
 
   ngAfterViewChecked() {
@@ -885,6 +1116,63 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     if (this.isOpen) {
       setTimeout(() => this.messageInput?.nativeElement?.focus(), 100);
     }
+  }
+
+  onFabMouseDown(event: MouseEvent) {
+    if (event.button !== 0) return; // Only left click
+    this.isDragging = true;
+    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    this.dragOffset = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
+    event.preventDefault();
+  }
+
+  onFabMouseMove(event: MouseEvent) {
+    if (!this.isDragging) return;
+    
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const fabSize = 52;
+    
+    // Calculate position from bottom-right
+    const right = viewportWidth - event.clientX - (fabSize - this.dragOffset.x);
+    const bottom = viewportHeight - event.clientY - (fabSize - this.dragOffset.y);
+    
+    // Keep within viewport bounds
+    this.fabPosition = {
+      right: Math.max(10, Math.min(viewportWidth - fabSize - 10, right)),
+      bottom: Math.max(10, Math.min(viewportHeight - fabSize - 10, bottom))
+    };
+    
+    event.preventDefault();
+  }
+
+  onFabMouseUp(event: MouseEvent) {
+    if (this.isDragging) {
+      this.isDragging = false;
+      this.saveFabPosition();
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  private loadFabPosition() {
+    if (!this.isBrowser) return;
+    try {
+      const saved = localStorage.getItem('chatbot-fab-position');
+      if (saved) {
+        this.fabPosition = JSON.parse(saved);
+      }
+    } catch {}
+  }
+
+  private saveFabPosition() {
+    if (!this.isBrowser) return;
+    try {
+      localStorage.setItem('chatbot-fab-position', JSON.stringify(this.fabPosition));
+    } catch {}
   }
 
   sendMessage(event?: Event) {
@@ -911,12 +1199,12 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
     const messageToSend = trimmedMessage;
     const requestStartedAt = new Date();
-    const isNewConversationMessage = this.pendingNewConversation || this.getPersistedConversationEntries().length === 0;
     this.currentMessage = '';
     this.isLoading = true;
 
-    // Generate a unique requestId for this request — used to cancel it server-side
     this.ensureActiveConversation();
+    const isNewConversationMessage = this.pendingNewConversation && !this.conversationStarted;
+    this.conversationStarted = true;
     this.currentRequestId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const requestId = this.currentRequestId;
     this.cancelSubject$ = new Subject<void>();
@@ -957,10 +1245,10 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
           this.typeMessage(botMsg);
           this.persistConversationEntry(messageToSend, responseText, requestId, requestStartedAt, responseAt, 'api');
           this.pendingNewConversation = false;
+          this.conversationStarted = true;
           this.shouldScrollToBottom = true;
         },
         error: (err) => {
-          // Don't show error message if we cancelled intentionally
           if (err?.name === 'AbortError' || err?.status === 0) return;
           const fallbackResponse = 'Sorry, I\'m having trouble connecting. Please try again.';
           const responseAt = new Date();
@@ -982,32 +1270,41 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   clearChat() {
     this.cancelCurrentRequest();
     this.messages = [];
-    if (this.currentConversationId) {
-      this.chatHistoryStore[this.currentConversationId] = [];
+    if (this.currentConversationId && this.chatHistoryStore[this.currentConversationId]) {
+      this.chatHistoryStore[this.currentConversationId].messages = [];
       this.persistChatHistoryStore();
     }
   }
 
   startNewChat() {
     const currentEntries = this.getPersistedConversationEntries();
-    if (this.messages.length === 0 && currentEntries.length === 0) {
-      return;
-    }
+    // Allow creating new chat even if current is empty (for tab initialization)
+    if (this.messages.length === 0 && currentEntries.length === 0 && this.currentConversationId) return;
 
     this.cancelCurrentRequest();
     this.messages = [];
     this.currentConversationId = this.getNextConversationId();
-    this.chatHistoryStore[this.currentConversationId] = [];
+    this.chatHistoryStore[this.currentConversationId] = {
+      meta: {
+        conversation_id: this.currentConversationId,
+        username: this.authService.currentUser()?.username ?? null,
+        user_id: null,
+        profile: globalThis.location?.hostname ?? 'localhost',
+        response_type: 'text',
+        chatTitle: 'New chat',
+        chatDate: new Date().toLocaleDateString('en-GB')
+      },
+      messages: []
+    };
     this.pendingNewConversation = true;
+    this.conversationStarted = false;
     this.persistChatHistoryStore();
     this.buildHistorySummaries();
     this.shouldScrollToBottom = true;
   }
 
-  /** Stop button — cancels the current in-flight request */
   stopRequest() {
     this.cancelCurrentRequest();
-    // Remove the loading bubble
     const idx = this.messages.findIndex(m => m.isLoading);
     if (idx !== -1) this.messages.splice(idx, 1);
     this.isLoading = false;
@@ -1015,13 +1312,11 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
   private cancelCurrentRequest() {
     if (this.currentRequestId) {
-      // Tell RxJS to unsubscribe from the HTTP observable
       this.cancelSubject$.next();
       this.cancelSubject$.complete();
-      // Tell the backend to cancel the Ollama Future
       this.http.delete(`http://localhost:8080/api/chatbot/cancel/${this.currentRequestId}`, {
         headers: { 'X-Skip-Loader': 'true' }
-      }).subscribe({ error: () => {} }); // fire-and-forget
+      }).subscribe({ error: () => {} }); 
       this.currentRequestId = null;
     }
   }
@@ -1039,6 +1334,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     this.currentConversationId = conversationId;
     this.messages = this.mapConversationToMessages(conversationId);
     this.pendingNewConversation = this.getPersistedConversationEntries().length === 0;
+    this.conversationStarted = !this.pendingNewConversation;
     this.shouldScrollToBottom = true;
   }
 
@@ -1052,11 +1348,8 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
       this.loadChatHistoryStore();
       this.buildHistorySummaries();
 
-      if (this.isOpen && this.messages.length === 0) {
-        this.messages = this.mapConversationToMessages(this.currentConversationId);
-        this.pendingNewConversation = this.getPersistedConversationEntries().length === 0;
-        this.shouldScrollToBottom = true;
-      }
+      // Don't auto-load previous conversation on new tab
+      // User can manually select from history if needed
     } finally {
       this.historyLoading = false;
     }
@@ -1096,13 +1389,12 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   private buildHistorySummaries() {
     const keys = this.getSortedConversationKeys().slice().reverse();
     this.historyConversations = keys.map((id) => {
-      const entries = this.chatHistoryStore[id] ?? [];
-      const firstEntry = entries[0];
+      const entry = this.chatHistoryStore[id];
       return {
         id,
-        title: firstEntry?.chatTitle || `Conversation ${id.replace('chat_', '')}`,
-        chatDate: firstEntry?.chatDate || '',
-        count: entries.length * 2
+        title: entry?.meta?.chatTitle || `Conversation ${id.replace('chat_', '')}`,
+        chatDate: entry?.meta?.chatDate || '',
+        count: (entry?.messages?.length ?? 0) * 2
       };
     });
   }
@@ -1122,13 +1414,11 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
   startRenameConversation(conversationId: string, event: Event) {
     event.stopPropagation();
-    const entries = this.chatHistoryStore[conversationId];
-    if (!entries || entries.length === 0) {
-      return;
-    }
+    const entry = this.chatHistoryStore[conversationId];
+    if (!entry) return;
 
     this.renameTargetId = conversationId;
-    this.renameTitle = entries[0].chatTitle || `Conversation ${conversationId.replace('chat_', '')}`;
+    this.renameTitle = entry.meta?.chatTitle || `Conversation ${conversationId.replace('chat_', '')}`;
     this.isRenameDialogOpen = true;
   }
 
@@ -1140,18 +1430,12 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
   confirmRename() {
     const newTitle = this.renameTitle.trim();
-    if (!newTitle || !this.renameTargetId) {
-      return;
-    }
+    if (!newTitle || !this.renameTargetId) return;
 
-    const entries = this.chatHistoryStore[this.renameTargetId];
-    if (!entries) {
-      return;
-    }
+    const entry = this.chatHistoryStore[this.renameTargetId];
+    if (!entry) return;
 
-    entries.forEach(entry => {
-      entry.chatTitle = newTitle;
-    });
+    entry.meta.chatTitle = newTitle;
     this.persistChatHistoryStore();
     this.buildHistorySummaries();
     this.cancelRename();
@@ -1159,8 +1443,65 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
   trackByIndex(index: number): number { return index; }
 
+  // Table data store — avoids putting JSON in innerHTML (Angular sanitizer strips data-* attrs)
+  private tableStore = new Map<number, TableData>();
+  private tableStoreCounter = 0;
+  tableModal: TableData | null = null;
+
+  onBubbleClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const btn = target.closest('.chatbot-view-data-link') as HTMLElement | null;
+    if (!btn) return;
+    event.preventDefault();
+    const idx = Number(btn.getAttribute('data-idx'));
+    const data = this.tableStore.get(idx);
+    if (data) this.tableModal = { ...data };
+  }
+
+  closeTableModal(): void {
+    this.tableModal = null;
+  }
+
+  exportTableAsExcel(): void {
+    if (!this.tableModal) return;
+    const { headers, rows, title } = this.tableModal;
+    const escape = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [
+      headers.map(escape).join(','),
+      ...rows.map(row => row.map(escape).join(','))
+    ];
+    const csv = '\uFEFF' + lines.join('\r\n'); // BOM for Excel UTF-8
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(title || 'data').replace(/[^a-z0-9]/gi, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   formatMessage(text: string): string {
     if (!text) return '';
+
+    // Replace markdown tables with a "View your data" button.
+    // Table data is stored in tableStore (keyed by index) — Angular's DomSanitizer
+    // strips data-* attributes from [innerHTML], so we only embed the numeric index.
+    const tableRegex = /(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)*)/g;
+    text = text.replace(tableRegex, (match) => {
+      const lines = match.trim().split('\n').filter(l => l.trim());
+      if (lines.length < 2) return match;
+      const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
+      const rows = lines.slice(2).map(line =>
+        line.split('|').map(c => c.trim()).filter(c => c)
+      );
+      const idx = this.tableStoreCounter++;
+      this.tableStore.set(idx, { headers, rows, title: `Data (${rows.length} rows)` });
+      return `<button class="chatbot-view-data-link" data-idx="${idx}">` +
+        `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">` +
+        `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>` +
+        `</svg>View your data</button>`;
+    });
+
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -1168,16 +1509,32 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
       .replace(/\n/g, '<br>');
   }
 
-  getDisplayHtml(msg: ChatMessage): string {
+  getDisplayHtml(msg: ChatMessage): SafeHtml {
     const text = msg.isTyping ? (msg.displayedText || '') : msg.text;
     const cursor = msg.isTyping ? '<span class="chatbot-cursor"></span>' : '';
-    return this.formatMessage(text) + cursor;
+
+    if (!msg.isTyping) {
+      // Fully received message — build and cache once
+      if (!msg.cachedHtml) {
+        msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text) + cursor);
+      }
+      return msg.cachedHtml;
+    }
+
+    // Typing animation — rebuild only when displayedText changes
+    if (msg.cachedTypingText !== text) {
+      msg.cachedTypingText = text;
+      msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text) + cursor);
+    }
+    return msg.cachedHtml!;
   }
 
   private typeMessage(msg: ChatMessage): void {
     const fullText = msg.text;
     msg.displayedText = '';
     msg.isTyping = true;
+    msg.cachedHtml = undefined;
+    msg.cachedTypingText = undefined;
     let i = 0;
     // ~18ms per char ≈ ~55 chars/sec — feels like fast streaming
     const interval = setInterval(() => {
@@ -1187,6 +1544,8 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
       if (i >= fullText.length) {
         clearInterval(interval);
         msg.isTyping = false;
+        msg.cachedHtml = undefined; // force rebuild as final (non-typing) HTML
+        msg.cachedTypingText = undefined;
       }
     }, 18);
   }
@@ -1273,13 +1632,24 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   private ensureActiveConversation(): void {
     this.lazyLoadChatHistory();
 
-    if (this.currentConversationId) {
-      return;
-    }
+    if (this.currentConversationId) return;
 
     this.currentConversationId = this.getLatestConversationId() || 'chat_001';
-    this.chatHistoryStore[this.currentConversationId] ??= [];
-    this.pendingNewConversation = this.chatHistoryStore[this.currentConversationId].length === 0;
+    if (!this.chatHistoryStore[this.currentConversationId]) {
+      this.chatHistoryStore[this.currentConversationId] = {
+        meta: {
+          conversation_id: this.currentConversationId,
+          username: this.authService.currentUser()?.username ?? null,
+          user_id: null,
+          profile: globalThis.location?.hostname ?? 'localhost',
+          response_type: 'text',
+          chatTitle: 'Chat session',
+          chatDate: new Date().toLocaleDateString('en-GB')
+        },
+        messages: []
+      };
+    }
+    this.pendingNewConversation = (this.chatHistoryStore[this.currentConversationId]?.messages?.length ?? 0) === 0;
   }
 
   private getLatestConversationId(): string {
@@ -1304,9 +1674,9 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     });
   }
 
-  private getPersistedConversationEntries(): StoredChatEntry[] {
+  private getPersistedConversationEntries(): StoredChatMessage[] {
     this.ensureActiveConversation();
-    return this.chatHistoryStore[this.currentConversationId] ?? [];
+    return this.chatHistoryStore[this.currentConversationId]?.messages ?? [];
   }
 
   private persistConversationEntry(
@@ -1317,36 +1687,43 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     responseAt: Date,
     source: string
   ): void {
-    if (!this.isBrowser) {
-      return;
-    }
+    if (!this.isBrowser) return;
 
     this.ensureActiveConversation();
-    const existingEntries = this.getPersistedConversationEntries();
-    const questionId = existingEntries.length + 1;
     const conversationId = this.currentConversationId;
-    const chatTitle = existingEntries[0]?.chatTitle || question;
     const username = this.authService.currentUser()?.username ?? null;
     const today = requestStartedAt.toLocaleDateString('en-GB');
 
-    existingEntries.push({
-      answer: [{ Text: answer, Table: null }],
-      profile: globalThis.location?.hostname ?? 'localhost',
-      user_id: null,
-      chatDate: today,
+    let entry = this.chatHistoryStore[conversationId];
+    if (!entry) {
+      entry = {
+        meta: {
+          conversation_id: conversationId,
+          username,
+          user_id: null,
+          profile: globalThis.location?.hostname ?? 'localhost',
+          response_type: 'text',
+          chatTitle: question,
+          chatDate: today
+        },
+        messages: []
+      };
+      this.chatHistoryStore[conversationId] = entry;
+    }
+
+    const questionId = entry.messages.length + 1;
+    entry.messages.push({
       question,
-      chatTitle,
-      request_id: requestId,
+      answer,
+      table: null,
+      source,
       question_id: questionId,
-      response_type: 'text',
-      conversation_id: conversationId,
+      request_id: requestId,
+      latency_ms: responseAt.getTime() - requestStartedAt.getTime(),
       request_timestamp: requestStartedAt.toISOString(),
-      response_timestamp: responseAt.toISOString(),
-      username,
-      source
+      response_timestamp: responseAt.toISOString()
     });
 
-    this.chatHistoryStore[conversationId] = existingEntries;
     this.persistChatHistoryStore();
     this.buildHistorySummaries();
   }
@@ -1362,46 +1739,57 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   }
 
   private mapConversationToMessages(conversationId: string): ChatMessage[] {
-    const entries = this.chatHistoryStore[conversationId] ?? [];
-    return entries.flatMap(entry => {
-      const requestTime = new Date(entry.request_timestamp);
-      const responseTime = new Date(entry.response_timestamp);
+    const entry = this.chatHistoryStore[conversationId];
+    if (!entry) return [];
+    const messages = entry.messages ?? [];
+    return messages.flatMap(msg => {
+      const requestTime = new Date(msg.request_timestamp);
+      const responseTime = new Date(msg.response_timestamp);
+      // Reconstruct full answer text with table markdown for rendering
+      const answerText = msg.answer ?? '';
       return [
-        { text: entry.question, isUser: true, timestamp: requestTime },
-        { text: entry.answer?.[0]?.Text ?? '', isUser: false, timestamp: responseTime }
+        { text: msg.question, isUser: true, timestamp: requestTime },
+        { text: answerText, isUser: false, timestamp: responseTime }
       ];
     });
   }
 
-  private mapMessagesToStoredEntries(messages: ChatMessage[], conversationId: string): StoredChatEntry[] {
-    const entries: StoredChatEntry[] = [];
-    const completeMessages = messages.filter(message => !message.isLoading);
+  private mapMessagesToStoredEntries(messages: ChatMessage[], conversationId: string): StoredChatEntry {
+    const completeMessages = messages.filter(m => !m.isLoading);
+    const username = this.authService.currentUser()?.username ?? null;
+    const firstUser = completeMessages.find(m => m.isUser);
 
-    for (let index = 0; index < completeMessages.length; index += 2) {
-      const userMessage = completeMessages[index];
-      const botMessage = completeMessages[index + 1];
-      if (!userMessage?.isUser || !botMessage || botMessage.isUser) {
-        continue;
-      }
-
-      entries.push({
-        answer: [{ Text: botMessage.text, Table: null }],
-        profile: globalThis.location?.hostname ?? 'localhost',
-        user_id: null,
-        chatDate: userMessage.timestamp.toLocaleDateString('en-GB'),
-        question: userMessage.text,
-        chatTitle: entries[0]?.chatTitle || userMessage.text,
-        request_id: `legacy_${index + 1}`,
-        question_id: entries.length + 1,
-        response_type: 'text',
+    const entry: StoredChatEntry = {
+      meta: {
         conversation_id: conversationId,
-        request_timestamp: userMessage.timestamp.toISOString(),
-        response_timestamp: botMessage.timestamp.toISOString(),
-        username: this.authService.currentUser()?.username ?? null,
-        source: 'legacy'
+        username,
+        user_id: null,
+        profile: globalThis.location?.hostname ?? 'localhost',
+        response_type: 'text',
+        chatTitle: firstUser?.text || 'Chat session',
+        chatDate: firstUser?.timestamp.toLocaleDateString('en-GB') || ''
+      },
+      messages: []
+    };
+
+    for (let i = 0; i < completeMessages.length; i += 2) {
+      const userMsg = completeMessages[i];
+      const botMsg = completeMessages[i + 1];
+      if (!userMsg?.isUser || !botMsg || botMsg.isUser) continue;
+
+      entry.messages.push({
+        question: userMsg.text,
+        answer: botMsg.text,
+        table: null,
+        source: 'legacy',
+        question_id: entry.messages.length + 1,
+        request_id: `legacy_${i + 1}`,
+        latency_ms: 0,
+        request_timestamp: userMsg.timestamp.toISOString(),
+        response_timestamp: botMsg.timestamp.toISOString()
       });
     }
 
-    return entries;
+    return entry;
   }
 }

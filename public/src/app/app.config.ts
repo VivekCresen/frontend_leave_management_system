@@ -7,14 +7,14 @@ import { AuthApiService } from './services/auth-api.service';
 import { AUTH_SERVICE } from './services/auth.service';
 import { loaderInterceptor } from './loader.interceptor';
 import { languageInterceptor } from './i18n/language.interceptor';
-
+import { serviceErrorInterceptor } from './service-error.interceptor';
 import { authInterceptor } from './auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor, languageInterceptor, loaderInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, languageInterceptor, loaderInterceptor, serviceErrorInterceptor])),
     provideClientHydration(withEventReplay()),
     AuthApiService,
     { provide: AUTH_SERVICE, useExisting: AuthApiService }
