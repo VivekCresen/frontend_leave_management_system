@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewChecked, OnInit, inject, PLATFORM_ID } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewChecked, OnInit, OnDestroy, inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -14,6 +14,7 @@ interface ChatMessage {
   isLoading?: boolean;
   displayedText?: string;
   isTyping?: boolean;
+  hasTable?: boolean;
   cachedHtml?: SafeHtml;       // cached so formatMessage never runs twice for the same message
   cachedTypingText?: string;   // tracks which displayedText the cached typing HTML was built from
 }
@@ -29,16 +30,6 @@ interface CachedChatResponse {
   savedAt: number;
 }
 
-interface StoredChatMeta {
-  conversation_id: string;
-  username: string | null;
-  user_id: number | null;
-  profile: string;
-  response_type: string;
-  chatTitle: string;
-  chatDate: string;
-}
-
 interface StoredChatMessage {
   question: string;
   answer: string;
@@ -52,7 +43,13 @@ interface StoredChatMessage {
 }
 
 interface StoredChatEntry {
-  meta: StoredChatMeta;
+  conversation_id: string;
+  username: string | null;
+  user_id: number | null;
+  profile: string;
+  response_type: string;
+  chatTitle: string;
+  chatDate: string;
   messages: StoredChatMessage[];
 }
 
@@ -67,8 +64,6 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       #chatbotFab
       (click)="!isDragging && toggleChat()"
       (mousedown)="onFabMouseDown($event)"
-      (document:mousemove)="onFabMouseMove($event)"
-      (document:mouseup)="onFabMouseUp($event)"
       [style.bottom.px]="fabPosition.bottom"
       [style.right.px]="fabPosition.right"
       class="chatbot-fab"
@@ -85,8 +80,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
 
     <div class="chatbot-window" 
          [class.chatbot-window--open]="isOpen" 
-         [style.bottom.px]="fabPosition.bottom + 64"
-         [style.right.px]="fabPosition.right"
+         [style]="windowStyle"
          role="dialog" 
          aria-label="Leave Assistant">
 
@@ -226,6 +220,13 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
 
             <div *ngIf="!msg.isLoading" [innerHTML]="getDisplayHtml(msg)"></div>
 
+            <div *ngIf="!msg.isLoading && msg.isTyping && msg.hasTable" class="chatbot-generating">
+              <span class="chatbot-generating-dot"></span>
+              <span class="chatbot-generating-dot"></span>
+              <span class="chatbot-generating-dot"></span>
+              Generating table...
+            </div>
+
             <div *ngIf="!msg.isLoading" class="chatbot-time">
               {{ msg.timestamp | date:'shortTime' }}
             </div>
@@ -359,8 +360,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       pointer-events: none;
       transition: opacity 0.22s ease, transform 0.22s ease;
       overflow: hidden;
-    }
-    .chatbot-window--open {
+    }    .chatbot-window--open {
       opacity: 1;
       transform: translateY(0) scale(1);
       pointer-events: all;
@@ -799,6 +799,29 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       50% { opacity: 0; }
     }
 
+    .chatbot-generating {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      padding: 5px 10px;
+      background: rgba(15,139,141,0.08);
+      border: 1px solid rgba(15,139,141,0.2);
+      border-radius: 20px;
+      font-size: 11px;
+      color: var(--app-primary, #0f8b8d);
+      font-weight: 500;
+    }
+    .chatbot-generating-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--app-primary, #0f8b8d);
+      animation: chatDot 1.3s infinite ease-in-out;
+    }
+    .chatbot-generating-dot:nth-child(2) { animation-delay: 0.18s; }
+    .chatbot-generating-dot:nth-child(3) { animation-delay: 0.36s; }
+
     .chatbot-input-area {
       display: flex;
       gap: 8px;
@@ -861,18 +884,10 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 768px) {
-      .chatbot-window { 
-        width: calc(100vw - 32px); 
-        height: 70vh;
-        max-width: 700px;
-      }
+      .chatbot-history-panel { width: 160px; }
     }
 
     @media (max-width: 480px) {
-      .chatbot-window { 
-        width: calc(100vw - 16px);
-        max-width: 700px;
-      }
       .chatbot-history-panel { width: 0; border-right: none; }
       .chatbot-history-panel--collapsed { display: none; }
     }
@@ -1026,7 +1041,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
     .chatbot-modal-close-btn:hover { background: rgba(148,163,184,0.28); }
   `]
 })
-export class ChatbotComponent implements OnInit, AfterViewChecked {
+export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
   @ViewChild('messageInput') messageInput!: ElementRef;
   @ViewChild('chatbotFab') chatbotFab!: ElementRef;
@@ -1034,13 +1049,58 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   private http = inject(HttpClient);
   private authService = injectAuthService();
   private platformId = inject(PLATFORM_ID);
-  private sanitizer = inject(DomSanitizer);
+  protected sanitizer = inject(DomSanitizer);
+  private ngZone = inject(NgZone);
   private isBrowser = isPlatformBrowser(this.platformId);
 
   isOpen = false;
   fabPosition = { bottom: 28, right: 28 };
-  private isDragging = false;
+  isDragging = false;
   private dragOffset = { x: 0, y: 0 };
+
+  private readonly WIN_W = 700;
+  private readonly WIN_H = 580;
+  private readonly FAB_SIZE = 52;
+  private readonly GAP = 12;
+
+  get windowStyle(): string {
+    if (!this.isBrowser) return '';
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // FAB center in viewport coords
+    const fabRight  = this.fabPosition.right;
+    const fabBottom = this.fabPosition.bottom;
+    const fabLeft   = vw - fabRight - this.FAB_SIZE;
+    const fabTop    = vh - fabBottom - this.FAB_SIZE;
+
+    const winW = Math.min(this.WIN_W, vw - 20);
+    const winH = Math.min(this.WIN_H, vh - 20);
+
+    // Horizontal: prefer aligning right edge of window with right edge of FAB,
+    // but clamp so window never goes off-screen
+    let left = fabLeft - winW + this.FAB_SIZE;
+    left = Math.max(10, Math.min(vw - winW - 10, left));
+
+    // Vertical: open above FAB if there's room, otherwise below
+    let top: number;
+    const spaceAbove = fabTop - this.GAP;
+    const spaceBelow = vh - (fabTop + this.FAB_SIZE) - this.GAP;
+
+    if (spaceAbove >= winH || spaceAbove >= spaceBelow) {
+      // Open above
+      top = fabTop - winH - this.GAP;
+      top = Math.max(10, top);
+    } else {
+      // Open below
+      top = fabTop + this.FAB_SIZE + this.GAP;
+      top = Math.min(vh - winH - 10, top);
+    }
+
+    return `left:${left}px; top:${top}px; width:${winW}px; height:${winH}px;`;
+  }
+  private boundMouseMove!: (e: MouseEvent) => void;
+  private boundMouseUp!: (e: MouseEvent) => void;
   currentMessage = '';
   isLoading = false;
   messages: ChatMessage[] = [];
@@ -1065,7 +1125,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   private currentRequestId: string | null = null;
   private cancelSubject$ = new Subject<void>();
   private readonly responseCache = new Map<string, CachedChatResponse>();
-  private readonly chatHistoryKey = 'chatbot-history-v2';
+  private readonly chatHistoryKey = 'chatbot-history-v3';
   private readonly responseCacheKey = 'chatbot-response-cache';
   private readonly responseCacheTtlMs = 5 * 60 * 1000;
   private chatHistoryStore: StoredChatHistory = {};
@@ -1079,7 +1139,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     this.loadFabPosition();
     // Auto-create new chat for each new tab/session
     if (this.isBrowser) {
-      this.loadChatHistoryStore();
+      // Always start with a fresh new chat, don't load previous conversation
       this.startNewChat();
     }
   }
@@ -1119,43 +1179,62 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   }
 
   onFabMouseDown(event: MouseEvent) {
-    if (event.button !== 0) return; // Only left click
-    this.isDragging = true;
-    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    if (event.button !== 0) return;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     this.dragOffset = {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top
     };
     event.preventDefault();
+
+    // Run listeners outside Angular zone to avoid triggering change detection on every mousemove
+    this.ngZone.runOutsideAngular(() => {
+      this.boundMouseMove = (e: MouseEvent) => {
+        if (!this.isDragging) {
+          // Only start dragging after a small movement threshold
+          const dx = Math.abs(e.clientX - (rect.left + this.dragOffset.x));
+          const dy = Math.abs(e.clientY - (rect.top + this.dragOffset.y));
+          if (dx < 4 && dy < 4) return;
+          this.ngZone.run(() => { this.isDragging = true; });
+        }
+
+        const fabSize = 52;
+        const right = window.innerWidth - e.clientX - (fabSize - this.dragOffset.x);
+        const bottom = window.innerHeight - e.clientY - (fabSize - this.dragOffset.y);
+
+        const newPos = {
+          right: Math.max(10, Math.min(window.innerWidth - fabSize - 10, right)),
+          bottom: Math.max(10, Math.min(window.innerHeight - fabSize - 10, bottom))
+        };
+
+        // Only run in zone (triggering CD) when position actually changes
+        if (newPos.right !== this.fabPosition.right || newPos.bottom !== this.fabPosition.bottom) {
+          this.ngZone.run(() => { this.fabPosition = newPos; });
+        }
+        e.preventDefault();
+      };
+
+      this.boundMouseUp = (e: MouseEvent) => {
+        document.removeEventListener('mousemove', this.boundMouseMove);
+        document.removeEventListener('mouseup', this.boundMouseUp);
+        if (this.isDragging) {
+          this.ngZone.run(() => {
+            this.isDragging = false;
+            this.saveFabPosition();
+          });
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      document.addEventListener('mousemove', this.boundMouseMove);
+      document.addEventListener('mouseup', this.boundMouseUp);
+    });
   }
 
-  onFabMouseMove(event: MouseEvent) {
-    if (!this.isDragging) return;
-    
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const fabSize = 52;
-    
-    // Calculate position from bottom-right
-    const right = viewportWidth - event.clientX - (fabSize - this.dragOffset.x);
-    const bottom = viewportHeight - event.clientY - (fabSize - this.dragOffset.y);
-    
-    // Keep within viewport bounds
-    this.fabPosition = {
-      right: Math.max(10, Math.min(viewportWidth - fabSize - 10, right)),
-      bottom: Math.max(10, Math.min(viewportHeight - fabSize - 10, bottom))
-    };
-    
-    event.preventDefault();
-  }
-
-  onFabMouseUp(event: MouseEvent) {
-    if (this.isDragging) {
-      this.isDragging = false;
-      this.saveFabPosition();
-      event.preventDefault();
-      event.stopPropagation();
-    }
+  ngOnDestroy() {
+    if (this.boundMouseMove) document.removeEventListener('mousemove', this.boundMouseMove);
+    if (this.boundMouseUp) document.removeEventListener('mouseup', this.boundMouseUp);
   }
 
   private loadFabPosition() {
@@ -1277,23 +1356,18 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   }
 
   startNewChat() {
-    const currentEntries = this.getPersistedConversationEntries();
-    // Allow creating new chat even if current is empty (for tab initialization)
-    if (this.messages.length === 0 && currentEntries.length === 0 && this.currentConversationId) return;
-
+    // Always create a new chat when this method is called
     this.cancelCurrentRequest();
     this.messages = [];
     this.currentConversationId = this.getNextConversationId();
     this.chatHistoryStore[this.currentConversationId] = {
-      meta: {
-        conversation_id: this.currentConversationId,
-        username: this.authService.currentUser()?.username ?? null,
-        user_id: null,
-        profile: globalThis.location?.hostname ?? 'localhost',
-        response_type: 'text',
-        chatTitle: 'New chat',
-        chatDate: new Date().toLocaleDateString('en-GB')
-      },
+      conversation_id: this.currentConversationId,
+      username: this.authService.currentUser()?.username ?? null,
+      user_id: null,
+      profile: globalThis.location?.hostname ?? 'localhost',
+      response_type: 'text',
+      chatTitle: 'New chat',
+      chatDate: new Date().toLocaleDateString('en-GB'),
       messages: []
     };
     this.pendingNewConversation = true;
@@ -1347,11 +1421,9 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     try {
       this.loadChatHistoryStore();
       this.buildHistorySummaries();
-
-      // Don't auto-load previous conversation on new tab
-      // User can manually select from history if needed
     } finally {
       this.historyLoading = false;
+      this.chatHistoryLoaded = true;
     }
   }
 
@@ -1369,6 +1441,26 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
         return;
       }
 
+      const v2Saved = localStorage.getItem('chatbot-history-v2');
+      if (v2Saved) {
+        const parsed = JSON.parse(v2Saved) as Record<string, any>;
+        const migrated: StoredChatHistory = {};
+        for (const [id, entry] of Object.entries(parsed)) {
+          if (entry && entry.meta && typeof entry.meta === 'object') {
+            migrated[id] = { ...entry.meta, messages: entry.messages ?? [] };
+          } else {
+            migrated[id] = entry as StoredChatEntry;
+          }
+        }
+        this.chatHistoryStore = migrated;
+        this.persistChatHistoryStore();
+        localStorage.removeItem('chatbot-history-v2');
+        this.currentConversationId = this.getLatestConversationId();
+        this.chatHistoryLoaded = true;
+        return;
+      }
+
+      // Migrate from v1 (raw ChatMessage array)
       const legacySaved = localStorage.getItem('chatbot-history');
       if (legacySaved) {
         const legacyMessages = JSON.parse(legacySaved).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })) as ChatMessage[];
@@ -1392,8 +1484,8 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
       const entry = this.chatHistoryStore[id];
       return {
         id,
-        title: entry?.meta?.chatTitle || `Conversation ${id.replace('chat_', '')}`,
-        chatDate: entry?.meta?.chatDate || '',
+        title: entry?.chatTitle || `Conversation ${id.replace('chat_', '')}`,
+        chatDate: entry?.chatDate || '',
         count: (entry?.messages?.length ?? 0) * 2
       };
     });
@@ -1418,7 +1510,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     if (!entry) return;
 
     this.renameTargetId = conversationId;
-    this.renameTitle = entry.meta?.chatTitle || `Conversation ${conversationId.replace('chat_', '')}`;
+    this.renameTitle = entry.chatTitle || `Conversation ${conversationId.replace('chat_', '')}`;
     this.isRenameDialogOpen = true;
   }
 
@@ -1435,7 +1527,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     const entry = this.chatHistoryStore[this.renameTargetId];
     if (!entry) return;
 
-    entry.meta.chatTitle = newTitle;
+    entry.chatTitle = newTitle;
     this.persistChatHistoryStore();
     this.buildHistorySummaries();
     this.cancelRename();
@@ -1480,27 +1572,35 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     URL.revokeObjectURL(url);
   }
 
-  formatMessage(text: string): string {
+  formatMessage(text: string, typing = false): string {
     if (!text) return '';
 
-    // Replace markdown tables with a "View your data" button.
-    // Table data is stored in tableStore (keyed by index) — Angular's DomSanitizer
-    // strips data-* attributes from [innerHTML], so we only embed the numeric index.
-    const tableRegex = /(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)*)/g;
-    text = text.replace(tableRegex, (match) => {
-      const lines = match.trim().split('\n').filter(l => l.trim());
-      if (lines.length < 2) return match;
-      const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
-      const rows = lines.slice(2).map(line =>
-        line.split('|').map(c => c.trim()).filter(c => c)
-      );
-      const idx = this.tableStoreCounter++;
-      this.tableStore.set(idx, { headers, rows, title: `Data (${rows.length} rows)` });
-      return `<button class="chatbot-view-data-link" data-idx="${idx}">` +
-        `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">` +
-        `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>` +
-        `</svg>View your data</button>`;
-    });
+    // During typing animation, hide partial markdown table syntax entirely
+    // so raw pipe characters don't flash on screen mid-stream.
+    // The full table button is rendered only once typing completes.
+    if (typing) {
+      // Strip any partial or complete markdown table block
+      text = text.replace(/(\|[^\n]*\n?)+/g, '');
+    } else {
+      // Replace complete markdown tables with a "View your data" button.
+      // Table data is stored in tableStore (keyed by index) — Angular's DomSanitizer
+      // strips data-* attributes from [innerHTML], so we only embed the numeric index.
+      const tableRegex = /(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)*)/g;
+      text = text.replace(tableRegex, (match) => {
+        const lines = match.trim().split('\n').filter(l => l.trim());
+        if (lines.length < 2) return match;
+        const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
+        const rows = lines.slice(2).map(line =>
+          line.split('|').map(c => c.trim()).filter(c => c)
+        );
+        const idx = this.tableStoreCounter++;
+        this.tableStore.set(idx, { headers, rows, title: `Data (${rows.length} rows)` });
+        return `<button class="chatbot-view-data-link" data-idx="${idx}">` +
+          `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">` +
+          `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>` +
+          `</svg>View your data</button>`;
+      });
+    }
 
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -1516,21 +1616,22 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     if (!msg.isTyping) {
       // Fully received message — build and cache once
       if (!msg.cachedHtml) {
-        msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text) + cursor);
+        msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text, false) + cursor);
       }
-      return msg.cachedHtml;
+      return msg.cachedHtml!;
     }
 
     // Typing animation — rebuild only when displayedText changes
     if (msg.cachedTypingText !== text) {
       msg.cachedTypingText = text;
-      msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text) + cursor);
+      msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text, true) + cursor);
     }
     return msg.cachedHtml!;
   }
 
   private typeMessage(msg: ChatMessage): void {
     const fullText = msg.text;
+    msg.hasTable = /\|.+\|\n\|[-| :]+\|/.test(fullText);
     msg.displayedText = '';
     msg.isTyping = true;
     msg.cachedHtml = undefined;
@@ -1637,15 +1738,13 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     this.currentConversationId = this.getLatestConversationId() || 'chat_001';
     if (!this.chatHistoryStore[this.currentConversationId]) {
       this.chatHistoryStore[this.currentConversationId] = {
-        meta: {
-          conversation_id: this.currentConversationId,
-          username: this.authService.currentUser()?.username ?? null,
-          user_id: null,
-          profile: globalThis.location?.hostname ?? 'localhost',
-          response_type: 'text',
-          chatTitle: 'Chat session',
-          chatDate: new Date().toLocaleDateString('en-GB')
-        },
+        conversation_id: this.currentConversationId,
+        username: this.authService.currentUser()?.username ?? null,
+        user_id: null,
+        profile: globalThis.location?.hostname ?? 'localhost',
+        response_type: 'text',
+        chatTitle: 'Chat session',
+        chatDate: new Date().toLocaleDateString('en-GB'),
         messages: []
       };
     }
@@ -1697,15 +1796,13 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     let entry = this.chatHistoryStore[conversationId];
     if (!entry) {
       entry = {
-        meta: {
-          conversation_id: conversationId,
-          username,
-          user_id: null,
-          profile: globalThis.location?.hostname ?? 'localhost',
-          response_type: 'text',
-          chatTitle: question,
-          chatDate: today
-        },
+        conversation_id: conversationId,
+        username,
+        user_id: null,
+        profile: globalThis.location?.hostname ?? 'localhost',
+        response_type: 'text',
+        chatTitle: question,
+        chatDate: today,
         messages: []
       };
       this.chatHistoryStore[conversationId] = entry;
@@ -1760,15 +1857,13 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     const firstUser = completeMessages.find(m => m.isUser);
 
     const entry: StoredChatEntry = {
-      meta: {
-        conversation_id: conversationId,
-        username,
-        user_id: null,
-        profile: globalThis.location?.hostname ?? 'localhost',
-        response_type: 'text',
-        chatTitle: firstUser?.text || 'Chat session',
-        chatDate: firstUser?.timestamp.toLocaleDateString('en-GB') || ''
-      },
+      conversation_id: conversationId,
+      username,
+      user_id: null,
+      profile: globalThis.location?.hostname ?? 'localhost',
+      response_type: 'text',
+      chatTitle: firstUser?.text || 'Chat session',
+      chatDate: firstUser?.timestamp.toLocaleDateString('en-GB') || '',
       messages: []
     };
 

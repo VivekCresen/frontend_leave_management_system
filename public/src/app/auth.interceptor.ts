@@ -6,7 +6,6 @@ import { AUTH_SERVICE } from './services/auth.service';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const platformId = inject(PLATFORM_ID);
 
-  // During SSR there is no localStorage — skip adding the token
   if (!isPlatformBrowser(platformId)) {
     return next(req);
   }
