@@ -5,6 +5,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { AuthApiService } from '../services/auth-api.service';
 import { LoginResponse } from '../services/auth.service';
+import { ThemeService } from '../services/theme.service';
 import { ToastService } from '../services/toast.service';
 import { getDashboardMenuItems, getDefaultDashboardPage, isDashboardPageAllowed } from './dashboard.config';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -28,7 +29,8 @@ export class DashboardComponent {
   constructor(
     authService: AuthApiService,
     private readonly router: Router,
-    private readonly toastService: ToastService
+    private readonly toastService: ToastService,
+    public readonly themeService: ThemeService
   ) {
     this.authService = authService;
     const user = this.authService.currentUser();

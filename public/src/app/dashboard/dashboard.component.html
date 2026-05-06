@@ -59,6 +59,18 @@
     </nav>
 
     <div class="sidebar-actions">
+      <button
+        type="button"
+        class="theme-toggle-button"
+        (click)="themeService.toggle()"
+        [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+        <i class="fas" [class.fa-sun]="themeService.isDark" [class.fa-moon]="!themeService.isDark"></i>
+        <span>{{ themeService.isDark ? 'Light mode' : 'Dark mode' }}</span>
+      </button>
+      <button type="button" class="primary-action" (click)="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>{{ 'menu.logout' | translate }}</span>
+      </button>
     </div>
   </aside>
 
@@ -79,6 +91,14 @@
         <strong>{{ user.role | titlecase }}</strong>
         <span>{{ user.username }}</span>
       </div>
+
+      <button
+        type="button"
+        class="mobile-theme-toggle"
+        (click)="themeService.toggle()"
+        [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+        <i class="fas" [class.fa-sun]="themeService.isDark" [class.fa-moon]="!themeService.isDark"></i>
+      </button>
     </div>
 
     <router-outlet></router-outlet>
