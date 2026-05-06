@@ -134,7 +134,7 @@ export class DashboardLeaveTableComponent implements OnInit, AfterViewInit, OnCh
   sortKey: keyof AdminLeaveTableRow = 'fromDate';
   sortDirection: 'asc' | 'desc' = 'desc';
   currentPage = 1;
-  pageSize = 6;
+  pageSize = 4;
   rejectingLeave: AdminLeaveTableRow | null = null;
   rejectionReason = '';
   rejectionSubmitted = false;

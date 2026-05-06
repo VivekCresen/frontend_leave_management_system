@@ -69,9 +69,28 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       class="chatbot-fab"
       [class.chatbot-fab--dragging]="isDragging"
       [attr.aria-label]="isOpen ? 'Close chat' : 'Open chat'">
-      <svg *ngIf="!isOpen" class="chatbot-fab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.681L3 21l2.681-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
+      <svg *ngIf="!isOpen" class="chatbot-fab-icon" fill="none" stroke="currentColor" viewBox="0 0 64 64">
+        <!-- Antennas -->
+        <line x1="20" y1="12" x2="20" y2="8" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="20" cy="6" r="2.5" fill="currentColor"/>
+        <line x1="44" y1="12" x2="44" y2="8" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="44" cy="6" r="2.5" fill="currentColor"/>
+        
+        <!-- Head -->
+        <rect x="14" y="12" width="36" height="24" rx="4" stroke-width="2.5" fill="currentColor" fill-opacity="0.15"/>
+        
+        <!-- AI Text -->
+        <text x="32" y="28" font-size="14" font-weight="bold" fill="currentColor" text-anchor="middle" font-family="Arial, sans-serif">AI</text>
+        
+        <!-- Body -->
+        <rect x="20" y="38" width="24" height="18" rx="3" stroke-width="2.5" fill="currentColor" fill-opacity="0.1"/>
+        
+        <!-- Circuit pattern in body -->
+        <circle cx="28" cy="47" r="2" fill="currentColor" fill-opacity="0.4"/>
+        <circle cx="36" cy="47" r="2" fill="currentColor" fill-opacity="0.4"/>
+        <line x1="28" y1="47" x2="36" y2="47" stroke-width="1.5" stroke-opacity="0.4"/>
+        <line x1="32" y1="47" x2="32" y2="52" stroke-width="1.5" stroke-opacity="0.4"/>
+        <circle cx="32" cy="52" r="1.5" fill="currentColor" fill-opacity="0.4"/>
       </svg>
       <svg *ngIf="isOpen" class="chatbot-fab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -98,7 +117,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
           </div>
         </div>
         <div class="chatbot-header-actions">
-          <button (click)="startNewChat()" class="chatbot-clear-btn" title="New chat" aria-label="New chat">
+          <button (click)="startNewChat()" class="chatbot-clear-btn" title="New chat" aria-label="New chat" [disabled]="hasEmptyChat()">
             <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -279,6 +298,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
           #messageInput
           [(ngModel)]="currentMessage"
           (keydown.enter)="sendMessage()"
+          (ngModelChange)="onMessageChange($event)"
           [disabled]="isLoading"
           placeholder="Ask about leaves, holidays or policies..."
           class="chatbot-input"
@@ -312,15 +332,15 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       position: fixed;
       bottom: 0;
       right: 0;
-      z-index: 1000;
+      z-index: 3000;
       pointer-events: none;
     }
     :host > * { pointer-events: all; }
 
     .chatbot-fab {
       position: fixed;
-      width: 52px;
-      height: 52px;
+      width: 70px;
+      height: 70px;
       border-radius: 50%;
       background: var(--app-primary, #0f8b8d);
       color: #fff;
@@ -329,27 +349,27 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 16px rgba(15,139,141,0.45);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 6px 20px rgba(15,139,141,0.5);
+      transition: transform 0.3s, box-shadow 0.3s;
       z-index: 1001;
       user-select: none;
     }
     .chatbot-fab:hover {
-      transform: scale(1.08);
-      box-shadow: 0 6px 20px rgba(15,139,141,0.55);
+      transform: scale(1.1);
+      box-shadow: 0 8px 28px rgba(15,139,141,0.6);
     }
     .chatbot-fab--dragging {
       cursor: grabbing;
-      transform: scale(1.1);
-      box-shadow: 0 8px 24px rgba(15,139,141,0.65);
+      transform: scale(1.12);
+      box-shadow: 0 10px 32px rgba(15,139,141,0.7);
     }
-    .chatbot-fab-icon { width: 22px; height: 22px; pointer-events: none; }
+    .chatbot-fab-icon { width: 36px; height: 36px; pointer-events: none; }
 
     .chatbot-window {
       position: fixed;
       width: 700px;
       height: 580px;
-      background: var(--surface-bg, #fff);
+      background: #fff;
       border: 1px solid var(--surface-border, rgba(226,232,240,0.7));
       border-radius: 18px;
       display: flex;
@@ -360,6 +380,11 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       pointer-events: none;
       transition: opacity 0.22s ease, transform 0.22s ease;
       overflow: hidden;
+      isolation: isolate;
+      contain: layout paint;
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+      -webkit-font-smoothing: antialiased;
     }    .chatbot-window--open {
       opacity: 1;
       transform: translateY(0) scale(1);
@@ -370,6 +395,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       display: flex;
       flex: 1;
       overflow: hidden;
+      background: #fff;
     }
 
     .chatbot-header {
@@ -386,7 +412,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
 
     .chatbot-history-panel {
       width: 240px;
-      background: var(--surface-bg, #fff);
+      background: #fff;
       border-right: 1px solid var(--surface-border, rgba(226,232,240,0.85));
       border-radius: 0;
       box-shadow: none;
@@ -409,7 +435,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       gap: 8px;
       padding: 12px 10px;
       border-bottom: 1px solid var(--surface-border, rgba(226,232,240,0.7));
-      background: var(--surface-bg, #fff);
+      background: #fff;
       flex-shrink: 0;
     }
     .chatbot-history-panel-header strong {
@@ -673,8 +699,9 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      background: var(--ws-bg, #f8fafc);
+      background: #f8fafc;
       min-width: 0;
+      transform: translateZ(0);
     }
     .chatbot-messages::-webkit-scrollbar { width: 5px; }
     .chatbot-messages::-webkit-scrollbar-thumb {
@@ -827,7 +854,7 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       gap: 8px;
       padding: 12px 14px;
       border-top: 1px solid var(--surface-border, rgba(226,232,240,0.7));
-      background: var(--surface-bg, #fff);
+      background: #fff;
       flex-shrink: 0;
     }
     .chatbot-input {
@@ -841,6 +868,8 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
       font-family: inherit;
+      will-change: border-color, box-shadow;
+      transform: translateZ(0);
     }
     .chatbot-input:focus {
       border-color: var(--app-primary, #0f8b8d);
@@ -991,19 +1020,19 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
     .chatbot-table-modal-body .chatbot-table {
       border-collapse: collapse;
       width: 100%;
-      font-size: 13px;
+      font-size: 11px;
     }
     .chatbot-table-modal-body .chatbot-table th {
       background: var(--app-primary, #0f8b8d);
       color: #fff;
-      padding: 10px 14px;
+      padding: 6px 10px;
       text-align: left;
       font-weight: 600;
       white-space: nowrap;
       border: 1px solid rgba(255,255,255,0.25);
     }
     .chatbot-table-modal-body .chatbot-table td {
-      padding: 9px 14px;
+      padding: 5px 10px;
       border: 1px solid rgba(148,163,184,0.35);
       color: var(--field-input-text, #0f172a);
       white-space: nowrap;
@@ -1039,6 +1068,18 @@ type StoredChatHistory = Record<string, StoredChatEntry>;
       transition: background 0.2s;
     }
     .chatbot-modal-close-btn:hover { background: rgba(148,163,184,0.28); }
+
+    :host-context([data-theme="dark"]) .chatbot-window,
+    :host-context([data-theme="dark"]) .chatbot-content-wrapper,
+    :host-context([data-theme="dark"]) .chatbot-history-panel,
+    :host-context([data-theme="dark"]) .chatbot-history-panel-header,
+    :host-context([data-theme="dark"]) .chatbot-input-area {
+      background: #162034;
+    }
+
+    :host-context([data-theme="dark"]) .chatbot-messages {
+      background: #0f172a;
+    }
   `]
 })
 export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
@@ -1060,7 +1101,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   private readonly WIN_W = 700;
   private readonly WIN_H = 580;
-  private readonly FAB_SIZE = 52;
+  private readonly FAB_SIZE = 70;
   private readonly GAP = 12;
 
   get windowStyle(): string {
@@ -1111,6 +1152,12 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
   isRenameDialogOpen = false;
   renameTargetId: string | null = null;
   renameTitle = '';
+  private _hasEmptyChatCache: boolean | null = null;
+
+  onMessageChange(value: string): void {
+    // This method helps prevent unnecessary change detection cycles
+    // by explicitly handling the input change
+  }
 
   quickActions = [
     { label: '📊 My Leave Balance', message: 'What is my current leave balance?' },
@@ -1198,7 +1245,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
           this.ngZone.run(() => { this.isDragging = true; });
         }
 
-        const fabSize = 52;
+        const fabSize = 70;
         const right = window.innerWidth - e.clientX - (fabSize - this.dragOffset.x);
         const bottom = window.innerHeight - e.clientY - (fabSize - this.dragOffset.y);
 
@@ -1284,6 +1331,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
     this.ensureActiveConversation();
     const isNewConversationMessage = this.pendingNewConversation && !this.conversationStarted;
     this.conversationStarted = true;
+    this.invalidateEmptyChatCache();
     this.currentRequestId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const requestId = this.currentRequestId;
     this.cancelSubject$ = new Subject<void>();
@@ -1355,8 +1403,42 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
     }
   }
 
+  isCurrentChatEmpty(): boolean {
+    if (this.messages.length === 0) {
+      return true;
+    }
+    
+    if (this.currentConversationId) {
+      const entry = this.chatHistoryStore[this.currentConversationId];
+      return !entry?.messages || entry.messages.length === 0;
+    }
+    
+    return true;
+  }
+
+  hasEmptyChat(): boolean {
+    // Use cached value if available to prevent repeated calculations
+    if (this._hasEmptyChatCache !== null) {
+      return this._hasEmptyChatCache;
+    }
+    
+    // Check if there's any empty chat in the history
+    this._hasEmptyChatCache = Object.values(this.chatHistoryStore).some(entry => 
+      !entry?.messages || entry.messages.length === 0
+    );
+    
+    return this._hasEmptyChatCache;
+  }
+
+  private invalidateEmptyChatCache(): void {
+    this._hasEmptyChatCache = null;
+  }
+
   startNewChat() {
-    // Always create a new chat when this method is called
+    if (this.hasEmptyChat()) {
+      return;
+    }
+    
     this.cancelCurrentRequest();
     this.messages = [];
     this.currentConversationId = this.getNextConversationId();
@@ -1372,6 +1454,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
     };
     this.pendingNewConversation = true;
     this.conversationStarted = false;
+    this.invalidateEmptyChatCache();
     this.persistChatHistoryStore();
     this.buildHistorySummaries();
     this.shouldScrollToBottom = true;
@@ -1494,6 +1577,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
   deleteConversation(conversationId: string, event: Event) {
     event.stopPropagation();
     delete this.chatHistoryStore[conversationId];
+    this.invalidateEmptyChatCache();
     this.persistChatHistoryStore();
     this.buildHistorySummaries();
 
@@ -1808,6 +1892,11 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
       this.chatHistoryStore[conversationId] = entry;
     }
 
+    // Update chat title with first question if it's still "New chat"
+    if (entry.messages.length === 0 && (entry.chatTitle === 'New chat' || entry.chatTitle === 'Chat session')) {
+      entry.chatTitle = question.length > 50 ? question.substring(0, 50) + '...' : question;
+    }
+
     const questionId = entry.messages.length + 1;
     entry.messages.push({
       question,
@@ -1821,6 +1910,7 @@ export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
       response_timestamp: responseAt.toISOString()
     });
 
+    this.invalidateEmptyChatCache();
     this.persistChatHistoryStore();
     this.buildHistorySummaries();
   }

@@ -5,8 +5,9 @@ import { LoaderService } from './shared/services/loader.service';
 
 export const loaderInterceptor: HttpInterceptorFn = (req, next) => {
   const loaderService = inject(LoaderService);
+  const isChatbotRequest = req.url.includes('/api/chatbot/');
   
-  if (req.method === 'GET' || req.headers.has('X-Skip-Loader')) {
+  if (req.method === 'GET' || req.headers.has('X-Skip-Loader') || isChatbotRequest) {
     return next(req);
   }
 
