@@ -1,0 +1,302 @@
+<section class="form-card">
+  <div class="form-heading">
+    <div>
+      <h3>{{ formTitle }}</h3>
+      <p>{{ formDescription }}</p>
+    </div>
+    <button
+      type="button"
+      class="close-button"
+      (click)="cancelEdit()"
+      aria-label="Close form"
+      title="Close form">
+      X
+    </button>
+  </div>
+
+  <form #userForm="ngForm" class="user-form" (ngSubmit)="submit(userForm)">
+    <label class="field">
+      <span>Company ID</span>
+      <input
+        #companyId="ngModel"
+        [(ngModel)]="model.companyId"
+        maxlength="100"
+        name="companyId"
+        placeholder="Generated automatically"
+        readonly
+        type="text" />
+     
+    </label>
+
+    <label class="field">
+      <span>Full name</span>
+      <input
+        #fullName="ngModel"
+        [(ngModel)]="model.fullName"
+        [class.input-invalid]="isFieldInvalid(fullName, 'fullName', 'Full name is required')"
+        (blur)="normalizeField('fullName')"
+        maxlength="255"
+        name="fullName"
+        placeholder="Enter full name"
+        required
+        type="text" />
+      <small
+        [class.field-message-empty]="!getControlError(fullName, 'fullName', 'Full name is required')"
+        aria-live="polite">
+        {{ getControlError(fullName, 'fullName', 'Full name is required') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Username</span>
+      <input
+        #username="ngModel"
+        [(ngModel)]="model.username"
+        [class.input-invalid]="isFieldInvalid(username, 'username', 'Username is required')"
+        (blur)="normalizeField('username')"
+        [maxlength]="usernameMaxLength"
+        name="username"
+        placeholder="Choose a username"
+        required
+        type="text" />
+      <small
+        [class.field-message-empty]="!getControlError(username, 'username', 'Username is required')"
+        aria-live="polite">
+        {{ getControlError(username, 'username', 'Username is required') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Email</span>
+      <input
+        #email="ngModel"
+        [(ngModel)]="model.email"
+        [class.input-invalid]="isFieldInvalid(email, 'email', 'Email is required')"
+        (blur)="normalizeField('email')"
+        maxlength="200"
+        name="email"
+        placeholder="Enter email address"
+        required
+        type="email" />
+      <small
+        [class.field-message-empty]="!getControlError(email, 'email', 'Email is required')"
+        aria-live="polite">
+        {{ getControlError(email, 'email', 'Email is required') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Password {{ isEditMode ? '(optional)' : '' }}</span>
+      <div class="password-input-wrapper">
+        <input
+          #password="ngModel"
+          [(ngModel)]="model.password"
+          [class.input-invalid]="getPasswordError() !== null"
+          [maxlength]="passwordMaxLength"
+          [placeholder]="isEditMode ? 'Leave blank to keep current password' : 'Enter a strong password'"
+          [required]="!isEditMode"
+          [type]="showPassword ? 'text' : 'password'"
+          [attr.autocomplete]="isEditMode ? 'new-password' : 'new-password'"
+          name="password" />
+        <button
+          type="button"
+          class="toggle-password"
+          (click)="togglePasswordVisibility()"
+          [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          [title]="showPassword ? 'Hide password' : 'Show password'">
+          <i *ngIf="!showPassword" class="fas fa-eye"></i>
+          <i *ngIf="showPassword" class="fas fa-eye-slash"></i>
+        </button>
+      </div>
+      <small [class.field-message-empty]="!getPasswordError()" aria-live="polite">
+        {{ getPasswordError() || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Role</span>
+      <select
+        #role="ngModel"
+        [(ngModel)]="model.role"
+        [class.input-invalid]="isFieldInvalid(role, 'role', 'Role is required')"
+        [class.placeholder-selected]="!model.role"
+        name="role"
+        required>
+        <option [ngValue]="''" disabled>Select a role</option>
+        <option *ngFor="let roleName of assignableRoles" [ngValue]="roleName">
+          {{ roleLabel(roleName) }}
+        </option>
+      </select>
+      <small
+        [class.field-message-empty]="!getControlError(role, 'role', 'Role is required')"
+        aria-live="polite">
+        {{ getControlError(role, 'role', 'Role is required') || ' ' }}
+      </small>
+    </label>
+
+    <label *ngIf="shouldShowManagerField" class="field">
+      <span>Manager{{ isEditMode ? ' (optional)' : '' }}</span>
+      <select
+        #managerUsername="ngModel"
+        [(ngModel)]="model.managerUsername"
+        [class.input-invalid]="getManagerError() !== null"
+        [class.placeholder-selected]="!model.managerUsername"
+        name="managerUsername"
+        [required]="!isEditMode">
+        <option [ngValue]="''" [disabled]="!isEditMode">Select manager</option>
+        <option *ngFor="let manager of managerOptions" [ngValue]="manager.username">
+          {{ manager.fullName }} ({{ manager.username }})
+        </option>
+      </select>
+      <small [class.field-message-empty]="!getManagerError()" aria-live="polite">
+        {{ getManagerError() || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Gender</span>
+      <select
+        #gender="ngModel"
+        [(ngModel)]="model.gender"
+        [class.input-invalid]="isFieldInvalid(gender, 'gender', 'Gender is required')"
+        [class.placeholder-selected]="!model.gender"
+        name="gender"
+        required>
+        <option [ngValue]="''" disabled>Select gender</option>
+        <option *ngFor="let option of genderOptions" [ngValue]="option">{{ option }}</option>
+      </select>
+      <small
+        [class.field-message-empty]="!getControlError(gender, 'gender', 'Gender is required')"
+        aria-live="polite">
+        {{ getControlError(gender, 'gender', 'Gender is required') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Country</span>
+      <div class="custom-dropdown-container">
+        <div 
+          class="custom-dropdown-trigger" 
+          [class.placeholder-selected]="!model.countryId"
+          [attr.disabled]="isLoading ? true : null"
+          (click)="toggleCountryDropdown($event)"
+        >
+          <span>{{ getSelectedCountryLabel() }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        
+        <div class="custom-dropdown-panel" *ngIf="isCountryDropdownOpen" (click)="$event.stopPropagation()">
+          <div class="dropdown-search">
+            <input type="text" [(ngModel)]="countrySearchText" [ngModelOptions]="{standalone: true}" placeholder="Search country..." autocomplete="off">
+          </div>
+          <div class="dropdown-list">
+            <div class="dropdown-item" (click)="selectCountry(null)">
+              Select country (optional)
+            </div>
+            <div 
+              class="dropdown-item" 
+              *ngFor="let country of searchedCountries" 
+              (click)="selectCountry(country.id)"
+            >
+              {{ country.flagEmoji }} {{ country.name }}
+            </div>
+            <div class="dropdown-empty" *ngIf="searchedCountries.length === 0">
+              No matching countries
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" #countryId="ngModel" [(ngModel)]="model.countryId" name="countryId">
+    </label>
+
+    <label class="field">
+      <span>Phone Code<span *ngIf="model.phoneNumber.trim()"> *</span></span>
+      <div class="custom-dropdown-container">
+        <div 
+          class="custom-dropdown-trigger" 
+          [class.input-invalid]="isFieldInvalid(phoneCodeId, 'phoneCodeId', 'Phone code is required')"
+          [class.placeholder-selected]="!model.phoneCodeId"
+          [attr.disabled]="isLoading ? true : null"
+          (click)="togglePhoneCodeDropdown($event)"
+        >
+          <span>{{ getSelectedPhoneCodeLabel() }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        
+        <div class="custom-dropdown-panel" *ngIf="isPhoneCodeDropdownOpen" (click)="$event.stopPropagation()">
+          <div class="dropdown-search">
+            <input type="text" [(ngModel)]="phoneCodeSearchText" [ngModelOptions]="{standalone: true}" placeholder="Search phone code..." autocomplete="off">
+          </div>
+          <div class="dropdown-list">
+            <div class="dropdown-item" (click)="selectPhoneCode(null)">
+              Select phone code (optional)
+            </div>
+            <div 
+              class="dropdown-item" 
+              *ngFor="let phoneCode of searchedPhoneCodes" 
+              (click)="selectPhoneCode(phoneCode.id)"
+            >
+              {{ phoneCode.flagEmoji }} {{ phoneCode.countryName }} (+{{ phoneCode.dialCode }})
+            </div>
+            <div class="dropdown-empty" *ngIf="searchedPhoneCodes.length === 0">
+              No matching phone codes
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" #phoneCodeId="ngModel" [(ngModel)]="model.phoneCodeId" name="phoneCodeId" [required]="!!model.phoneNumber.trim()">
+      <small
+        [class.field-message-empty]="!getControlError(phoneCodeId, 'phoneCodeId', 'Phone code is required')"
+        aria-live="polite">
+        {{ getControlError(phoneCodeId, 'phoneCodeId', 'Phone code is required') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Phone Number</span>
+      <input
+        #phoneNumber="ngModel"
+        [(ngModel)]="model.phoneNumber"
+        [class.input-invalid]="isFieldInvalid(phoneNumber, 'phoneNumber', '')"
+        (blur)="normalizeField('phoneNumber')"
+        maxlength="30"
+        name="phoneNumber"
+        placeholder="Enter phone number (optional)"
+        type="text" />
+      <small
+        [class.field-message-empty]="!getControlError(phoneNumber, 'phoneNumber', '')"
+        aria-live="polite">
+        {{ getControlError(phoneNumber, 'phoneNumber', '') || ' ' }}
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Status</span>
+      <select
+        #active="ngModel"
+        [(ngModel)]="model.active"
+        [class.input-invalid]="isFieldInvalid(active, 'active', 'Status is required')"
+        [class.placeholder-selected]="model.active === null"
+        name="active"
+        required>
+        <option [ngValue]="null" disabled>Select status</option>
+        <option [ngValue]="true">Active</option>
+        <option [ngValue]="false">Inactive</option>
+      </select>
+      <small
+        [class.field-message-empty]="!getControlError(active, 'active', 'Status is required')"
+        aria-live="polite">
+        {{ getControlError(active, 'active', 'Status is required') || ' ' }}
+      </small>
+    </label>
+
+    <div class="form-actions">
+      <button type="button" class="secondary-button" (click)="resetForm()" [disabled]="isSaving">
+        Reset
+      </button>
+      <button type="submit" class="primary-button" [class.is-loading]="isSaving" [disabled]="isSaving">
+        <span>{{ isSaving ? 'Saving...' : isEditMode ? 'Update user' : 'Create user' }}</span>
+      </button>
+    </div>
+  </form>
+</section>

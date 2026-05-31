@@ -1,0 +1,526 @@
+<section class="role-dashboard">
+  <ng-container *ngIf="pageId === 'overview'">
+
+
+    <app-dashboard-stat-cards [cards]="stats" [compact]="true"></app-dashboard-stat-cards>
+  </ng-container>
+
+  <ng-container [ngSwitch]="pageId">
+    <section *ngSwitchCase="'overview'" class="overview-panel">
+
+
+
+      <app-dashboard-user-table
+        [users]="dashboard?.users ?? []"
+        [title]="'tableTitles.recentAccounts' | translate"
+        [description]="'tableTitles.recentAccountsDesc' | translate"
+        [emptyTitle]="'tableTitles.noUsersAvailable' | translate"
+        [emptyMessage]="'tableTitles.noUsersAvailableMsg' | translate"
+        [showActions]="false"
+        [showTableTools]="true"
+        [useAgGrid]="true"
+        [compactCard]="true"
+        [expandToFill]="true"
+        [showExtendedColumns]="true"
+        [deletingUserId]="deletingUserId"
+        [isLoading]="isLoading"
+        (editRequested)="editRequested.emit($event)"
+        (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
+    </section>
+
+    <section *ngSwitchCase="'users'" class="management-grid">
+      <div class="management-toolbar">
+        <div>
+          <h3>User management</h3>
+          <p class="body-copy">Create, update, or remove accounts from one directory view.</p>
+        </div>
+
+        <div class="toolbar-actions">
+          <button type="button" class="secondary-toolbar-button" (click)="isImportPanelOpen = !isImportPanelOpen">
+            <i class="fas fa-file-excel"></i>
+            <span>Import Excel</span>
+          </button>
+          <button type="button" class="primary-toolbar-button" (click)="createRequested.emit()">
+            <i class="fas fa-user-plus"></i>
+            <span>Create user</span>
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="isImportPanelOpen" class="form-modal-backdrop" (click)="isImportPanelOpen = false">
+        <div class="import-modal-card" (click)="$event.stopPropagation()">
+          <div class="import-modal-header">
+            <div class="import-modal-title">
+              <i class="fas fa-file-excel import-modal-icon"></i>
+              <div>
+                <h4>Bulk import users</h4>
+                <p>Download the template, fill it in, then upload to import multiple users at once.</p>
+              </div>
+            </div>
+            <button type="button" class="close-button" (click)="isImportPanelOpen = false" aria-label="Close import modal">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+          <div class="import-modal-body">
+            <app-user-excel-import (importCompleted)="isImportPanelOpen = false; importCompleted.emit()"></app-user-excel-import>
+          </div>
+        </div>
+      </div>
+
+      <app-dashboard-user-table
+        [users]="dashboard?.users ?? []"
+        [title]="'tableTitles.userDirectory' | translate"
+        [description]="'tableTitles.userDirectoryDesc' | translate"
+        [emptyTitle]="'tableTitles.noManagedUsers' | translate"
+        [emptyMessage]="'tableTitles.noManagedUsersMsg' | translate"
+        [showTableTools]="true"
+        [useAgGrid]="true"
+        [compactCard]="true"
+        [showExtendedColumns]="true"
+        [initialRole]="filterRole"
+        [initialStatus]="filterStatus"
+        [deletingUserId]="deletingUserId"
+        [isLoading]="isLoading"
+        (editRequested)="editRequested.emit($event)"
+        (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
+
+    </section>
+
+    <section *ngSwitchCase="'roles'" class="panel-grid">
+      <article class="surface">
+        <h3>Role counts</h3>
+        <div class="role-pills">
+          <span>Admins: {{ dashboard?.adminCount ?? 0 }}</span>
+          <span>Managers: {{ dashboard?.managerCount ?? 0 }}</span>
+          <span>Employees: {{ dashboard?.employeeCount ?? 0 }}</span>
+        </div>
+      </article>
+
+      <article class="surface">
+        <h3>Role policy</h3>
+        <ul class="detail-list">
+          <li>Admin manages manager and employee accounts.</li>
+          <li>Manager manages employee accounts only.</li>
+          <li>Employee access is read-only.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'leaves'" class="leave-operations-grid">
+      <!-- <article class="surface leave-summary-surface">
+        <div class="leave-surface-header">
+          <div>
+            <h3>Leave operations overview</h3>
+            <p class="body-copy">Monitor all manager and employee leave activity from one admin workspace.</p>
+          </div>
+          <span class="leave-count-pill">{{ leaves.length }} total requests</span>
+        </div>
+
+        <div class="leave-summary-metrics">
+          <article class="leave-summary-card">
+            <span>Managers</span>
+            <strong>{{ managerLeaveCount }}</strong>
+            <small>Manager-submitted leave records</small>
+          </article>
+          <article class="leave-summary-card">
+            <span>Employees</span>
+            <strong>{{ employeeLeaveCount }}</strong>
+            <small>Employee-submitted leave records</small>
+          </article>
+          <article class="leave-summary-card">
+            <span>Leave types</span>
+            <strong>{{ leaveTypes.length }}</strong>
+            <small>Configured categories available for requests</small>
+          </article>
+        </div>
+      </article> -->
+
+      <article class="surface leave-tab-surface">
+        <div class="leave-tab-bar" role="tablist" aria-label="Leave operations navigation">
+          <button
+            type="button"
+            class="leave-tab-button"
+            [class.active]="isRecordsTabActive"
+            [attr.aria-selected]="isRecordsTabActive"
+            (click)="selectLeaveTab('records')">
+            <i class="fas fa-calendar-days"></i>
+            <span>{{ 'leaves.records' | translate }}</span>
+          </button>
+          <button
+            type="button"
+            class="leave-tab-button"
+            [class.active]="isTypesTabActive"
+            [attr.aria-selected]="isTypesTabActive"
+            (click)="selectLeaveTab('types')">
+            <i class="fas fa-layer-group"></i>
+            <span>{{ 'leaves.types' | translate }}</span>
+          </button>
+          <button
+            type="button"
+            class="leave-tab-button"
+            [class.active]="isHolidaysTabActive"
+            [attr.aria-selected]="isHolidaysTabActive"
+            (click)="selectLeaveTab('holidays')">
+            <i class="fas fa-umbrella-beach"></i>
+            <span>{{ 'leaves.holidays' | translate }}</span>
+          </button>
+        </div>
+
+        <div *ngIf="isRecordsTabActive" class="leave-tab-panel">
+          <app-dashboard-leave-table
+            [leaves]="leaves"
+            [title]="'tableTitles.managerEmployeeLeave' | translate"
+            [description]="'tableTitles.managerEmployeeLeaveDesc' | translate"
+            [emptyTitle]="'tableTitles.noManagerEmployeeLeave' | translate"
+            [emptyMessage]="'tableTitles.noManagerEmployeeLeaveMsg' | translate"
+            [initialRole]="filterRole"
+            [initialStatus]="filterStatus || 'ALL'"
+            [allowedStatuses]="['PENDING', 'MANAGER_APPROVED', 'APPROVED', 'REJECTED']"
+            [compactView]="true"
+            [showActions]="true"
+            [viewerRole]="'ADMIN'"
+            [processingLeaveId]="processingLeaveId"
+            [isLoading]="isLeavesLoading"
+            (approveRequested)="leaveApproveRequested.emit($event)"
+            (rejectRequested)="leaveRejectRequested.emit($event)"
+            (partialStatusRequested)="leavePartialStatusRequested.emit($event)"
+          ></app-dashboard-leave-table>
+        </div>
+
+        <div *ngIf="isTypesTabActive" class="leave-tab-panel">
+          <div class="leave-types-toolbar">
+            <div>
+              <h3>{{ 'leaveTypeForm.configuredTypes' | translate }}</h3>
+              <p class="body-copy">{{ 'leaveTypeForm.managedHere' | translate }}</p>
+            </div>
+            <div class="leave-types-toolbar-actions">
+              <span class="leave-count-pill">{{ leaveTypes.length }} {{ 'leaveTypeForm.configured' | translate }}</span>
+              <button type="button" class="primary-toolbar-button" (click)="openCreateLeaveTypeModal()">
+                <i class="fas fa-plus"></i>
+                <span>{{ 'leaveTypeForm.createType' | translate }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="isLeaveTypesLoading || isLeavesLoading" class="leave-empty-state">
+            <h4>{{ 'leaveTypeForm.loadingTypes' | translate }}</h4>
+            <p>{{ 'leaveTypeForm.fetchingCatalog' | translate }}</p>
+          </div>
+
+          <div *ngIf="!isLeaveTypesLoading && !leaveTypes.length" class="leave-empty-state">
+            <h4>{{ 'leaveTypeForm.noTypesYet' | translate }}</h4>
+            <p>{{ 'leaveTypeForm.createFirst' | translate }}</p>
+          </div>
+
+          <div *ngIf="!isLeaveTypesLoading && leaveTypes.length" class="leave-type-list leave-type-list-managed">
+            <article *ngFor="let leaveType of leaveTypes; trackBy: trackLeaveType" class="leave-type-card">
+              <div class="leave-type-card-header">
+                <div>
+                  <h4>{{ ('leaveTypes.' + leaveType.leaveUniqueName | translate) !== ('leaveTypes.' + leaveType.leaveUniqueName) ? ('leaveTypes.' + leaveType.leaveUniqueName | translate) : leaveType.leaveName }}</h4>
+                  <p>{{ leaveType.leaveUniqueName }}</p>
+                </div>
+                <div class="leave-type-card-actions">
+                  <span class="leave-type-days">{{ leaveType.maxDays }} {{ 'stats.days' | translate }}</span>
+                  <span *ngIf="leaveType.genderRestriction" class="leave-type-gender-badge">
+                    {{ leaveType.genderRestriction === 'MALE' ? ('leaveTypeForm.maleOnly' | translate) : ('leaveTypeForm.femaleOnly' | translate) }}
+                  </span>
+                  <button type="button" class="edit-button" (click)="openEditLeaveTypeModal(leaveType)" [disabled]="deletingLeaveTypeId === leaveType.id">{{ 'common.edit' | translate }}</button>
+                  <button type="button" class="delete-button" [class.is-loading]="deletingLeaveTypeId === leaveType.id" (click)="requestDeleteLeaveType(leaveType)" [disabled]="deletingLeaveTypeId === leaveType.id">
+                    <span>{{ deletingLeaveTypeId === leaveType.id ? ('leaveTypeForm.deleting' | translate) : ('common.delete' | translate) }}</span>
+                  </button>
+                </div>
+              </div>
+              <p class="leave-type-description">{{ leaveType.description || 'No description provided for this leave type yet.' }}</p>
+            </article>
+          </div>
+        </div>
+
+        <div *ngIf="isHolidaysTabActive" class="leave-tab-panel">
+          <div class="leave-types-toolbar">
+            <div>
+              <h3>{{ 'holidayForm.publicHolidays' | translate }}</h3>
+              <p class="body-copy">{{ 'holidayForm.visibleToAll' | translate }}</p>
+            </div>
+            <div class="leave-types-toolbar-actions">
+              <span class="leave-count-pill">{{ holidays.length }} {{ 'holidayForm.holidays' | translate }}</span>
+              <button type="button" class="primary-toolbar-button" (click)="openCreateHolidayModal()">
+                <i class="fas fa-plus"></i>
+                <span>{{ 'holidayForm.addHoliday' | translate }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="isHolidaysLoading" class="leave-empty-state">
+            <h4>{{ 'holidayForm.loadingHolidays' | translate }}</h4>
+          </div>
+
+          <div *ngIf="!isHolidaysLoading && holidays.length === 0" class="leave-empty-state">
+            <h4>{{ 'holidayForm.noHolidaysYet' | translate }}</h4>
+            <p>{{ 'holidayForm.addFirst' | translate }}</p>
+          </div>
+
+          <div *ngIf="!isHolidaysLoading && holidays.length > 0" class="leave-type-list leave-type-list-managed">
+            <article *ngFor="let h of holidays" class="leave-type-card">
+              <div class="leave-type-card-header">
+                <div>
+                  <h4>{{ h.name }}</h4>
+                  <p>{{ h.date | date:'dd MMM yyyy' }}</p>
+                </div>
+                <div class="leave-type-card-actions">
+                  <span class="leave-type-days">
+                    <i class="fas fa-calendar-star"></i>
+                    {{ 'holidayForm.holiday' | translate }}
+                  </span>
+                  <button type="button" class="edit-button" (click)="openEditHolidayModal(h)" [disabled]="deletingHolidayId === h.id">{{ 'common.edit' | translate }}</button>
+                  <button type="button" class="delete-button" [class.is-loading]="deletingHolidayId === h.id" (click)="holidayDeleteRequested.emit(h.id)" [disabled]="deletingHolidayId === h.id">
+                    <span>{{ deletingHolidayId === h.id ? ('leaveTypeForm.deleting' | translate) : ('common.delete' | translate) }}</span>
+                  </button>
+                </div>
+              </div>
+              <p class="leave-type-description">{{ h.description || 'No description provided.' }}</p>
+            </article>
+          </div>
+        </div>
+      </article>
+
+      <div *ngIf="isHolidayModalOpen" class="form-modal-backdrop" (click)="closeHolidayModal()">
+        <section class="leave-type-modal-card" (click)="$event.stopPropagation()">
+          <section class="leave-form-card">
+            <div class="leave-form-heading">
+              <div>
+                <p class="leave-form-eyebrow">{{ 'holidayForm.companyHoliday' | translate }}</p>
+                <h3>{{ editingHoliday ? ('holidayForm.updateHoliday' | translate) : ('holidayForm.createHoliday' | translate) }}</h3>
+                <p>{{ 'holidayForm.visibleNote' | translate }}</p>
+              </div>
+              <button type="button" class="close-button leave-type-close-button" (click)="closeHolidayModal()" [disabled]="isHolidaySaving" aria-label="Close">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+            <form #holidayForm="ngForm" class="leave-type-form" (ngSubmit)="submitHoliday(holidayForm)">
+              <label class="leave-field">
+                <span>{{ 'holidayForm.holidayName' | translate }}</span>
+                <input #hName="ngModel" [(ngModel)]="holidayModel.name" name="hName"
+                  placeholder="e.g. Kite Festival (Uttarayan)" required maxlength="100" type="text"
+                  [class.input-invalid]="holidaySubmitted && hName.invalid" />
+                <small *ngIf="holidaySubmitted && hName.invalid">{{ 'holidayForm.nameRequired' | translate }}</small>
+              </label>
+              <label class="leave-field">
+                <span>{{ 'holidayForm.date' | translate }}</span>
+                <input #hDate="ngModel" [(ngModel)]="holidayModel.date" name="hDate"
+                  type="date" required
+                  [class.input-invalid]="holidaySubmitted && hDate.invalid" />
+                <small *ngIf="holidaySubmitted && hDate.invalid">{{ 'holidayForm.dateRequired' | translate }}</small>
+              </label>
+              <label class="leave-field leave-field-wide">
+                <span>{{ 'holidayForm.description' | translate }} <span class="optional-mark">({{ 'leaveTypeForm.optional' | translate }})</span></span>
+                <textarea [(ngModel)]="holidayModel.description" name="hDesc"
+                  placeholder="Brief description of the holiday" rows="3" maxlength="255"></textarea>
+              </label>
+              <div class="leave-form-actions">
+                <button type="button" class="secondary-toolbar-button" (click)="closeHolidayModal()" [disabled]="isHolidaySaving">{{ 'common.cancel' | translate }}</button>
+                <button type="submit" class="primary-toolbar-button" [class.is-loading]="isHolidaySaving" [disabled]="isHolidaySaving">
+                  <span>{{ isHolidaySaving ? ('table.processing' | translate) : editingHoliday ? ('common.update' | translate) : ('common.create' | translate) }}</span>
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+      </div>
+
+      <div *ngIf="isLeaveTypeModalOpen" class="form-modal-backdrop" (click)="closeLeaveTypeModal()">
+        <section class="leave-type-modal-card" (click)="$event.stopPropagation()">
+          <section class="leave-form-card">
+            <div class="leave-form-heading">
+              <div>
+                <p class="leave-form-eyebrow">{{ 'leaveTypeForm.leaveSetup' | translate }}</p>
+                <h3>{{ leaveTypeModalTitle }}</h3>
+                <p>{{ leaveTypeModalDescription }}</p>
+              </div>
+              <button type="button" class="close-button leave-type-close-button" (click)="closeLeaveTypeModal()" [disabled]="isLeaveTypeSaving" aria-label="Close leave type form">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="leave-form-layout">
+              <form #leaveTypeForm="ngForm" class="leave-type-form" (ngSubmit)="submitLeaveType(leaveTypeForm)">
+                <label class="leave-field">
+                  <span>{{ 'leaveTypeForm.leaveName' | translate }}</span>
+                  <input
+                    #leaveName="ngModel"
+                    [(ngModel)]="leaveTypeModel.leaveName"
+                    [class.input-invalid]="isLeaveTypeFieldInvalid(leaveName, 'leaveName')"
+                    (ngModelChange)="handleLeaveNameChange($event)"
+                    name="leaveName"
+                    placeholder="Annual Leave"
+                    required
+                    maxlength="100"
+                    type="text" />
+                  <small *ngIf="getLeaveTypeControlError(leaveName, 'leaveName')" aria-live="polite">
+                    {{ getLeaveTypeControlError(leaveName, 'leaveName') }}
+                  </small>
+                </label>
+
+                <label class="leave-field">
+                  <span>{{ 'leaveTypeForm.uniqueCode' | translate }}</span>
+                  <input
+                    #leaveUniqueName="ngModel"
+                    [(ngModel)]="leaveTypeModel.leaveUniqueName"
+                    [class.input-invalid]="isLeaveTypeFieldInvalid(leaveUniqueName, 'leaveUniqueName')"
+                    (ngModelChange)="handleLeaveUniqueNameChange($event)"
+                    name="leaveUniqueName"
+                    placeholder="ANNUAL_LEAVE"
+                    required
+                    maxlength="100"
+                    type="text" />
+                  <small *ngIf="getLeaveTypeControlError(leaveUniqueName, 'leaveUniqueName')" aria-live="polite">
+                    {{ getLeaveTypeControlError(leaveUniqueName, 'leaveUniqueName') }}
+                  </small>
+                </label>
+
+                <label class="leave-field leave-field-wide">
+                  <span>{{ 'leaveTypeForm.description' | translate }}</span>
+                  <textarea
+                    [(ngModel)]="leaveTypeModel.description"
+                    name="description"
+                    placeholder="Describe when this leave type should be used."
+                    maxlength="255"
+                    rows="5"></textarea>
+                  <small *ngIf="leaveTypeFieldErrors['description']" aria-live="polite">
+                    {{ leaveTypeFieldErrors['description'] }}
+                  </small>
+                </label>
+
+                <label class="leave-field leave-field-half">
+                  <span>{{ 'leaveTypeForm.maxDays' | translate }}</span>
+                  <input
+                    #maxDays="ngModel"
+                    [(ngModel)]="leaveTypeModel.maxDays"
+                    [class.input-invalid]="isLeaveTypeFieldInvalid(maxDays, 'maxDays')"
+                    name="maxDays"
+                    required
+                    min="1"
+                    max="365"
+                    type="number" />
+                  <small *ngIf="getLeaveTypeControlError(maxDays, 'maxDays')" aria-live="polite">
+                    {{ getLeaveTypeControlError(maxDays, 'maxDays') }}
+                  </small>
+                </label>
+
+                <label class="leave-field leave-field-half leave-field-gender">
+                  <span>{{ 'leaveTypeForm.genderRestriction' | translate }} <span class="optional-mark">({{ 'leaveTypeForm.optional' | translate }})</span></span>
+                  <select
+                    [(ngModel)]="leaveTypeModel.genderRestriction"
+                    name="genderRestriction">
+                    <option value="">{{ 'leaveTypeForm.noRestriction' | translate }}</option>
+                    <option value="MALE">{{ 'leaveTypeForm.maleOnly' | translate }}</option>
+                    <option value="FEMALE">{{ 'leaveTypeForm.femaleOnly' | translate }}</option>
+                  </select>
+                  <small class="hint">{{ 'leaveTypeForm.genderHint' | translate }}</small>
+                </label>
+
+                <div class="leave-form-actions">
+                  <button
+                    *ngIf="shouldShowLeaveTypeResetButton"
+                    type="button"
+                    class="secondary-toolbar-button"
+                    (click)="resetLeaveTypeForm()"
+                    [disabled]="isLeaveTypeSaving">
+                    {{ 'common.reset' | translate }}
+                  </button>
+                  <button type="submit" class="primary-toolbar-button" [disabled]="isLeaveTypeSaving">
+                    <span>{{ leaveTypeSubmitLabel }}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </section>
+      </div>
+    </section>
+
+    <section *ngSwitchCase="'reports'" class="panel-grid">
+      <app-dashboard-attendance-table
+        [logs]="attendanceLogs"
+        [title]="'tableTitles.attendanceLogs' | translate"
+        [description]="'tableTitles.attendanceLogsDesc' | translate"
+      ></app-dashboard-attendance-table>
+    </section>
+
+    <section *ngSwitchCase="'attendance'" class="panel-grid">
+      <app-dashboard-attendance-table
+        [logs]="attendanceLogs"
+        [title]="'tableTitles.attendanceLogs' | translate"
+        [description]="'tableTitles.attendanceLogsDesc' | translate"
+      ></app-dashboard-attendance-table>
+    </section>
+
+    <section *ngSwitchCase="'settings'" class="settings-page">
+
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <div class="settings-card-icon"><i class="fas fa-palette"></i></div>
+          <div>
+            <p class="settings-eyebrow">Display</p>
+            <h3>Appearance</h3>
+            <p>Choose between light and dark mode for the dashboard interface.</p>
+          </div>
+        </div>
+        <div class="theme-mode-buttons">
+          <button type="button" class="theme-mode-btn" [class.theme-mode-btn-active]="!themeService.isDark"
+            (click)="themeService.setTheme('light')" aria-label="Switch to light mode">
+            <span class="theme-mode-icon">☀️</span>
+            <span class="theme-mode-label">Light</span>
+            <span *ngIf="!themeService.isDark" class="theme-mode-check"><i class="fas fa-check"></i></span>
+          </button>
+          <button type="button" class="theme-mode-btn" [class.theme-mode-btn-active]="themeService.isDark"
+            (click)="themeService.setTheme('dark')" aria-label="Switch to dark mode">
+            <span class="theme-mode-icon">🌙</span>
+            <span class="theme-mode-label">Dark</span>
+            <span *ngIf="themeService.isDark" class="theme-mode-check"><i class="fas fa-check"></i></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-header">
+          <div class="settings-card-icon"><i class="fas fa-globe"></i></div>
+          <div>
+            <p class="settings-eyebrow">Regional</p>
+            <h3>{{ 'adminSettings.localization' | translate }}</h3>
+            <p>{{ 'adminSettings.languageDesc' | translate }}</p>
+          </div>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label">{{ 'adminSettings.languageControl' | translate }}</label>
+          <div class="custom-dropdown-container settings-dropdown">
+            <div class="custom-dropdown-trigger" (click)="toggleLangDropdown($event)">
+              <span>{{ getSelectedLangLabel() }}</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="custom-dropdown-panel" *ngIf="isLangDropdownOpen" (click)="$event.stopPropagation()">
+              <div class="dropdown-list">
+                <div class="dropdown-item" *ngFor="let lang of availableLangs" (click)="selectLang(lang.code)">
+                  {{ lang.label }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </ng-container>
+
+<div *ngIf="isUserFormOpen" class="form-modal-backdrop" (click)="cancelEditRequested.emit()">
+  <div class="form-modal-card" (click)="$event.stopPropagation()">
+    <app-dashboard-user-form
+      [assignableRoles]="assignableRoles"
+      [editingUser]="editingUser"
+      [fieldErrors]="fieldErrors"
+      [isSaving]="isSaving"
+      [users]="dashboard?.users ?? []"
+      (saveRequested)="saveRequested.emit($event)"
+      (cancelRequested)="cancelEditRequested.emit()"></app-dashboard-user-form>
+  </div>
+</div>
+</section>

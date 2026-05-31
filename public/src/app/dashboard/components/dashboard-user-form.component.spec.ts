@@ -1,0 +1,162 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NgForm, NgModel } from '@angular/forms';
+import { of } from 'rxjs';
+import { DashboardUserFormComponent } from './dashboard-user-form.component';
+import { AUTH_SERVICE } from '../../services/auth.service';
+
+describe('DashboardUserFormComponent', () => {
+  let component: DashboardUserFormComponent;
+  let fixture: ComponentFixture<DashboardUserFormComponent>;
+
+  beforeEach(async () => {
+    const authServiceMock = jasmine.createSpyObj('AuthService', ['getCountries', 'getPhoneCodes']);
+    authServiceMock.getCountries.and.returnValue(of([]));
+    authServiceMock.getPhoneCodes.and.returnValue(of([]));
+
+    await TestBed.configureTestingModule({
+      imports: [DashboardUserFormComponent],
+      providers: [
+        { provide: AUTH_SERVICE, useValue: authServiceMock }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(DashboardUserFormComponent);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('assignableRoles', ['EMPLOYEE']);
+    fixture.componentRef.setInput('users', []);
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should show a username length error after the field is edited', () => {
+    component.model.username = 'ab';
+
+    const control = createControl({ dirty: true });
+
+    expect(component.getControlError(control, 'username', 'Username is required'))
+      .toBe('Username must be 3 to 100 characters');
+  });
+
+  it('should show a username character error after the field is edited', () => {
+    component.model.username = 'user name';
+
+    const control = createControl({ dirty: true });
+
+    expect(component.getControlError(control, 'username', 'Username is required'))
+      .toBe('Username must use letters, numbers, dot, underscore, or hyphen only');
+  });
+
+  it('should emit a trimmed and normalized payload when the form is valid', () => {
+    spyOn(component.saveRequested, 'emit');
+    fixture.componentRef.setInput('assignableRoles', ['MANAGER', 'EMPLOYEE']);
+    fixture.componentRef.setInput('users', [
+      {
+        id: 2,
+        companyId: 'CRESEN002',
+        username: 'manager.one',
+        fullName: 'Manager One',
+        email: 'manager.one@cresen.com',
+        role: 'MANAGER',
+        active: true,
+        gender: 'Male',
+        createdBy: 'admin',
+        updatedBy: 'admin',
+        createDate: null,
+        updateDate: null,
+        lastLogin: null,
+        canEdit: true,
+        canDelete: true
+      }
+    ]);
+    component.model = {
+      companyId: ' CRESEN004 ',
+      fullName: ' Test Employee ',
+      username: ' test.user ',
+      email: ' Test.User@Cresen.com ',
+      password: 'TempPass@123',
+      role: 'EMPLOYEE',
+      managerUsername: ' manager.one ',
+      active: true,
+      gender: 'Female',
+      countryId: null,
+      phoneCodeId: null,
+      phoneNumber: ''
+    };
+
+    component.submit({ invalid: false } as NgForm);
+
+    expect(component.saveRequested.emit).toHaveBeenCalledWith({
+      userId: undefined,
+      payload: {
+        companyId: 'CRESEN004',
+        fullName: 'Test Employee',
+        username: 'test.user',
+        email: 'test.user@cresen.com',
+        password: btoa('TempPass@123'),
+        role: 'EMPLOYEE',
+        managerUsername: 'manager.one',
+        active: true,
+        gender: 'Female'
+      }
+    });
+  });
+
+  it('should not emit when the username contains invalid characters', () => {
+    spyOn(component.saveRequested, 'emit');
+    component.model = {
+      companyId: 'CRESEN004',
+      fullName: 'Test Employee',
+      username: 'test user',
+      email: 'test.user@cresen.com',
+      password: 'TempPass@123',
+      role: 'EMPLOYEE',
+      managerUsername: '',
+      active: true,
+      gender: 'Female',
+      countryId: null,
+      phoneCodeId: null,
+      phoneNumber: ''
+    };
+
+    component.submit({ invalid: false } as NgForm);
+
+    expect(component.saveRequested.emit).not.toHaveBeenCalled();
+  });
+
+  it('should require a manager when admin creates an employee', () => {
+    spyOn(component.saveRequested, 'emit');
+    fixture.componentRef.setInput('assignableRoles', ['MANAGER', 'EMPLOYEE']);
+    component.model = {
+      companyId: 'CRESEN004',
+      fullName: 'Test Employee',
+      username: 'test.user',
+      email: 'test.user@cresen.com',
+      password: 'TempPass@123',
+      role: 'EMPLOYEE',
+      managerUsername: '',
+      active: true,
+      gender: 'Female',
+      countryId: null,
+      phoneCodeId: null,
+      phoneNumber: ''
+    };
+
+    component.submit({ invalid: false } as NgForm);
+
+    expect(component.getManagerError()).toBe('Manager is required');
+    expect(component.saveRequested.emit).not.toHaveBeenCalled();
+  });
+});
+
+function createControl(overrides: Partial<NgModel> = {}): NgModel {
+  return {
+    dirty: false,
+    touched: false,
+    invalid: false,
+    errors: null,
+    ...overrides
+  } as NgModel;
+}

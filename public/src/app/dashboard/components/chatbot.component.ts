@@ -1,0 +1,2288 @@
+import { Component, ElementRef, ViewChild, AfterViewChecked, OnInit, OnDestroy, inject, PLATFORM_ID, NgZone } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Observable, Subject, finalize, takeUntil } from 'rxjs';
+import { injectAuthService } from '../../services/auth.service';
+
+interface ChatMessage {
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+  isLoading?: boolean;
+  displayedText?: string;
+  isTyping?: boolean;
+  hasTable?: boolean;
+  cachedHtml?: SafeHtml;       // cached so formatMessage never runs twice for the same message
+  cachedTypingText?: string;   // tracks which displayedText the cached typing HTML was built from
+}
+
+interface TableData {
+  headers: string[];
+  rows: string[][];
+  title?: string;
+}
+
+interface CachedChatResponse {
+  response: string;
+  savedAt: number;
+}
+
+interface StoredChatMessage {
+  question: string;
+  answer: string;
+  table: { headers: string[]; rows: string[][] } | null;
+  source: string;
+  question_id: number;
+  request_id: string;
+  latency_ms: number;
+  request_timestamp: string;
+  response_timestamp: string;
+}
+
+interface StoredChatEntry {
+  conversation_id: string;
+  username: string | null;
+  user_id: number | null;
+  profile: string;
+  response_type: string;
+  chatTitle: string;
+  chatDate: string;
+  messages: StoredChatMessage[];
+  isPinned?: boolean;
+}
+
+type StoredChatHistory = Record<string, StoredChatEntry>;
+
+@Component({
+  selector: 'app-chatbot',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <button
+      #chatbotFab
+      (click)="!isDragging && toggleChat()"
+      (mousedown)="onFabMouseDown($event)"
+      [style.bottom.px]="isExpanded ? 28 : fabPosition.bottom"
+      [style.right.px]="isExpanded ? 28 : fabPosition.right"
+      class="chatbot-fab"
+      [class.chatbot-fab--dragging]="isDragging"
+      [attr.aria-label]="isOpen ? 'Close chat' : 'Open chat'">
+      <svg *ngIf="!isOpen" class="chatbot-fab-icon" fill="none" stroke="currentColor" viewBox="0 0 64 64">
+        <!-- Antennas -->
+        <line x1="20" y1="12" x2="20" y2="8" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="20" cy="6" r="2.5" fill="currentColor"/>
+        <line x1="44" y1="12" x2="44" y2="8" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="44" cy="6" r="2.5" fill="currentColor"/>
+        
+        <!-- Head -->
+        <rect x="14" y="12" width="36" height="24" rx="4" stroke-width="2.5" fill="currentColor" fill-opacity="0.15"/>
+        
+        <!-- AI Text -->
+        <text x="32" y="28" font-size="14" font-weight="bold" fill="currentColor" text-anchor="middle" font-family="Arial, sans-serif">AI</text>
+        
+        <!-- Body -->
+        <rect x="20" y="38" width="24" height="18" rx="3" stroke-width="2.5" fill="currentColor" fill-opacity="0.1"/>
+        
+        <!-- Circuit pattern in body -->
+        <circle cx="28" cy="47" r="2" fill="currentColor" fill-opacity="0.4"/>
+        <circle cx="36" cy="47" r="2" fill="currentColor" fill-opacity="0.4"/>
+        <line x1="28" y1="47" x2="36" y2="47" stroke-width="1.5" stroke-opacity="0.4"/>
+        <line x1="32" y1="47" x2="32" y2="52" stroke-width="1.5" stroke-opacity="0.4"/>
+        <circle cx="32" cy="52" r="1.5" fill="currentColor" fill-opacity="0.4"/>
+      </svg>
+      <svg *ngIf="isOpen" class="chatbot-fab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+
+    <div class="chatbot-window" 
+         [class.chatbot-window--open]="isOpen"
+         [class.chatbot-window--expanded]="isExpanded" 
+         [style]="windowStyle"
+         role="dialog" 
+         aria-label="Leave Assistant">
+
+      <div class="chatbot-header">
+        <div class="chatbot-header-info">
+          <div class="chatbot-avatar">
+            <svg class="chatbot-avatar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+          </div>
+          <div>
+            <strong class="chatbot-title">Leave Assistant</strong>
+            <span class="chatbot-subtitle">Ask about leaves, holidays &amp; policies</span>
+          </div>
+        </div>
+        <div class="chatbot-header-actions">
+          <button (click)="toggleExpand()" class="chatbot-clear-btn" [title]="isExpanded ? 'Collapse' : 'Expand'" [attr.aria-label]="isExpanded ? 'Collapse' : 'Expand'">
+            <svg *ngIf="!isExpanded" class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+            </svg>
+            <svg *ngIf="isExpanded" class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/>
+            </svg>
+          </button>
+          <button (click)="startNewChat()" class="chatbot-clear-btn" title="New chat" aria-label="New chat" [disabled]="hasEmptyChat()">
+            <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </button>
+          <button *ngIf="isExpanded" (click)="toggleHistory()" class="chatbot-clear-btn" title="Chat history" [attr.aria-expanded]="isHistoryOpen">
+            <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 10a9 9 0 1118 0 9 9 0 01-18 0zm9-5v5l3 3"/>
+            </svg>
+          </button>
+          <button (click)="clearChat()" class="chatbot-clear-btn" title="Clear chat" [disabled]="messages.length === 0">
+            <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="chatbot-content-wrapper">
+
+        <div *ngIf="isExpanded" class="chatbot-history-panel" role="region" aria-label="Chat history" [class.chatbot-history-panel--collapsed]="!isHistoryOpen">
+          <div class="chatbot-history-panel-header">
+            <div>
+              <strong>Chats</strong>
+              <p>{{ (pinnedConversations.length + historyConversations.length) }} total</p>
+            </div>
+            <button (click)="toggleHistory()" class="chatbot-clear-btn" aria-label="Toggle history">
+              <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+          </div>
+          <div class="chatbot-history-list">
+            <div *ngIf="historyLoading" class="chatbot-history-empty">
+              <p>Loading saved conversations…</p>
+            </div>
+
+            <!-- Pinned Chats Section -->
+            <div *ngIf="!historyLoading && pinnedConversations.length > 0" class="chatbot-history-section">
+              <button class="chatbot-history-section-header" (click)="isPinnedSectionOpen = !isPinnedSectionOpen">
+                <svg class="chatbot-section-chevron" [class.chatbot-section-chevron--open]="isPinnedSectionOpen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <svg class="chatbot-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                </svg>
+                <span>Pinned ({{ pinnedConversations.length }})</span>
+              </button>
+              <div *ngIf="isPinnedSectionOpen" class="chatbot-history-section-content">
+                <div *ngFor="let conversation of pinnedConversations"
+                     class="chatbot-history-item" [class.active]="conversation.id === currentConversationId"
+                     (click)="openConversation(conversation.id)">
+                  <div>
+                    <strong>{{ conversation.title }}</strong>
+                    <span>{{ conversation.chatDate }} · {{ conversation.count }} messages</span>
+                  </div>
+                  <div class="chatbot-history-item-actions">
+                    <button type="button" class="chatbot-history-pin-btn chatbot-history-pin-btn--pinned"
+                            (click)="togglePinConversation(conversation.id, $event)"
+                            title="Unpin conversation" aria-label="Unpin conversation">
+                      <svg class="chatbot-icon-sm" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                      </svg>
+                    </button>
+                    <button type="button" class="chatbot-history-rename-btn"
+                            (click)="startRenameConversation(conversation.id, $event)"
+                            title="Rename conversation" aria-label="Rename conversation">
+                      <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15.232 5.232l3.536 3.536M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                      </svg>
+                    </button>
+                    <button type="button" class="chatbot-history-delete-btn"
+                            (click)="deleteConversation(conversation.id, $event)"
+                            title="Delete conversation" aria-label="Delete conversation">
+                      <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- History Section -->
+            <div *ngIf="!historyLoading" class="chatbot-history-section">
+              <button class="chatbot-history-section-header" (click)="isHistorySectionOpen = !isHistorySectionOpen">
+                <svg class="chatbot-section-chevron" [class.chatbot-section-chevron--open]="isHistorySectionOpen" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                <svg class="chatbot-section-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10a9 9 0 1118 0 9 9 0 01-18 0zm9-5v5l3 3"/>
+                </svg>
+                <span>History ({{ historyConversations.length }})</span>
+              </button>
+              <div *ngIf="isHistorySectionOpen" class="chatbot-history-section-content">
+                <div *ngFor="let conversation of historyConversations"
+                     class="chatbot-history-item" [class.active]="conversation.id === currentConversationId"
+                     (click)="openConversation(conversation.id)">
+                  <div>
+                    <strong>{{ conversation.title }}</strong>
+                    <span>{{ conversation.chatDate }} · {{ conversation.count }} messages</span>
+                  </div>
+                  <div class="chatbot-history-item-actions">
+                    <button type="button" class="chatbot-history-pin-btn"
+                            (click)="togglePinConversation(conversation.id, $event)"
+                            title="Pin conversation" aria-label="Pin conversation">
+                      <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                      </svg>
+                    </button>
+                    <button type="button" class="chatbot-history-rename-btn"
+                            (click)="startRenameConversation(conversation.id, $event)"
+                            title="Rename conversation" aria-label="Rename conversation">
+                      <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15.232 5.232l3.536 3.536M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                      </svg>
+                    </button>
+                    <button type="button" class="chatbot-history-delete-btn"
+                            (click)="deleteConversation(conversation.id, $event)"
+                            title="Delete conversation" aria-label="Delete conversation">
+                      <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div *ngIf="historyConversations.length === 0" class="chatbot-history-empty">
+                  <p>No conversations yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="isRenameDialogOpen" class="chatbot-modal-backdrop" role="dialog" aria-modal="true" (click)="cancelRename()">
+              <div class="chatbot-modal" (click)="$event.stopPropagation()">
+                <strong class="chatbot-modal-title">Rename conversation</strong>
+                <p class="chatbot-modal-description">Edit the conversation title and save it.</p>
+                <input
+                  class="chatbot-modal-input"
+                  [(ngModel)]="renameTitle"
+                  (keydown.enter)="confirmRename()"
+                  aria-label="Rename conversation title"
+                  placeholder="New conversation title" />
+                <div class="chatbot-modal-actions">
+                  <button type="button" class="chatbot-modal-btn chatbot-modal-btn--cancel" (click)="cancelRename()">Cancel</button>
+                  <button type="button" class="chatbot-modal-btn chatbot-modal-btn--confirm" [disabled]="!renameTitle.trim()" (click)="confirmRename()">Save</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chatbot-main-content">
+          <div #messagesContainer class="chatbot-messages">
+
+        <div *ngIf="messages.length === 0" class="chatbot-welcome">
+          <div class="chatbot-welcome-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:28px;height:28px">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.681L3 21l2.681-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
+            </svg>
+          </div>
+          <p class="chatbot-welcome-title">How can I help you?</p>
+          <p class="chatbot-welcome-text">Ask me anything about leaves, holidays or policies.</p>
+          <div class="chatbot-quick-actions">
+            <button *ngFor="let action of quickActions"
+                    (click)="sendQuickMessage(action.message)"
+                    [disabled]="isLoading"
+                    class="chatbot-quick-btn">
+              <span class="chatbot-quick-btn-emoji">{{ action.label.split(' ')[0] }}</span>
+              <span class="chatbot-quick-btn-text">{{ action.label.slice(action.label.indexOf(' ') + 1) }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div *ngFor="let msg of messages; trackBy: trackByIndex"
+             class="chatbot-msg-row"
+             [class.chatbot-msg-row--user]="msg.isUser">
+          <div class="chatbot-bubble"
+               [class.chatbot-bubble--user]="msg.isUser"
+               [class.chatbot-bubble--bot]="!msg.isUser"
+               (click)="onBubbleClick($event)">
+
+            <div *ngIf="msg.isLoading" class="chatbot-typing">
+              <span></span><span></span><span></span>
+            </div>
+
+            <div *ngIf="!msg.isLoading" [innerHTML]="getDisplayHtml(msg)"></div>
+
+            <div *ngIf="!msg.isLoading && msg.isTyping && msg.hasTable" class="chatbot-generating">
+              <span class="chatbot-generating-dot"></span>
+              <span class="chatbot-generating-dot"></span>
+              <span class="chatbot-generating-dot"></span>
+              Generating table...
+            </div>
+
+            <div *ngIf="!msg.isLoading" class="chatbot-time">
+              {{ msg.timestamp | date:'shortTime' }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    
+      <!-- Table data modal -->
+      <div *ngIf="tableModal" class="chatbot-table-modal-backdrop" (click)="closeTableModal()" role="dialog" aria-modal="true" aria-label="Data table">
+        <div class="chatbot-table-modal" (click)="$event.stopPropagation()">
+          <div class="chatbot-table-modal-header">
+            <strong>{{ tableModal.title || 'Data' }}</strong>
+            <div class="chatbot-table-modal-actions">
+              <button type="button" class="chatbot-export-btn" (click)="exportTableAsExcel()">
+                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Export as Excel
+              </button>
+              <button type="button" class="chatbot-modal-close-btn" (click)="closeTableModal()" aria-label="Close">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="chatbot-table-modal-body">
+            <div class="chatbot-table-wrapper">
+              <table class="chatbot-table">
+                <thead>
+                  <tr>
+                    <th *ngFor="let h of tableModal.headers">{{ h }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of tableModal.rows">
+                    <td *ngFor="let cell of row">{{ cell }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chatbot-input-area">
+        <input
+          #messageInput
+          [(ngModel)]="currentMessage"
+          (keydown.enter)="sendMessage()"
+          (ngModelChange)="onMessageChange($event)"
+          [disabled]="isLoading"
+          placeholder="Ask about leaves, holidays or policies..."
+          class="chatbot-input"
+          maxlength="500" />
+
+        <button
+          *ngIf="isLoading"
+          (click)="stopRequest()"
+          class="chatbot-stop-btn"
+          aria-label="Stop">
+          <svg class="chatbot-icon-sm" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="12" height="12" rx="2"/>
+          </svg>
+        </button>
+
+        <button
+          *ngIf="!isLoading"
+          (click)="sendMessage()"
+          [disabled]="!currentMessage.trim()"
+          class="chatbot-send-btn"
+          aria-label="Send">
+          <svg class="chatbot-icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+          </svg>
+        </button>
+      </div>
+      </div>
+    </div>
+  `,
+  styles: [`
+    :host {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      z-index: 3000;
+      pointer-events: none;
+    }
+    :host > * { pointer-events: all; }
+
+    .chatbot-fab {
+      position: fixed;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      border: none;
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(15,139,141,0.5);
+      transition: transform 0.3s, box-shadow 0.3s;
+      z-index: 1001;
+      user-select: none;
+    }
+    .chatbot-fab:hover {
+      transform: scale(1.05);
+      box-shadow: 0 12px 36px rgba(15,139,141,0.6);
+    }
+    .chatbot-fab--dragging {
+      cursor: grabbing;
+      transform: scale(1.08);
+      box-shadow: 0 14px 40px rgba(15,139,141,0.7);
+    }
+    .chatbot-fab-icon { width: 52px; height: 52px; pointer-events: none; }
+
+    .chatbot-window {
+      position: fixed;
+      width: 550px;
+      height: 500px;
+      background: #fff;
+      border: 1px solid var(--surface-border, rgba(226,232,240,0.7));
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 40px rgba(15,23,42,0.18);
+      opacity: 0;
+      transform: translateY(16px) scale(0.97);
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease, width 0.3s ease, height 0.3s ease, left 0.3s ease, top 0.3s ease;
+      overflow: hidden;
+      isolation: isolate;
+      contain: layout paint;
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+      -webkit-font-smoothing: antialiased;
+    }    .chatbot-window--open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: all;
+    }
+
+    .chatbot-window.chatbot-window--expanded .chatbot-bubble {
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 12px 16px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-input {
+      font-size: 15px;
+      padding: 11px 14px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-welcome-title {
+      font-size: 18px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-welcome-text {
+      font-size: 14px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-quick-btn {
+      font-size: 14px;
+      padding: 14px 12px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-quick-btn-emoji {
+      font-size: 22px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-quick-btn-text {
+      font-size: 14px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-time {
+      font-size: 11px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-title {
+      font-size: 16px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-subtitle {
+      font-size: 12px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-panel-header strong {
+      font-size: 14px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-panel-header p {
+      font-size: 12px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-section-header {
+      font-size: 13px;
+      padding: 10px 12px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-section-chevron,
+    .chatbot-window.chatbot-window--expanded .chatbot-section-icon {
+      width: 16px;
+      height: 16px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-item {
+      padding: 12px 12px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-item strong {
+      font-size: 14px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-item span {
+      font-size: 13px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-pin-btn,
+    .chatbot-window.chatbot-window--expanded .chatbot-history-rename-btn,
+    .chatbot-window.chatbot-window--expanded .chatbot-history-delete-btn {
+      width: 32px;
+      height: 32px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-pin-btn svg,
+    .chatbot-window.chatbot-window--expanded .chatbot-history-rename-btn svg,
+    .chatbot-window.chatbot-window--expanded .chatbot-history-delete-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-empty {
+      font-size: 14px;
+      padding: 16px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-history-panel {
+      width: 280px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-input-area {
+      padding: 10px 14px;
+    }
+    .chatbot-window.chatbot-window--expanded .chatbot-input {
+      padding: 11px 14px;
+    }
+
+    .chatbot-content-wrapper {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .chatbot-main-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .chatbot-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .chatbot-header-info { display: flex; align-items: center; gap: 8px; }
+    .chatbot-header-actions { display: flex; align-items: center; gap: 6px; }
+
+    .chatbot-history-panel {
+      width: 240px;
+      background: #fff;
+      border-right: 1px solid var(--surface-border, rgba(226,232,240,0.85));
+      border-radius: 0;
+      box-shadow: none;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s ease, margin-right 0.3s ease;
+      flex-shrink: 0;
+    }
+    .chatbot-history-panel--collapsed {
+      width: 0;
+      margin-right: 0;
+      border-right: none;
+    }
+    .chatbot-history-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--surface-border, rgba(226,232,240,0.7));
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .chatbot-history-panel-header strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 12px;
+    }
+    .chatbot-history-panel-header p {
+      margin: 0;
+      font-size: 10px;
+      color: var(--modal-desc, #64748b);
+    }
+    .chatbot-history-list {
+      padding: 8px 8px 8px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      flex: 1;
+    }
+    .chatbot-history-item {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      text-align: left;
+      border: 1px solid var(--surface-border, rgba(226,232,240,0.7));
+      border-radius: 10px;
+      background: var(--field-input-bg, #fff);
+      padding: 10px 10px;
+      color: var(--shell-text, #10233d);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.2s, background 0.2s;
+      overflow: hidden;
+      min-width: 0;
+    }
+    .chatbot-history-item:hover {
+      border-color: var(--app-primary, #0f8b8d);
+      background: var(--field-focus-shadow, rgba(15,139,141,0.08));
+    }
+    .chatbot-history-item.active {
+      border-color: var(--app-primary, #0f8b8d);
+      background: rgba(15,139,141,0.08);
+    }
+    .chatbot-history-item strong {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 0;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chatbot-history-item > div:first-child {
+      min-width: 0;
+      overflow: hidden;
+      flex: 1;
+    }
+    .chatbot-history-item-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+      justify-content: flex-end;
+    }
+    .chatbot-history-item span {
+      display: block;
+      font-size: 11px;
+      color: var(--modal-desc, #64748b);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chatbot-history-rename-btn,
+    .chatbot-history-delete-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .chatbot-history-rename-btn {
+      background: rgba(14,165,233,0.1);
+      border: 1px solid rgba(14,165,233,0.35);
+      color: #0ea5e9;
+    }
+    .chatbot-history-rename-btn:hover {
+      background: rgba(14,165,233,0.18);
+      transform: translateY(-1px);
+    }
+    .chatbot-history-delete-btn {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #ef4444;
+    }
+    .chatbot-history-delete-btn:hover {
+      background: rgba(239,68,68,0.18);
+      transform: translateY(-1px);
+    }
+    .chatbot-history-delete-btn svg,
+    .chatbot-history-rename-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .chatbot-history-item > div {
+      min-width: 0;
+      overflow: hidden;
+    }
+    .chatbot-history-item span {
+      display: block;
+      font-size: 12px;
+      color: var(--modal-desc, #64748b);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chatbot-history-delete-btn {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #ef4444;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .chatbot-history-delete-btn:hover {
+      background: rgba(239,68,68,0.18);
+      transform: translateY(-1px);
+    }
+    .chatbot-history-delete-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .chatbot-history-item span {
+      display: block;
+      font-size: 12px;
+      color: var(--modal-desc, #64748b);
+    }
+    .chatbot-history-empty {
+      padding: 14px;
+      color: var(--modal-desc, #64748b);
+      text-align: center;
+      font-size: 13px;
+    }
+    .chatbot-history-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .chatbot-history-section-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      background: rgba(15,139,141,0.05);
+      border: 1px solid rgba(15,139,141,0.15);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--app-primary, #0f8b8d);
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      text-align: left;
+    }
+    .chatbot-history-section-header:hover {
+      background: rgba(15,139,141,0.1);
+    }
+    .chatbot-section-chevron {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .chatbot-section-chevron--open {
+      transform: rotate(90deg);
+    }
+    .chatbot-section-icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    .chatbot-history-section-content {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .chatbot-history-pin-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.2s;
+      background: rgba(168,85,247,0.1);
+      border: 1px solid rgba(168,85,247,0.35);
+      color: #a855f7;
+    }
+    .chatbot-history-pin-btn:hover {
+      background: rgba(168,85,247,0.18);
+      transform: translateY(-1px);
+    }
+    .chatbot-history-pin-btn--pinned {
+      background: rgba(168,85,247,0.2);
+      border: 1px solid rgba(168,85,247,0.5);
+    }
+    .chatbot-history-pin-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .chatbot-avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .chatbot-avatar-icon { width: 16px; height: 16px; }
+    .chatbot-title { display: block; font-size: 13px; font-weight: 600; }
+    .chatbot-subtitle { font-size: 10px; opacity: 0.85; }
+    .chatbot-clear-btn {
+      background: rgba(255,255,255,0.15);
+      border: none; color: #fff; cursor: pointer;
+      padding: 6px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .chatbot-clear-btn:hover:not(:disabled) { background: rgba(255,255,255,0.28); }
+    .chatbot-clear-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .chatbot-icon-sm { width: 16px; height: 16px; }
+
+    .chatbot-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 30;
+    }
+    .chatbot-modal {
+      width: min(100%, 360px);
+      max-width: 100%;
+      box-sizing: border-box;
+      background: var(--surface-bg, #fff);
+      border-radius: 22px;
+      padding: 22px 20px 18px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    .chatbot-modal-title {
+      font-size: 15px;
+      margin: 0;
+      color: var(--shell-text, #10233d);
+    }
+    .chatbot-modal-description {
+      margin: 0;
+      font-size: 12px;
+      color: var(--modal-desc, #64748b);
+      line-height: 1.5;
+    }
+    .chatbot-modal-input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(148,163,184,0.4);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--field-input-text, #0f172a);
+      background: var(--field-input-bg, #fff);
+    }
+    .chatbot-modal-input:focus {
+      outline: none;
+      border-color: var(--app-primary, #0f8b8d);
+      box-shadow: 0 0 0 4px rgba(15, 139, 141, 0.12);
+    }
+    .chatbot-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .chatbot-modal-btn {
+      min-width: 82px;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .chatbot-modal-btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .chatbot-modal-btn--cancel {
+      background: var(--surface-bg, #f8fafc);
+      color: var(--shell-text, #10233d);
+      border: 1px solid rgba(226,232,240,0.9);
+    }
+    .chatbot-modal-btn--confirm {
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+    }
+    .chatbot-modal-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .chatbot-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #f8fafc;
+      min-width: 0;
+      transform: translateZ(0);
+    }
+    .chatbot-messages::-webkit-scrollbar { width: 5px; }
+    .chatbot-messages::-webkit-scrollbar-thumb {
+      background: var(--surface-border, rgba(226,232,240,0.7));
+      border-radius: 3px;
+    }
+
+    .chatbot-welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 16px 12px;
+      text-align: center;
+      height: 100%;
+    }
+    .chatbot-welcome-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--field-focus-shadow, rgba(15,139,141,0.12));
+      color: var(--app-primary, #0f8b8d);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 10px;
+    }
+    .chatbot-welcome-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--shell-text, #10233d);
+      margin: 0 0 4px;
+    }
+    .chatbot-welcome-text {
+      font-size: 11px;
+      color: var(--modal-desc, #64748b);
+      line-height: 1.4;
+      margin: 0 0 14px;
+    }
+    .chatbot-quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      justify-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .chatbot-quick-btn {
+      background: var(--surface-bg, #fff);
+      border: 1px solid var(--surface-border, rgba(226,232,240,0.9));
+      border-radius: 12px;
+      padding: 14px 12px;
+      width: 100%;
+      max-width: 240px;
+      min-height: 88px;
+      font-size: 12px;
+      color: var(--shell-text, #10233d);
+      cursor: pointer;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+    }
+    .chatbot-quick-btn:hover:not(:disabled) {
+      border-color: var(--app-primary, #0f8b8d);
+      background: rgba(15,139,141,0.05);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(15,139,141,0.12);
+    }
+    .chatbot-quick-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chatbot-quick-btn-emoji { font-size: 22px; line-height: 1; }
+    .chatbot-quick-btn-text { font-size: 12px; font-weight: 600; color: var(--shell-text, #10233d); line-height: 1.3; }
+
+    .chatbot-msg-row { display: flex; }
+    .chatbot-msg-row--user { justify-content: flex-end; }
+
+    .chatbot-bubble {
+      max-width: 82%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .chatbot-bubble--user {
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      border-radius: 12px 12px 4px 12px;
+    }
+    .chatbot-bubble--bot {
+      background: var(--surface-bg, #fff);
+      color: var(--shell-text, #10233d);
+      border: 1px solid var(--surface-border, rgba(226,232,240,0.7));
+      border-radius: 12px 12px 12px 4px;
+    }
+    .chatbot-time {
+      font-size: 9px;
+      opacity: 0.6;
+      margin-top: 3px;
+    }
+    .chatbot-msg-row--user .chatbot-time { text-align: right; }
+
+    .chatbot-typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+    .chatbot-typing span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--app-primary, #0f8b8d);
+      animation: chatDot 1.3s infinite ease-in-out;
+    }
+    .chatbot-typing span:nth-child(2) { animation-delay: 0.18s; }
+    .chatbot-typing span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes chatDot {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    .chatbot-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--app-primary, #0f8b8d);
+      margin-left: 1px;
+      vertical-align: text-bottom;
+      animation: cursorBlink 0.7s steps(1) infinite;
+    }
+    @keyframes cursorBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .chatbot-generating {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      padding: 5px 10px;
+      background: rgba(15,139,141,0.08);
+      border: 1px solid rgba(15,139,141,0.2);
+      border-radius: 20px;
+      font-size: 11px;
+      color: var(--app-primary, #0f8b8d);
+      font-weight: 500;
+    }
+    .chatbot-generating-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--app-primary, #0f8b8d);
+      animation: chatDot 1.3s infinite ease-in-out;
+    }
+    .chatbot-generating-dot:nth-child(2) { animation-delay: 0.18s; }
+    .chatbot-generating-dot:nth-child(3) { animation-delay: 0.36s; }
+
+    .chatbot-input-area {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      border-top: 1px solid var(--surface-border, rgba(226,232,240,0.7));
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .chatbot-input {
+      flex: 1;
+      background: var(--field-input-bg, #fff);
+      border: 1px solid var(--field-input-border, rgba(148,163,184,0.45));
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--field-input-text, #0f172a);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+      will-change: border-color, box-shadow;
+      transform: translateZ(0);
+    }
+    .chatbot-input:focus {
+      border-color: var(--app-primary, #0f8b8d);
+      box-shadow: 0 0 0 3px var(--field-focus-shadow, rgba(15,139,141,0.12));
+    }
+    .chatbot-input::placeholder { color: var(--modal-desc, #94a3b8); }
+    .chatbot-input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .chatbot-send-btn {
+      background: var(--app-primary, #0f8b8d);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      width: 38px;
+      height: 38px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .chatbot-send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .chatbot-send-btn:not(:disabled):hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .chatbot-stop-btn {
+      background: #ef4444;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      width: 38px;
+      height: 38px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .chatbot-stop-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .chatbot-spin {
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      .chatbot-history-panel { width: 160px; }
+    }
+
+    @media (max-width: 480px) {
+      .chatbot-history-panel { width: 0; border-right: none; }
+      .chatbot-history-panel--collapsed { display: none; }
+    }
+
+    ::ng-deep .chatbot-table-wrapper {
+      overflow-x: auto;
+      margin: 6px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(148,163,184,0.4);
+    }
+    ::ng-deep .chatbot-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+      min-width: 300px;
+    }
+    ::ng-deep .chatbot-table th {
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      padding: 7px 10px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    ::ng-deep .chatbot-table td {
+      padding: 6px 10px;
+      border: 1px solid rgba(148,163,184,0.45);
+      color: var(--field-input-text, #0f172a);
+      white-space: nowrap;
+    }
+    ::ng-deep .chatbot-table tr:nth-child(even) td { background: rgba(15,139,141,0.05); }
+    ::ng-deep .chatbot-table tr:hover td { background: rgba(15,139,141,0.1); }
+
+    ::ng-deep .chatbot-view-data-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--app-primary, #0f8b8d);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      padding: 4px 0;
+      background: none;
+      border: none;
+    }
+    ::ng-deep .chatbot-view-data-link:hover {
+      opacity: 0.8;
+    }
+
+    .chatbot-table-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+    .chatbot-table-modal {
+      background: var(--surface-bg, #fff);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(15,23,42,0.25);
+      width: min(90vw, 800px);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chatbot-table-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--surface-border, rgba(226,232,240,0.7));
+      flex-shrink: 0;
+    }
+    .chatbot-table-modal-header strong {
+      font-size: 15px;
+      color: var(--shell-text, #10233d);
+    }
+    .chatbot-table-modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chatbot-table-modal-body {
+      overflow: auto;
+      padding: 16px 20px;
+      flex: 1;
+    }
+    .chatbot-table-modal-body .chatbot-table-wrapper {
+      margin: 0;
+      border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.4);
+      overflow: auto;
+    }
+    .chatbot-table-modal-body .chatbot-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 11px;
+    }
+    .chatbot-table-modal-body .chatbot-table th {
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      padding: 6px 10px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.25);
+    }
+    .chatbot-table-modal-body .chatbot-table td {
+      padding: 5px 10px;
+      border: 1px solid rgba(148,163,184,0.35);
+      color: var(--field-input-text, #0f172a);
+      white-space: nowrap;
+    }
+    .chatbot-table-modal-body .chatbot-table tr:nth-child(even) td { background: rgba(15,139,141,0.04); }
+    .chatbot-table-modal-body .chatbot-table tr:hover td { background: rgba(15,139,141,0.09); }
+    .chatbot-export-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--app-primary, #0f8b8d);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .chatbot-export-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .chatbot-modal-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(148,163,184,0.15);
+      border: none;
+      color: var(--shell-text, #10233d);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .chatbot-modal-close-btn:hover { background: rgba(148,163,184,0.28); }
+
+    :host-context([data-theme="dark"]) .chatbot-window,
+    :host-context([data-theme="dark"]) .chatbot-content-wrapper,
+    :host-context([data-theme="dark"]) .chatbot-history-panel,
+    :host-context([data-theme="dark"]) .chatbot-history-panel-header,
+    :host-context([data-theme="dark"]) .chatbot-input-area {
+      background: #162034;
+    }
+
+    :host-context([data-theme="dark"]) .chatbot-messages {
+      background: #0f172a;
+    }
+  `]
+})
+export class ChatbotComponent implements OnInit, AfterViewChecked, OnDestroy {
+  @ViewChild('messagesContainer') messagesContainer!: ElementRef;
+  @ViewChild('messageInput') messageInput!: ElementRef;
+  @ViewChild('chatbotFab') chatbotFab!: ElementRef;
+
+  private http = inject(HttpClient);
+  private authService = injectAuthService();
+  private platformId = inject(PLATFORM_ID);
+  protected sanitizer = inject(DomSanitizer);
+  private ngZone = inject(NgZone);
+  private isBrowser = isPlatformBrowser(this.platformId);
+
+  isOpen = false;
+  isExpanded = false;
+  fabPosition = { bottom: 28, right: 28 };
+  isDragging = false;
+  private dragOffset = { x: 0, y: 0 };
+
+  private readonly WIN_W = 550;
+  private readonly WIN_H = 500;
+  private readonly EXPANDED_WIN_W = 1200;
+  private readonly EXPANDED_WIN_H = 800;
+  private readonly FAB_SIZE = 100;
+  private readonly GAP = 12;
+
+  get windowStyle(): string {
+    if (!this.isBrowser) return '';
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Use expanded dimensions if expanded, otherwise normal dimensions
+    const targetW = this.isExpanded ? this.EXPANDED_WIN_W : this.WIN_W;
+    const targetH = this.isExpanded ? this.EXPANDED_WIN_H : this.WIN_H;
+
+    // If expanded, center the window on screen
+    if (this.isExpanded) {
+      const winW = Math.min(targetW, vw - 40);
+      const winH = Math.min(targetH, vh - 40);
+      const left = Math.max(20, (vw - winW) / 2);
+      const top = Math.max(20, (vh - winH) / 2);
+      return `left:${left}px; top:${top}px; width:${winW}px; height:${winH}px;`;
+    }
+
+    // FAB center in viewport coords
+    const fabRight  = this.fabPosition.right;
+    const fabBottom = this.fabPosition.bottom;
+    const fabLeft   = vw - fabRight - this.FAB_SIZE;
+    const fabTop    = vh - fabBottom - this.FAB_SIZE;
+
+    const winW = Math.min(targetW, vw - 20);
+    const winH = Math.min(targetH, vh - 20);
+
+    // Horizontal: prefer aligning right edge of window with right edge of FAB,
+    // but clamp so window never goes off-screen
+    let left = fabLeft - winW + this.FAB_SIZE;
+    left = Math.max(10, Math.min(vw - winW - 10, left));
+
+    // Vertical: open above FAB if there's room, otherwise below
+    let top: number;
+    const spaceAbove = fabTop - this.GAP;
+    const spaceBelow = vh - (fabTop + this.FAB_SIZE) - this.GAP;
+
+    if (spaceAbove >= winH || spaceAbove >= spaceBelow) {
+      // Open above
+      top = fabTop - winH - this.GAP;
+      top = Math.max(10, top);
+    } else {
+      // Open below
+      top = fabTop + this.FAB_SIZE + this.GAP;
+      top = Math.min(vh - winH - 10, top);
+    }
+
+    return `left:${left}px; top:${top}px; width:${winW}px; height:${winH}px;`;
+  }
+  private boundMouseMove!: (e: MouseEvent) => void;
+  private boundMouseUp!: (e: MouseEvent) => void;
+  currentMessage = '';
+  isLoading = false;
+  messages: ChatMessage[] = [];
+  isHistoryOpen = false;
+  chatHistoryLoaded = false;
+  historyLoading = false;
+  historyConversations: Array<{ id: string; title: string; chatDate: string; count: number; isPinned?: boolean }> = [];
+  pinnedConversations: Array<{ id: string; title: string; chatDate: string; count: number; isPinned?: boolean }> = [];
+  isPinnedSectionOpen = true;
+  isHistorySectionOpen = true;
+  isRenameDialogOpen = false;
+  renameTargetId: string | null = null;
+  renameTitle = '';
+  private _hasEmptyChatCache: boolean | null = null;
+
+  onMessageChange(value: string): void {
+    // This method helps prevent unnecessary change detection cycles
+    // by explicitly handling the input change
+  }
+
+  quickActions = [
+    { label: '📊 My Leave Balance', message: 'What is my current leave balance?' },
+    { label: '🗓️ Upcoming Holidays', message: 'What are the upcoming holidays?' },
+    { label: '👥 Who is on leave today?', message: 'Who is on leave today?' },
+    { label: '📋 Leave Policies', message: 'What are the leave policies?' }
+  ];
+
+  private shouldScrollToBottom = false;
+  private lastSubmissionKey = '';
+  private lastSubmissionAt = 0;
+  private currentRequestId: string | null = null;
+  private cancelSubject$ = new Subject<void>();
+  private readonly responseCache = new Map<string, CachedChatResponse>();
+  private readonly chatHistoryKey = 'chatbot-history-v3';
+  private readonly responseCacheKey = 'chatbot-response-cache';
+  private readonly responseCacheTtlMs = 5 * 60 * 1000;
+  private chatHistoryStore: StoredChatHistory = {};
+  currentConversationId = '';
+  private pendingNewConversation = false;
+  private conversationStarted = false;
+
+  ngOnInit() {
+    this.loadResponseCache();
+    this.initQuickActions();
+    this.loadFabPosition();
+    // Load chat history on initialization
+    if (this.isBrowser) {
+      this.lazyLoadChatHistory();
+      this.buildHistorySummaries();
+      // If no history exists, start a new chat
+      if (!this.currentConversationId || this.isCurrentChatEmpty()) {
+        this.startNewChat();
+      } else {
+        // Load the latest conversation
+        this.messages = this.mapConversationToMessages(this.currentConversationId);
+        this.pendingNewConversation = false;
+        this.conversationStarted = true;
+      }
+    }
+  }
+
+  private initQuickActions() {
+    const role = (this.authService.currentUser()?.role ?? '').toUpperCase();
+    if (role === 'MANAGER') {
+      this.quickActions = [
+        { label: '📊 My Leave Balance', message: 'What is my current leave balance?' },
+        { label: '👥 Team on leave today', message: 'Who is on leave today?' },
+        { label: '⏳ Team pending leaves', message: 'How many pending leaves does my team have?' },
+        { label: '🗓️ Upcoming Holidays', message: 'What are the upcoming holidays?' }
+      ];
+    } else if (role === 'EMPLOYEE') {
+      this.quickActions = [
+        { label: '📊 My Leave Balance', message: 'What is my current leave balance?' },
+        { label: '⏳ My Pending Leaves', message: 'How many pending leaves do I have?' },
+        { label: '✅ My Approved Leaves', message: 'How many approved leaves do I have?' },
+        { label: '🗓️ Upcoming Holidays', message: 'What are the upcoming holidays?' }
+      ];
+    }
+
+  }
+
+  ngAfterViewChecked() {
+    if (this.shouldScrollToBottom) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
+    }
+  }
+
+  toggleChat() {
+    this.isOpen = !this.isOpen;
+    if (this.isOpen) {
+      setTimeout(() => this.messageInput?.nativeElement?.focus(), 100);
+    } else {
+      // Reset expanded state when closing
+      this.isExpanded = false;
+    }
+  }
+
+  toggleExpand() {
+    this.isExpanded = !this.isExpanded;
+    
+    // Automatically open history when expanding
+    if (this.isExpanded) {
+      this.isHistoryOpen = true;
+      this.lazyLoadChatHistory();
+      this.buildHistorySummaries();
+    }
+    
+    this.shouldScrollToBottom = true;
+  }
+
+  onFabMouseDown(event: MouseEvent) {
+    if (event.button !== 0) return;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.dragOffset = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
+    event.preventDefault();
+
+    // Run listeners outside Angular zone to avoid triggering change detection on every mousemove
+    this.ngZone.runOutsideAngular(() => {
+      this.boundMouseMove = (e: MouseEvent) => {
+        if (!this.isDragging) {
+          // Only start dragging after a small movement threshold
+          const dx = Math.abs(e.clientX - (rect.left + this.dragOffset.x));
+          const dy = Math.abs(e.clientY - (rect.top + this.dragOffset.y));
+          if (dx < 4 && dy < 4) return;
+          this.ngZone.run(() => { this.isDragging = true; });
+        }
+
+        const fabSize = 100;
+        const right = window.innerWidth - e.clientX - (fabSize - this.dragOffset.x);
+        const bottom = window.innerHeight - e.clientY - (fabSize - this.dragOffset.y);
+
+        const newPos = {
+          right: Math.max(10, Math.min(window.innerWidth - fabSize - 10, right)),
+          bottom: Math.max(10, Math.min(window.innerHeight - fabSize - 10, bottom))
+        };
+
+        // Only run in zone (triggering CD) when position actually changes
+        if (newPos.right !== this.fabPosition.right || newPos.bottom !== this.fabPosition.bottom) {
+          this.ngZone.run(() => { this.fabPosition = newPos; });
+        }
+        e.preventDefault();
+      };
+
+      this.boundMouseUp = (e: MouseEvent) => {
+        document.removeEventListener('mousemove', this.boundMouseMove);
+        document.removeEventListener('mouseup', this.boundMouseUp);
+        if (this.isDragging) {
+          this.ngZone.run(() => {
+            this.isDragging = false;
+            this.saveFabPosition();
+          });
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+
+      document.addEventListener('mousemove', this.boundMouseMove);
+      document.addEventListener('mouseup', this.boundMouseUp);
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.boundMouseMove) document.removeEventListener('mousemove', this.boundMouseMove);
+    if (this.boundMouseUp) document.removeEventListener('mouseup', this.boundMouseUp);
+  }
+
+  private loadFabPosition() {
+    if (!this.isBrowser) return;
+    try {
+      const saved = localStorage.getItem('chatbot-fab-position');
+      if (saved) {
+        this.fabPosition = JSON.parse(saved);
+      }
+    } catch {}
+  }
+
+  private saveFabPosition() {
+    if (!this.isBrowser) return;
+    try {
+      localStorage.setItem('chatbot-fab-position', JSON.stringify(this.fabPosition));
+    } catch {}
+  }
+
+  sendMessage(event?: Event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const trimmedMessage = this.currentMessage.trim();
+    if (!trimmedMessage || this.isLoading) return;
+
+    const submissionKey = `${this.authService.currentUser()?.username ?? 'anonymous'}::${trimmedMessage}`;
+    const now = Date.now();
+    if (submissionKey === this.lastSubmissionKey && now - this.lastSubmissionAt < 1500) {
+      return;
+    }
+
+    this.lastSubmissionKey = submissionKey;
+    this.lastSubmissionAt = now;
+
+    const userMsg: ChatMessage = { text: trimmedMessage, isUser: true, timestamp: new Date() };
+    const loadingMsg: ChatMessage = { text: '', isUser: false, timestamp: new Date(), isLoading: true };
+
+    this.messages.push(userMsg, loadingMsg);
+    this.shouldScrollToBottom = true;
+
+    const messageToSend = trimmedMessage;
+    const requestStartedAt = new Date();
+    this.currentMessage = '';
+    this.isLoading = true;
+
+    this.ensureActiveConversation();
+    const isNewConversationMessage = this.pendingNewConversation && !this.conversationStarted;
+    this.conversationStarted = true;
+    this.invalidateEmptyChatCache();
+    this.currentRequestId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const requestId = this.currentRequestId;
+    this.cancelSubject$ = new Subject<void>();
+
+    const cachedResponse = this.getCachedResponse(submissionKey);
+    if (cachedResponse) {
+      this.isLoading = false;
+      this.currentRequestId = null;
+      const idx = this.messages.findIndex(m => m.isLoading);
+      if (idx !== -1) this.messages.splice(idx, 1);
+      const responseAt = new Date();
+      const botMsg: ChatMessage = { text: cachedResponse, isUser: false, timestamp: responseAt };
+      this.messages.push(botMsg);
+      this.typeMessage(botMsg);
+      this.persistConversationEntry(messageToSend, cachedResponse, requestId, requestStartedAt, responseAt, 'cache');
+      this.pendingNewConversation = false;
+      this.shouldScrollToBottom = true;
+      return;
+    }
+
+    this.callChatAPI(messageToSend, requestId, this.currentConversationId, isNewConversationMessage)
+      .pipe(
+        takeUntil(this.cancelSubject$),
+        finalize(() => {
+          this.isLoading = false;
+          this.currentRequestId = null;
+          const idx = this.messages.findIndex(m => m.isLoading);
+          if (idx !== -1) this.messages.splice(idx, 1);
+        })
+      )
+      .subscribe({
+        next: (res) => {
+          const responseText = res.response || 'Sorry, I could not process that.';
+          this.cacheResponse(submissionKey, responseText);
+          const responseAt = new Date();
+          const botMsg: ChatMessage = { text: responseText, isUser: false, timestamp: responseAt };
+          this.messages.push(botMsg);
+          this.typeMessage(botMsg);
+          this.persistConversationEntry(messageToSend, responseText, requestId, requestStartedAt, responseAt, 'api');
+          this.pendingNewConversation = false;
+          this.conversationStarted = true;
+          this.shouldScrollToBottom = true;
+        },
+        error: (err) => {
+          if (err?.name === 'AbortError' || err?.status === 0) return;
+          const fallbackResponse = 'Sorry, I\'m having trouble connecting. Please try again.';
+          const responseAt = new Date();
+          const botMsg: ChatMessage = { text: fallbackResponse, isUser: false, timestamp: responseAt };
+          this.messages.push(botMsg);
+          this.typeMessage(botMsg);
+          this.persistConversationEntry(messageToSend, fallbackResponse, requestId, requestStartedAt, responseAt, 'error');
+          this.pendingNewConversation = false;
+          this.shouldScrollToBottom = true;
+        }
+      });
+  }
+
+  sendQuickMessage(message: string) {
+    this.currentMessage = message;
+    this.sendMessage();
+  }
+
+  clearChat() {
+    this.cancelCurrentRequest();
+    this.messages = [];
+    if (this.currentConversationId && this.chatHistoryStore[this.currentConversationId]) {
+      this.chatHistoryStore[this.currentConversationId].messages = [];
+      this.persistChatHistoryStore();
+    }
+  }
+
+  isCurrentChatEmpty(): boolean {
+    if (this.messages.length === 0) {
+      return true;
+    }
+    
+    if (this.currentConversationId) {
+      const entry = this.chatHistoryStore[this.currentConversationId];
+      return !entry?.messages || entry.messages.length === 0;
+    }
+    
+    return true;
+  }
+
+  hasEmptyChat(): boolean {
+    // Use cached value if available to prevent repeated calculations
+    if (this._hasEmptyChatCache !== null) {
+      return this._hasEmptyChatCache;
+    }
+    
+    // Check if there's any empty chat in the history
+    this._hasEmptyChatCache = Object.values(this.chatHistoryStore).some(entry => 
+      !entry?.messages || entry.messages.length === 0
+    );
+    
+    return this._hasEmptyChatCache;
+  }
+
+  private invalidateEmptyChatCache(): void {
+    this._hasEmptyChatCache = null;
+  }
+
+  startNewChat() {
+    if (this.hasEmptyChat()) {
+      return;
+    }
+    
+    this.cancelCurrentRequest();
+    this.messages = [];
+    this.currentConversationId = this.getNextConversationId();
+    this.chatHistoryStore[this.currentConversationId] = {
+      conversation_id: this.currentConversationId,
+      username: this.authService.currentUser()?.username ?? null,
+      user_id: null,
+      profile: globalThis.location?.hostname ?? 'localhost',
+      response_type: 'text',
+      chatTitle: 'New chat',
+      chatDate: new Date().toLocaleDateString('en-GB'),
+      messages: []
+    };
+    this.pendingNewConversation = true;
+    this.conversationStarted = false;
+    this.invalidateEmptyChatCache();
+    this.persistChatHistoryStore();
+    this.buildHistorySummaries();
+    this.shouldScrollToBottom = true;
+  }
+
+  stopRequest() {
+    this.cancelCurrentRequest();
+    const idx = this.messages.findIndex(m => m.isLoading);
+    if (idx !== -1) this.messages.splice(idx, 1);
+    this.isLoading = false;
+  }
+
+  private cancelCurrentRequest() {
+    if (this.currentRequestId) {
+      this.cancelSubject$.next();
+      this.cancelSubject$.complete();
+      this.http.delete(`http://localhost:8080/api/chatbot/cancel/${this.currentRequestId}`, {
+        headers: { 'X-Skip-Loader': 'true' }
+      }).subscribe({ error: () => {} }); 
+      this.currentRequestId = null;
+    }
+  }
+
+  toggleHistory() {
+    this.isHistoryOpen = !this.isHistoryOpen;
+    if (this.isHistoryOpen) {
+      this.lazyLoadChatHistory();
+      this.buildHistorySummaries();
+    }
+  }
+
+  openConversation(conversationId: string) {
+    this.lazyLoadChatHistory();
+    this.currentConversationId = conversationId;
+    this.messages = this.mapConversationToMessages(conversationId);
+    this.pendingNewConversation = this.getPersistedConversationEntries().length === 0;
+    this.conversationStarted = !this.pendingNewConversation;
+    this.shouldScrollToBottom = true;
+  }
+
+  private lazyLoadChatHistory() {
+    if (this.chatHistoryLoaded || this.historyLoading) {
+      return;
+    }
+
+    this.historyLoading = true;
+    try {
+      this.loadChatHistoryStore();
+      this.buildHistorySummaries();
+    } finally {
+      this.historyLoading = false;
+      this.chatHistoryLoaded = true;
+    }
+  }
+
+  private loadChatHistoryStore() {
+    if (!this.isBrowser || this.chatHistoryLoaded) {
+      return;
+    }
+
+    try {
+      const saved = localStorage.getItem(this.chatHistoryKey);
+      if (saved) {
+        this.chatHistoryStore = JSON.parse(saved) as StoredChatHistory;
+        this.currentConversationId = this.getLatestConversationId();
+        this.chatHistoryLoaded = true;
+        return;
+      }
+
+      const v2Saved = localStorage.getItem('chatbot-history-v2');
+      if (v2Saved) {
+        const parsed = JSON.parse(v2Saved) as Record<string, any>;
+        const migrated: StoredChatHistory = {};
+        for (const [id, entry] of Object.entries(parsed)) {
+          if (entry && entry.meta && typeof entry.meta === 'object') {
+            migrated[id] = { ...entry.meta, messages: entry.messages ?? [] };
+          } else {
+            migrated[id] = entry as StoredChatEntry;
+          }
+        }
+        this.chatHistoryStore = migrated;
+        this.persistChatHistoryStore();
+        localStorage.removeItem('chatbot-history-v2');
+        this.currentConversationId = this.getLatestConversationId();
+        this.chatHistoryLoaded = true;
+        return;
+      }
+
+      // Migrate from v1 (raw ChatMessage array)
+      const legacySaved = localStorage.getItem('chatbot-history');
+      if (legacySaved) {
+        const legacyMessages = JSON.parse(legacySaved).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })) as ChatMessage[];
+        this.currentConversationId = 'chat_001';
+        this.chatHistoryStore = {
+          [this.currentConversationId]: this.mapMessagesToStoredEntries(legacyMessages, this.currentConversationId)
+        };
+        this.persistChatHistoryStore();
+        localStorage.removeItem('chatbot-history');
+      }
+    } catch {
+      this.chatHistoryStore = {};
+    } finally {
+      this.chatHistoryLoaded = true;
+    }
+  }
+
+  private buildHistorySummaries() {
+    const keys = this.getSortedConversationKeys().slice().reverse();
+    const allConversations = keys.map((id) => {
+      const entry = this.chatHistoryStore[id];
+      return {
+        id,
+        title: entry?.chatTitle || `Conversation ${id.replace('chat_', '')}`,
+        chatDate: entry?.chatDate || '',
+        count: (entry?.messages?.length ?? 0) * 2,
+        isPinned: entry?.isPinned || false
+      };
+    });
+
+    // Separate pinned and unpinned conversations
+    this.pinnedConversations = allConversations.filter(c => c.isPinned);
+    this.historyConversations = allConversations.filter(c => !c.isPinned);
+  }
+
+  togglePinConversation(conversationId: string, event: Event) {
+    event.stopPropagation();
+    const entry = this.chatHistoryStore[conversationId];
+    if (!entry) return;
+
+    entry.isPinned = !entry.isPinned;
+    this.persistChatHistoryStore();
+    this.buildHistorySummaries();
+  }
+
+  deleteConversation(conversationId: string, event: Event) {
+    event.stopPropagation();
+    delete this.chatHistoryStore[conversationId];
+    this.invalidateEmptyChatCache();
+    this.persistChatHistoryStore();
+    this.buildHistorySummaries();
+
+    if (this.currentConversationId === conversationId) {
+      this.currentConversationId = this.getLatestConversationId();
+      this.messages = this.currentConversationId ? this.mapConversationToMessages(this.currentConversationId) : [];
+      this.pendingNewConversation = this.messages.length === 0;
+    }
+  }
+
+  startRenameConversation(conversationId: string, event: Event) {
+    event.stopPropagation();
+    const entry = this.chatHistoryStore[conversationId];
+    if (!entry) return;
+
+    this.renameTargetId = conversationId;
+    this.renameTitle = entry.chatTitle || `Conversation ${conversationId.replace('chat_', '')}`;
+    this.isRenameDialogOpen = true;
+  }
+
+  cancelRename() {
+    this.isRenameDialogOpen = false;
+    this.renameTargetId = null;
+    this.renameTitle = '';
+  }
+
+  confirmRename() {
+    const newTitle = this.renameTitle.trim();
+    if (!newTitle || !this.renameTargetId) return;
+
+    const entry = this.chatHistoryStore[this.renameTargetId];
+    if (!entry) return;
+
+    entry.chatTitle = newTitle;
+    this.persistChatHistoryStore();
+    this.buildHistorySummaries();
+    this.cancelRename();
+  }
+
+  trackByIndex(index: number): number { return index; }
+
+  // Table data store — avoids putting JSON in innerHTML (Angular sanitizer strips data-* attrs)
+  private tableStore = new Map<number, TableData>();
+  private tableStoreCounter = 0;
+  tableModal: TableData | null = null;
+
+  onBubbleClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const btn = target.closest('.chatbot-view-data-link') as HTMLElement | null;
+    if (!btn) return;
+    event.preventDefault();
+    const idx = Number(btn.getAttribute('data-idx'));
+    const data = this.tableStore.get(idx);
+    if (data) this.tableModal = { ...data };
+  }
+
+  closeTableModal(): void {
+    this.tableModal = null;
+  }
+
+  exportTableAsExcel(): void {
+    if (!this.tableModal) return;
+    const { headers, rows, title } = this.tableModal;
+    const escape = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [
+      headers.map(escape).join(','),
+      ...rows.map(row => row.map(escape).join(','))
+    ];
+    const csv = '\uFEFF' + lines.join('\r\n'); // BOM for Excel UTF-8
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(title || 'data').replace(/[^a-z0-9]/gi, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  formatMessage(text: string, typing = false): string {
+    if (!text) return '';
+
+    // During typing animation, hide partial markdown table syntax entirely
+    // so raw pipe characters don't flash on screen mid-stream.
+    // The full table button is rendered only once typing completes.
+    if (typing) {
+      // Strip any partial or complete markdown table block
+      text = text.replace(/(\|[^\n]*\n?)+/g, '');
+    } else {
+      // Replace complete markdown tables with a "View your data" button.
+      // Table data is stored in tableStore (keyed by index) — Angular's DomSanitizer
+      // strips data-* attributes from [innerHTML], so we only embed the numeric index.
+      const tableRegex = /(\|.+\|\n\|[-| :]+\|\n(?:\|.+\|\n?)*)/g;
+      text = text.replace(tableRegex, (match) => {
+        const lines = match.trim().split('\n').filter(l => l.trim());
+        if (lines.length < 2) return match;
+        const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
+        const rows = lines.slice(2).map(line =>
+          line.split('|').map(c => c.trim()).filter(c => c)
+        );
+        const idx = this.tableStoreCounter++;
+        this.tableStore.set(idx, { headers, rows, title: `Data (${rows.length} rows)` });
+        return `<button class="chatbot-view-data-link" data-idx="${idx}">` +
+          `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">` +
+          `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>` +
+          `</svg>View your data</button>`;
+      });
+    }
+
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
+  }
+
+  getDisplayHtml(msg: ChatMessage): SafeHtml {
+    const text = msg.isTyping ? (msg.displayedText || '') : msg.text;
+    const cursor = msg.isTyping ? '<span class="chatbot-cursor"></span>' : '';
+
+    if (!msg.isTyping) {
+      // Fully received message — build and cache once
+      if (!msg.cachedHtml) {
+        msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text, false) + cursor);
+      }
+      return msg.cachedHtml!;
+    }
+
+    // Typing animation — rebuild only when displayedText changes
+    if (msg.cachedTypingText !== text) {
+      msg.cachedTypingText = text;
+      msg.cachedHtml = this.sanitizer.bypassSecurityTrustHtml(this.formatMessage(text, true) + cursor);
+    }
+    return msg.cachedHtml!;
+  }
+
+  private typeMessage(msg: ChatMessage): void {
+    const fullText = msg.text;
+    msg.hasTable = /\|.+\|\n\|[-| :]+\|/.test(fullText);
+    msg.displayedText = '';
+    msg.isTyping = true;
+    msg.cachedHtml = undefined;
+    msg.cachedTypingText = undefined;
+    let i = 0;
+    // ~18ms per char ≈ ~55 chars/sec — feels like fast streaming
+    const interval = setInterval(() => {
+      i++;
+      msg.displayedText = fullText.slice(0, i);
+      this.shouldScrollToBottom = true;
+      if (i >= fullText.length) {
+        clearInterval(interval);
+        msg.isTyping = false;
+        msg.cachedHtml = undefined; // force rebuild as final (non-typing) HTML
+        msg.cachedTypingText = undefined;
+      }
+    }, 18);
+  }
+
+  private callChatAPI(
+    message: string,
+    requestId?: string | null,
+    conversationId?: string | null,
+    newConversation = false
+  ): Observable<any> {
+    return this.http.post('http://localhost:8080/api/chatbot/chat', {
+      message,
+      username: this.authService.currentUser()?.username ?? null,
+      role: this.authService.currentUser()?.role ?? null,
+      requestId: requestId ?? null,
+      conversationId: conversationId ?? null,
+      newConversation
+    }, {
+      headers: { 'X-Skip-Loader': 'true' }
+    });
+  }
+
+  private scrollToBottom() {
+    try {
+      const el = this.messagesContainer?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    } catch {}
+  }
+
+  private getCachedResponse(cacheKey: string): string | null {
+    const cached = this.responseCache.get(cacheKey);
+    if (!cached) {
+      return null;
+    }
+
+    if (Date.now() - cached.savedAt > this.responseCacheTtlMs) {
+      this.responseCache.delete(cacheKey);
+      this.persistResponseCache();
+      return null;
+    }
+
+    return cached.response;
+  }
+
+  private cacheResponse(cacheKey: string, response: string): void {
+    this.responseCache.set(cacheKey, {
+      response,
+      savedAt: Date.now()
+    });
+    this.persistResponseCache();
+  }
+
+  private loadResponseCache(): void {
+    if (!this.isBrowser) return;
+    try {
+      const saved = localStorage.getItem(this.responseCacheKey);
+      if (!saved) {
+        return;
+      }
+
+      const parsed = JSON.parse(saved) as Record<string, CachedChatResponse>;
+      const now = Date.now();
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (value && typeof value.response === 'string' && typeof value.savedAt === 'number') {
+          if (now - value.savedAt <= this.responseCacheTtlMs) {
+            this.responseCache.set(key, value);
+          }
+        }
+      });
+      this.persistResponseCache();
+    } catch {
+      this.responseCache.clear();
+    }
+  }
+
+  private persistResponseCache(): void {
+    if (!this.isBrowser) return;
+    try {
+      const serializable = Object.fromEntries(this.responseCache.entries());
+      localStorage.setItem(this.responseCacheKey, JSON.stringify(serializable));
+    } catch {}
+  }
+
+  private ensureActiveConversation(): void {
+    this.lazyLoadChatHistory();
+
+    if (this.currentConversationId) return;
+
+    this.currentConversationId = this.getLatestConversationId() || 'chat_001';
+    if (!this.chatHistoryStore[this.currentConversationId]) {
+      this.chatHistoryStore[this.currentConversationId] = {
+        conversation_id: this.currentConversationId,
+        username: this.authService.currentUser()?.username ?? null,
+        user_id: null,
+        profile: globalThis.location?.hostname ?? 'localhost',
+        response_type: 'text',
+        chatTitle: 'Chat session',
+        chatDate: new Date().toLocaleDateString('en-GB'),
+        messages: []
+      };
+    }
+    this.pendingNewConversation = (this.chatHistoryStore[this.currentConversationId]?.messages?.length ?? 0) === 0;
+  }
+
+  private getLatestConversationId(): string {
+    const keys = this.getSortedConversationKeys();
+    return keys.length > 0 ? keys[keys.length - 1] : '';
+  }
+
+  private getNextConversationId(): string {
+    const keys = this.getSortedConversationKeys();
+    const nextNumber = keys.reduce((max, key) => {
+      const match = /^chat_(\d+)$/.exec(key);
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0) + 1;
+    return `chat_${nextNumber.toString().padStart(3, '0')}`;
+  }
+
+  private getSortedConversationKeys(): string[] {
+    return Object.keys(this.chatHistoryStore).sort((left, right) => {
+      const leftNumber = Number((/^chat_(\d+)$/.exec(left)?.[1]) ?? '0');
+      const rightNumber = Number((/^chat_(\d+)$/.exec(right)?.[1]) ?? '0');
+      return leftNumber - rightNumber;
+    });
+  }
+
+  private getPersistedConversationEntries(): StoredChatMessage[] {
+    this.ensureActiveConversation();
+    return this.chatHistoryStore[this.currentConversationId]?.messages ?? [];
+  }
+
+  private persistConversationEntry(
+    question: string,
+    answer: string,
+    requestId: string,
+    requestStartedAt: Date,
+    responseAt: Date,
+    source: string
+  ): void {
+    if (!this.isBrowser) return;
+
+    this.ensureActiveConversation();
+    const conversationId = this.currentConversationId;
+    const username = this.authService.currentUser()?.username ?? null;
+    const today = requestStartedAt.toLocaleDateString('en-GB');
+
+    let entry = this.chatHistoryStore[conversationId];
+    if (!entry) {
+      entry = {
+        conversation_id: conversationId,
+        username,
+        user_id: null,
+        profile: globalThis.location?.hostname ?? 'localhost',
+        response_type: 'text',
+        chatTitle: question,
+        chatDate: today,
+        messages: []
+      };
+      this.chatHistoryStore[conversationId] = entry;
+    }
+
+    // Update chat title with first question if it's still "New chat"
+    if (entry.messages.length === 0 && (entry.chatTitle === 'New chat' || entry.chatTitle === 'Chat session')) {
+      entry.chatTitle = question.length > 50 ? question.substring(0, 50) + '...' : question;
+    }
+
+    const questionId = entry.messages.length + 1;
+    entry.messages.push({
+      question,
+      answer,
+      table: null,
+      source,
+      question_id: questionId,
+      request_id: requestId,
+      latency_ms: responseAt.getTime() - requestStartedAt.getTime(),
+      request_timestamp: requestStartedAt.toISOString(),
+      response_timestamp: responseAt.toISOString()
+    });
+
+    this.invalidateEmptyChatCache();
+    this.persistChatHistoryStore();
+    this.buildHistorySummaries();
+  }
+
+  private persistChatHistoryStore(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(this.chatHistoryKey, JSON.stringify(this.chatHistoryStore));
+    } catch {}
+  }
+
+  private mapConversationToMessages(conversationId: string): ChatMessage[] {
+    const entry = this.chatHistoryStore[conversationId];
+    if (!entry) return [];
+    const messages = entry.messages ?? [];
+    return messages.flatMap(msg => {
+      const requestTime = new Date(msg.request_timestamp);
+      const responseTime = new Date(msg.response_timestamp);
+      // Reconstruct full answer text with table markdown for rendering
+      const answerText = msg.answer ?? '';
+      return [
+        { text: msg.question, isUser: true, timestamp: requestTime },
+        { text: answerText, isUser: false, timestamp: responseTime }
+      ];
+    });
+  }
+
+  private mapMessagesToStoredEntries(messages: ChatMessage[], conversationId: string): StoredChatEntry {
+    const completeMessages = messages.filter(m => !m.isLoading);
+    const username = this.authService.currentUser()?.username ?? null;
+    const firstUser = completeMessages.find(m => m.isUser);
+
+    const entry: StoredChatEntry = {
+      conversation_id: conversationId,
+      username,
+      user_id: null,
+      profile: globalThis.location?.hostname ?? 'localhost',
+      response_type: 'text',
+      chatTitle: firstUser?.text || 'Chat session',
+      chatDate: firstUser?.timestamp.toLocaleDateString('en-GB') || '',
+      messages: []
+    };
+
+    for (let i = 0; i < completeMessages.length; i += 2) {
+      const userMsg = completeMessages[i];
+      const botMsg = completeMessages[i + 1];
+      if (!userMsg?.isUser || !botMsg || botMsg.isUser) continue;
+
+      entry.messages.push({
+        question: userMsg.text,
+        answer: botMsg.text,
+        table: null,
+        source: 'legacy',
+        question_id: entry.messages.length + 1,
+        request_id: `legacy_${i + 1}`,
+        latency_ms: 0,
+        request_timestamp: userMsg.timestamp.toISOString(),
+        response_timestamp: botMsg.timestamp.toISOString()
+      });
+    }
+
+    return entry;
+  }
+}

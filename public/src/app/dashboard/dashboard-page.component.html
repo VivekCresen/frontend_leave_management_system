@@ -1,0 +1,295 @@
+<section class="workspace" [class.workspace-overview]="pageId === 'overview'">
+  <header class="workspace-header">
+    <div class="workspace-copy">
+      <h2>{{ pageHeading }}</h2>
+      <p class="workspace-description">{{ pageDescription }}</p>
+    </div>
+
+    <div class="workspace-actions">
+      <div class="profile-menu-shell" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          class="profile-trigger"
+          (click)="toggleProfileMenu($event)"
+          [attr.aria-expanded]="isProfileMenuOpen"
+          aria-haspopup="menu"
+          aria-label="Open profile menu">
+          <span class="profile-avatar">{{ profileInitials }}</span>
+          <span class="profile-trigger-copy">
+            <strong>{{ profileDisplayName }}</strong>
+            <small>{{ profileDisplayEmail }}</small>
+          </span>
+          <i class="fas" [class.fa-chevron-down]="!isProfileMenuOpen" [class.fa-chevron-up]="isProfileMenuOpen"></i>
+        </button>
+
+        <div *ngIf="isProfileMenuOpen" class="profile-menu" role="menu">
+          <div class="profile-menu-summary">
+            <!-- <span class="badge badge-role">{{ profileRoleLabel | titlecase }}</span> -->
+            <strong>{{ profileDisplayName }}</strong>
+            <small>{{ profileDisplayEmail }}</small>
+          </div>
+
+          <button type="button" class="profile-menu-item" (click)="openProfileEditor()">
+            <i class="fas fa-user-pen"></i>
+            <span>{{ 'menu.editProfile' | translate }}</span>
+          </button>
+          <button type="button" class="profile-menu-item" (click)="openChangePassword()">
+            <i class="fas fa-key"></i>
+            <span>{{ 'menu.changePassword' | translate }}</span>
+          </button>
+          <button type="button" class="profile-menu-item" (click)="openForgotPassword()">
+            <i class="fas fa-unlock-keyhole"></i>
+            <span>{{ 'menu.forgotPassword' | translate }}</span>
+          </button>
+        
+          <button type="button" class="profile-menu-item danger" (click)="logout()">
+            <i class="fas fa-right-from-bracket"></i>
+            <span>{{ 'menu.logout' | translate }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div *ngIf="isProfileModalOpen" class="profile-modal-backdrop" (click)="closeProfileEditor()">
+    <section class="profile-modal-card" (click)="$event.stopPropagation()">
+      <div class="profile-modal-header">
+        <div>
+          <h3>{{ 'profile.title' | translate }}</h3>
+          <p>{{ 'profile.desc' | translate }}</p>
+        </div>
+        <button
+          type="button"
+          class="profile-modal-close"
+          (click)="closeProfileEditor()"
+          [disabled]="isProfileSaving"
+          aria-label="Close profile form">
+          X
+        </button>
+      </div>
+
+      <form #profileForm="ngForm" class="profile-form" (ngSubmit)="saveProfile(profileForm)">
+        <label class="profile-field">
+          <span>{{ 'profile.companyId' | translate }}</span>
+          <input [value]="dashboard?.actor?.companyId || ('profile.notAssigned' | translate)" readonly type="text" />
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.fullName' | translate }}</span>
+          <input
+            #profileFullName="ngModel"
+            [(ngModel)]="profileModel.fullName"
+            [class.input-invalid]="!!getProfileControlError(profileFullName, 'fullName', 'Full name is required')"
+            maxlength="255"
+            name="profileFullName"
+            placeholder="Enter full name"
+            required
+            type="text" />
+          <small>{{ getProfileControlError(profileFullName, 'fullName', 'Full name is required') || ' ' }}</small>
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.username' | translate }}</span>
+          <input
+            [value]="dashboard?.actor?.username || user.username"
+            readonly
+            type="text" />
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.email' | translate }}</span>
+          <input
+            [value]="dashboard?.actor?.email || user.email"
+            readonly
+            type="email" />
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.gender' | translate }}</span>
+          <select
+            #profileGender="ngModel"
+            [(ngModel)]="profileModel.gender"
+            [class.input-invalid]="!!getProfileControlError(profileGender, 'gender', 'Gender is required')"
+            [class.placeholder-selected]="!profileModel.gender"
+            name="profileGender"
+            required>
+            <option [ngValue]="''" disabled>{{ 'profile.selectGender' | translate }}</option>
+            <option *ngFor="let option of genderOptions" [ngValue]="option">{{ option }}</option>
+          </select>
+          <small>{{ getProfileControlError(profileGender, 'gender', 'Gender is required') || ' ' }}</small>
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.language' | translate }}</span>
+          <div class="custom-dropdown-container">
+            <div class="custom-dropdown-trigger" (click)="toggleLangDropdown($event)">
+              <span>{{ getSelectedLangLabel() }}</span>
+              <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="custom-dropdown-panel" *ngIf="isLangDropdownOpen" (click)="$event.stopPropagation()">
+              <div class="dropdown-list">
+                <div class="dropdown-item" *ngFor="let lang of availableLangs" (click)="selectLang(lang.code)">
+                  {{ lang.label }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.role' | translate }}</span>
+          <input [value]="dashboard?.actor?.role || user.role" readonly type="text" />
+        </label>
+
+        <label class="profile-field">
+          <span>{{ 'profile.status' | translate }}</span>
+          <input [value]="dashboard?.actor?.active !== false ? 'Active' : 'Inactive'" readonly type="text" />
+        </label>
+
+        <div class="profile-form-actions">
+          <button type="button" class="secondary-button" (click)="resetProfileForm()" [disabled]="isProfileSaving">
+            {{ 'common.reset' | translate }}
+          </button>
+          <button type="submit" class="primary-button" [class.is-loading]="isProfileSaving" [disabled]="isProfileSaving">
+            <span>{{ isProfileSaving ? ('profile.saving' | translate) : ('profile.saveProfile' | translate) }}</span>
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <section *ngIf="errorMessage" class="feedback-panel error-panel">
+    <h3>Dashboard unavailable</h3>
+    <p>{{ errorMessage }}</p>
+  </section>
+
+  <section *ngIf="isLoading" class="feedback-panel">
+    <h3>Loading dashboard</h3>
+    <p>Fetching the latest role-based data for this workspace.</p>
+  </section>
+
+  <ng-container *ngIf="!isLoading && !errorMessage">
+
+    <!-- Leave form modal — shared across employee and manager roles -->
+    <div *ngIf="isLeaveFormOpen" class="leave-modal-backdrop" (click)="cancelLeaveForm()">
+      <section class="leave-modal-card" (click)="$event.stopPropagation()">
+        <app-dashboard-leave-form
+          [leaveTypes]="leaveTypes"
+          [userGender]="dashboard?.actor?.gender ?? null"
+          [myLeaves]="myLeaves"
+          [holidays]="holidays"
+          [bookedDates]="bookedDates"
+          [notifyUsers]="notifyUsers"
+          [notifyUsersLoading]="notifyUsersLoading"
+          [isSaving]="isLeaveSaving"
+          [fieldErrors]="leaveFieldErrors"
+          [editingLeave]="editingLeave"
+          (saveRequested)="handleCreateLeave($event)"
+          (cancelRequested)="cancelLeaveForm()">
+        </app-dashboard-leave-form>
+      </section>
+    </div>
+
+    <app-admin-dashboard
+      *ngIf="normalizedRole === 'ADMIN'"
+      [dashboard]="dashboard"
+      [editingUser]="editingUser"
+      [fieldErrors]="fieldErrors"
+      [filterRole]="filterRole"
+      [filterStatus]="filterStatus"
+      [isLeavesLoading]="isLeavesLoading"
+      [isLoading]="isLoading"
+      [isLeaveTypeSaving]="isLeaveTypeSaving"
+      [isSaving]="isSaving"
+      [isLeaveTypesLoading]="isLeaveTypesLoading"
+      [isUserFormOpen]="isUserFormOpen"
+      [deletingHolidayId]="deletingHolidayId"
+      [deletingLeaveTypeId]="deletingLeaveTypeId"
+      [deletingUserId]="deletingUserId"
+      [isHolidaySaving]="isHolidaySaving"
+      [lastLeaveTypeCreatedAt]="lastLeaveTypeCreatedAt"
+      [lastHolidaySavedAt]="lastHolidaySavedAt"
+      [processingLeaveId]="processingLeaveId"
+      [leaveTypeFieldErrors]="leaveTypeFieldErrors"
+      [leaves]="leaves"
+      [leaveTypes]="leaveTypes"
+      [attendanceLogs]="attendanceLogs"
+      [holidays]="holidays"
+      [isHolidaysLoading]="isHolidaysLoading"
+      [pageId]="pageId"
+      [user]="user"
+      (cancelEditRequested)="cancelEdit()"
+      (createRequested)="openCreateForm()"
+      (deleteRequested)="handleDelete($event)"
+      (editRequested)="startEdit($event)"
+      (leaveTypeDeleteRequested)="handleDeleteLeaveType($event)"
+      (leaveTypeSaveRequested)="handleSaveLeaveType($event)"
+      (leaveApproveRequested)="handleApproveLeave($event)"
+      (leaveRejectRequested)="handleRejectLeave($event)"
+      (leavePartialStatusRequested)="handlePartialLeaveStatus($event)"
+      (holidayCreateRequested)="handleCreateHoliday($event)"
+      (holidayUpdateRequested)="handleUpdateHoliday($event)"
+      (holidayDeleteRequested)="handleDeleteHoliday($event)"
+      (leaveTabChangeRequested)="handleAdminLeaveTabChange($event)"
+      (importCompleted)="loadDashboard()"
+      (saveRequested)="handleSave($event)"></app-admin-dashboard>
+
+    <app-manager-dashboard
+      *ngIf="normalizedRole === 'MANAGER'"
+      [dashboard]="dashboard"
+      [editingUser]="editingUser"
+      [fieldErrors]="fieldErrors"
+      [isSaving]="isSaving"
+      [isUserFormOpen]="isUserFormOpen"
+      [deletingUserId]="deletingUserId"
+      [leaveTypes]="leaveTypes"
+      [isLeaveFormOpen]="isLeaveFormOpen"
+      [isLeaveSaving]="isLeaveSaving"
+      [processingLeaveId]="processingLeaveId"
+      [deletingLeaveId]="deletingLeaveId"
+      [leaveFieldErrors]="leaveFieldErrors"
+      [managerLeaves]="managerLeaves"
+      [myLeaves]="myLeaves"
+      [holidays]="holidays"
+      [myAttendanceLogs]="myAttendanceLogs"
+      [isLeavesLoading]="isLeavesLoading"
+      [pageId]="pageId"
+      [user]="user"
+      (cancelEditRequested)="cancelEdit()"
+      (createRequested)="openCreateForm()"
+      (deleteRequested)="handleDelete($event)"
+      (editRequested)="startEdit($event)"
+      (saveRequested)="handleSave($event)"
+      (openLeaveFormRequested)="openLeaveForm()"
+      (leaveSubmitRequested)="handleCreateLeave($event)"
+      (cancelLeaveFormRequested)="cancelLeaveForm()"
+      (leaveApproveRequested)="handleApproveLeave($event)"
+      (leaveRejectRequested)="handleRejectLeave($event)"
+      (leavePartialStatusRequested)="handlePartialLeaveStatus($event)"
+      (editProfileRequested)="openProfileEditor()"
+      (editLeaveRequested)="handleEditLeave($event)"
+      (deleteLeaveRequested)="handleDeleteLeave($event)"></app-manager-dashboard>
+
+    <app-employee-dashboard
+      *ngIf="normalizedRole === 'EMPLOYEE'"
+      [dashboard]="dashboard"
+      [leaveTypes]="leaveTypes"
+      [isLeaveFormOpen]="isLeaveFormOpen"
+      [isSaving]="isLeaveSaving"
+      [deletingLeaveId]="deletingLeaveId"
+      [leaveFieldErrors]="leaveFieldErrors"
+      [myLeaves]="myLeaves"
+      [notifyUsers]="notifyUsers"
+      [holidays]="holidays"
+      [myAttendanceLogs]="myAttendanceLogs"
+      [isLeavesLoading]="isLeavesLoading"
+      [pageId]="pageId"
+      [user]="user"
+      (openLeaveFormRequested)="openLeaveForm()"
+      (leaveSubmitRequested)="handleCreateLeave($event)"
+      (cancelLeaveFormRequested)="cancelLeaveForm()"
+      (editProfileRequested)="openProfileEditor()"
+      (editLeaveRequested)="handleEditLeave($event)"
+      (deleteLeaveRequested)="handleDeleteLeave($event)"></app-employee-dashboard>
+  </ng-container>
+</section>

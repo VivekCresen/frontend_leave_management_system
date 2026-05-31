@@ -1,0 +1,328 @@
+<section class="table-card">
+  <div class="table-heading">
+    <div>
+      <h3>{{ title }}</h3>
+      <p>{{ description }}</p>
+    </div>
+    <span class="count-pill">{{ visibleCountLabel }}</span>
+  </div>
+
+  <div class="table-tools">
+    <label class="tool-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()"
+        type="text"
+        placeholder="Search by name, email, leave type, or reason" />
+    </label>
+
+    <label class="tool-select">
+      <span>{{ ('role.role' | translate) || 'Role' }}</span>
+      <select [(ngModel)]="selectedRole" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
+        <option value="ALL">{{ 'table.allRoles' | translate }}</option>
+        <option *ngFor="let role of roleOptions" [ngValue]="role">{{ role | titlecase }}</option>
+      </select>
+    </label>
+
+    <label class="tool-select">
+      <span>{{ 'table.leaveType' | translate }}</span>
+      <select [(ngModel)]="selectedLeaveType" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
+        <option value="ALL">{{ 'table.allLeaveTypes' | translate }}</option>
+        <option *ngFor="let leaveType of leaveTypeOptions" [ngValue]="leaveType">{{ ('leaveTypes.' + leaveType | translate) || leaveType }}</option>
+      </select>
+    </label>
+
+    <label *ngIf="showStatusFilter" class="tool-select">
+      <span>{{ 'table.status' | translate }}</span>
+      <select [(ngModel)]="selectedStatus" (ngModelChange)="compactView ? onAgFilterChange() : onFilterChange()">
+        <option value="ALL">{{ 'table.allStatuses' | translate }}</option>
+        <option *ngFor="let status of statusOptions" [ngValue]="status">{{ ('table.' + (status === 'MANAGER_APPROVED' ? 'pending_admin' : status.toLowerCase()) | translate) || status }}</option>
+      </select>
+    </label>
+
+    <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">{{ 'table.reset' | translate }}</button>
+  </div>
+
+  <ng-container *ngIf="compactView">
+    <div *ngIf="agFilteredCount === 0 && !isLoading" class="empty-state">
+      <i class="fas fa-calendar-xmark empty-state-icon"></i>
+      <h4>{{ resolvedEmptyTitle }}</h4>
+      <p>{{ resolvedEmptyMessage }}</p>
+    </div>
+    <div [hidden]="!gridMounted || agFilteredCount === 0" class="ag-shell">
+      <ag-grid-angular
+        class="leave-ag-grid"
+        [theme]="agTheme"
+        [rowData]="agRowData"
+        [columnDefs]="columnDefs"
+        [defaultColDef]="defaultColDef"
+        [pagination]="true"
+        [paginationPageSize]="4"
+        [paginationPageSizeSelector]="[4, 7, 15, 30]"
+        [localeText]="agLocaleText"
+        [suppressCellFocus]="true"
+        [domLayout]="'autoHeight'"
+        (gridReady)="onGridReady($event)">
+      </ag-grid-angular>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="!compactView">
+    <div *ngIf="displayedLeaves.length === 0" class="empty-state">
+      <h4>{{ resolvedEmptyTitle }}</h4>
+      <p>{{ resolvedEmptyMessage }}</p>
+    </div>
+
+    <div *ngIf="displayedLeaves.length > 0" class="table-shell">
+      <div class="table-inner">
+        <div class="table-row table-head" [class.has-actions]="showActions">
+          <span class="sortable-header" (click)="toggleSort('fullName')">
+            {{ 'table.employee' | translate }}
+            <i class="fas" [class.fa-sort]="sortKey !== 'fullName'" [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('role')">
+            Role
+            <i class="fas" [class.fa-sort]="sortKey !== 'role'" [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('leaveType')">
+            {{ 'table.leaveType' | translate }}
+            <i class="fas" [class.fa-sort]="sortKey !== 'leaveType'" [class.fa-sort-up]="sortKey === 'leaveType' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'leaveType' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('fromDate')">
+            {{ 'table.dateRange' | translate }}
+            <i class="fas" [class.fa-sort]="sortKey !== 'fromDate'" [class.fa-sort-up]="sortKey === 'fromDate' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'fromDate' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('durationDays')">
+            Days
+            <i class="fas" [class.fa-sort]="sortKey !== 'durationDays'" [class.fa-sort-up]="sortKey === 'durationDays' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'durationDays' && sortDirection === 'desc'"></i>
+          </span>
+          <span>{{ 'table.reason' | translate }}</span>
+          <span class="sortable-header" (click)="toggleSort('status')">
+            {{ 'table.status' | translate }}
+            <i class="fas" [class.fa-sort]="sortKey !== 'status'" [class.fa-sort-up]="sortKey === 'status' && sortDirection === 'asc'" [class.fa-sort-down]="sortKey === 'status' && sortDirection === 'desc'"></i>
+          </span>
+          <span>{{ 'table.progress' | translate }}</span>
+          <span *ngIf="showActions">{{ 'table.actions' | translate }}</span>
+        </div>
+
+        <div class="table-body">
+          <div *ngFor="let leave of displayedLeaves; trackBy: trackByLeaveId" class="table-row" [class.has-actions]="showActions">
+            <div class="user-cell">
+              <strong>{{ leave.fullName }}</strong>
+              <span>{{ leave.emailId }}</span>
+              <small>ID #{{ leave.userId }}</small>
+            </div>
+            <span class="role-pill" [class.manager]="leave.role === 'MANAGER'">{{ leave.role | titlecase }}</span>
+            <div class="type-cell">
+              <strong>{{ ('leaveTypes.' + leave.leaveType | translate) || leave.leaveType }}</strong>
+            </div>
+            <div class="date-cell">
+              <strong>{{ leave.fromDate | date: 'dd MMM yyyy' }}</strong>
+              <span>to {{ leave.toDate | date: 'dd MMM yyyy' }}</span>
+              <small>{{ leave.leaveDates.length }} date{{ leave.leaveDates.length !== 1 ? 's' : '' }}</small>
+              <small>Created {{ leave.createdAt ? (leave.createdAt | date: 'dd MMM yyyy') : 'N/A' }}</small>
+            </div>
+            <span class="duration-pill">{{ leave.durationDays }} day{{ leave.durationDays === 1 ? '' : 's' }}</span>
+            <div class="reason-cell">
+              <strong>{{ leave.reason || 'No reason added' }}</strong>
+              <small>{{ leave.comments || 'No comments' }}</small>
+              <small *ngIf="leave.rejectionReason" class="rejection-note">
+                <i class="fas fa-circle-xmark"></i> {{ leave.rejectionReason }}
+              </small>
+            </div>
+            <div class="status-cell">
+              <span class="status-badge"
+                [class.status-pending]="leave.status === 'PENDING'"
+                [class.status-manager-approved]="leave.status === 'MANAGER_APPROVED'"
+                [class.status-approved]="leave.status === 'APPROVED'"
+                [class.status-rejected]="leave.status === 'REJECTED'">
+                <i class="fas"
+                  [class.fa-clock]="leave.status === 'PENDING'"
+                  [class.fa-hourglass-half]="leave.status === 'MANAGER_APPROVED'"
+                  [class.fa-circle-check]="leave.status === 'APPROVED'"
+                  [class.fa-circle-xmark]="leave.status === 'REJECTED'"></i>
+                {{ ('table.' + (leave.status === 'MANAGER_APPROVED' ? 'pending_admin' : leave.status.toLowerCase()) | translate) || leave.status }}
+              </span>
+              <small *ngIf="leave.managerApprovedBy" class="approved-by-note">Manager: {{ leave.managerApprovedBy }}</small>
+              <small *ngIf="leave.managerRejectedBy" class="approved-by-note">Manager rejected: {{ leave.managerRejectedBy }}</small>
+              <small *ngIf="leave.adminApprovedBy && leave.status !== 'MANAGER_APPROVED'" class="approved-by-note">Admin approved: {{ leave.adminApprovedBy }}</small>
+              <small *ngIf="leave.adminRejectedBy" class="approved-by-note">Admin rejected: {{ leave.adminRejectedBy }}</small>
+            </div>
+            <div class="progress-cell">
+              <button type="button" class="track-btn" (click)="progressLeave = leave" title="View leave progress">
+                <i class="fas fa-chart-line"></i>
+                <span>{{ 'table.leaveProgress' | translate }}</span>
+              </button>
+            </div>
+            <div *ngIf="showActions" class="action-cell">
+              <button *ngIf="leave.status === 'PENDING'" type="button" class="partial-btn" [class.is-loading]="processingLeaveId === leave.id" [disabled]="processingLeaveId === leave.id" (click)="openPartialModal(leave)" title="Review individual dates">
+                <i *ngIf="processingLeaveId !== leave.id" class="fas fa-list-check"></i>
+                <span>{{ processingLeaveId === leave.id ? ('table.processing' | translate) : ('table.reviewDates' | translate) }}</span>
+              </button>
+              <button *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole === 'ADMIN'" type="button" class="partial-btn partial-btn-admin" [class.is-loading]="processingLeaveId === leave.id" [disabled]="processingLeaveId === leave.id" (click)="openPartialModal(leave)" title="Give final admin decision">
+                <i *ngIf="processingLeaveId !== leave.id" class="fas fa-shield-halved"></i>
+                <span>{{ processingLeaveId === leave.id ? ('table.processing' | translate) : ('table.finalDecision' | translate) }}</span>
+              </button>
+              <span *ngIf="leave.status === 'MANAGER_APPROVED' && viewerRole !== 'ADMIN'" class="action-done">{{ 'table.pending_admin' | translate }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="totalPages > 1" class="table-pagination">
+      <span class="pagination-info">Page {{ currentPage }} of {{ totalPages }} · {{ filteredCount }} records</span>
+      <div class="pagination-controls">
+        <button type="button" class="pagination-arrow" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Previous page">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="pagination-pages">
+          <button
+            *ngFor="let page of [].constructor(totalPages); let i = index"
+            type="button"
+            class="pagination-page"
+            [class.active]="currentPage === i + 1"
+            (click)="goToPage(i + 1)">
+            {{ i + 1 }}
+          </button>
+        </div>
+        <button type="button" class="pagination-arrow" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" aria-label="Next page">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</section>
+
+<div *ngIf="rejectingLeave" class="reject-modal-backdrop" (click)="closeRejectModal()">
+  <div class="reject-modal-card" (click)="$event.stopPropagation()">
+    <div class="reject-modal-header">
+      <div>
+        <h3>{{ 'tableActions.rejectLeaveRequest' | translate }}</h3>
+        <p>{{ 'tableActions.rejectLeaveDesc' | translate }}</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closeRejectModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="reject-modal-body">
+      <p class="reject-employee">
+        <strong>{{ rejectingLeave.fullName }}</strong> — {{ rejectingLeave.leaveType }}
+        ({{ rejectingLeave.fromDate | date: 'dd MMM' }} to {{ rejectingLeave.toDate | date: 'dd MMM yyyy' }})
+      </p>
+      <label class="reject-field">
+        <span>{{ 'tableActions.rejectionReason' | translate }} <span class="required-mark">*</span></span>
+        <textarea
+          [(ngModel)]="rejectionReason"
+          [class.input-invalid]="rejectionSubmitted && !rejectionReason.trim()"
+          placeholder="Explain why this leave is being rejected"
+          rows="3"
+          maxlength="500"></textarea>
+        <small *ngIf="rejectionSubmitted && !rejectionReason.trim()">{{ 'tableActions.rejectionRequired' | translate }}</small>
+      </label>
+    </div>
+    <div class="reject-modal-actions">
+      <button type="button" class="secondary-btn" (click)="closeRejectModal()">{{ 'tableActions.cancel' | translate }}</button>
+      <button type="button" class="reject-confirm-btn" (click)="confirmReject()">{{ 'tableActions.confirmRejection' | translate }}</button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="partialLeave" class="reject-modal-backdrop" (click)="closePartialModal()">
+  <div class="reject-modal-card partial-modal-card" (click)="$event.stopPropagation()">
+    <div class="reject-modal-header">
+      <div>
+        <h3>{{ partialLeave.status === 'MANAGER_APPROVED' ? ('tableActions.adminFinalDecision' | translate) : ('tableActions.reviewLeaveDates' | translate) }}</h3>
+        <p>{{ partialLeave.status === 'MANAGER_APPROVED' ? ('tableActions.adminFinalDecisionDesc' | translate) : ('tableActions.reviewLeaveDatesDesc' | translate) }}</p>
+      </div>
+      <button type="button" class="close-btn" (click)="closePartialModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="reject-modal-body">
+      <p class="reject-employee">
+        <strong>{{ partialLeave.fullName }}</strong> — {{ partialLeave.leaveType }}
+      </p>
+      <div class="partial-bulk-actions">
+        <button
+          type="button"
+          class="partial-bulk-btn approve-all-btn"
+          [disabled]="hasMixedPartialDecisions || areAllPartialApproved"
+          (click)="setAllPartialDecisions('APPROVED')">
+          {{ 'tableActions.approveAll' | translate }}
+        </button>
+        <button
+          type="button"
+          class="partial-bulk-btn reject-all-btn"
+          [disabled]="hasMixedPartialDecisions || areAllPartialRejected"
+          (click)="setAllPartialDecisions('REJECTED')">
+          {{ 'tableActions.rejectAll' | translate }}
+        </button>
+      </div>
+      <div class="partial-dates-list">
+        <div *ngFor="let d of partialLeave.leaveDates" class="partial-date-row"
+          [class.partial-approved]="getPartialDecision(d.date, d.dayType) === 'APPROVED'"
+          [class.partial-rejected]="getPartialDecision(d.date, d.dayType) === 'REJECTED'">
+          <span class="partial-date-icon">{{ d.dayType === 'MORNING_HALF' ? '🌅' : d.dayType === 'AFTERNOON_HALF' ? '🌇' : '📅' }}</span>
+          <span class="partial-date-label">{{ fmtDatePublic(d.date) }}</span>
+          <span class="partial-session-label">{{ d.dayType === 'MORNING_HALF' ? ('tableActions.morning' | translate) : d.dayType === 'AFTERNOON_HALF' ? ('tableActions.afternoon' | translate) : ('tableActions.fullDay' | translate) }}</span>
+          <button type="button" class="partial-toggle-btn"
+            [class.is-approved]="getPartialDecision(d.date, d.dayType) === 'APPROVED'"
+            [class.is-rejected]="getPartialDecision(d.date, d.dayType) === 'REJECTED'"
+            (click)="togglePartialDecision(d.date, d.dayType)">
+            <i class="fas" [class.fa-circle-check]="getPartialDecision(d.date, d.dayType) === 'APPROVED'" [class.fa-circle-xmark]="getPartialDecision(d.date, d.dayType) === 'REJECTED'"></i>
+            {{ getPartialDecision(d.date, d.dayType) === 'APPROVED' ? ('tableActions.approved' | translate) : ('tableActions.rejected' | translate) }}
+          </button>
+        </div>
+      </div>
+      <label *ngIf="hasAnyRejected" class="reject-field" style="margin-top:14px;">
+        <span>{{ 'tableActions.rejectionReason' | translate }} <span class="required-mark">*</span></span>
+        <textarea
+          [(ngModel)]="partialRejectionReason"
+          [class.input-invalid]="partialSubmitted && !partialRejectionReason.trim()"
+          placeholder="Explain why these dates are being rejected"
+          rows="3"
+          maxlength="500"></textarea>
+        <small *ngIf="partialSubmitted && !partialRejectionReason.trim()">{{ 'tableActions.rejectionRequired' | translate }}</small>
+      </label>
+    </div>
+    <div class="reject-modal-actions">
+      <button type="button" class="secondary-btn" (click)="closePartialModal()">{{ 'tableActions.cancel' | translate }}</button>
+      <button type="button" class="reject-confirm-btn" [class.is-loading]="partialLeave && processingLeaveId === partialLeave.id" [disabled]="partialLeave && processingLeaveId === partialLeave.id" (click)="confirmPartial()">
+        <span>{{ partialLeave && processingLeaveId === partialLeave.id ? ('tableActions.applying' | translate) : ('tableActions.confirmDecisions' | translate) }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<app-leave-progress-modal
+  *ngIf="progressLeave"
+  [leave]="progressLeave"
+  (closed)="progressLeave = null">
+</app-leave-progress-modal>
+
+<div *ngIf="popupLeave" class="dates-popup-backdrop" (click)="popupLeave = null">
+  <div class="dates-popup-card" (click)="$event.stopPropagation()">
+    <div class="dates-popup-header">
+      <div>
+        <p class="dates-popup-eyebrow">{{ popupLeave.leaveType }}</p>
+        <h3>{{ 'tableActions.allSelectedDates' | translate }}</h3>
+      </div>
+      <button type="button" class="dates-popup-close" (click)="popupLeave = null" aria-label="Close">✕</button>
+    </div>
+    <div class="dates-popup-list">
+      <div *ngFor="let d of popupLeave.leaveDates" class="dates-popup-row">
+        <span class="dates-popup-icon">{{ d.dayType === 'MORNING_HALF' ? '🌅' : d.dayType === 'AFTERNOON_HALF' ? '🌇' : '📅' }}</span>
+        <strong class="dates-popup-date">{{ fmtDatePublic(d.date) }}</strong>
+        <span class="dates-popup-session"
+          [class.session-morning]="d.dayType === 'MORNING_HALF'"
+          [class.session-afternoon]="d.dayType === 'AFTERNOON_HALF'"
+          [class.session-full]="!d.dayType || d.dayType === 'FULL'">
+          {{ d.dayType === 'MORNING_HALF' ? ('tableActions.morningHalf' | translate) : d.dayType === 'AFTERNOON_HALF' ? ('tableActions.afternoonHalf' | translate) : ('tableActions.fullDay' | translate) }}
+        </span>
+      </div>
+    </div>
+    <div class="dates-popup-footer">
+      {{ popupLeave.leaveDates.length }} date{{ popupLeave.leaveDates.length !== 1 ? 's' : '' }}
+      &nbsp;·&nbsp;
+      {{ popupLeave.durationDays % 1 === 0 ? popupLeave.durationDays : popupLeave.durationDays.toFixed(1) }} day{{ popupLeave.durationDays !== 1 ? 's' : '' }} total
+    </div>
+  </div>
+</div>

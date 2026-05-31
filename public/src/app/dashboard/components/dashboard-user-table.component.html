@@ -1,0 +1,174 @@
+<section class="table-card" [class.table-card-compact]="compactCard" [class.expand-to-fill]="expandToFill">
+  <div class="table-heading">
+    <div>
+      <h3>{{ title }}</h3>
+      <p>{{ description }}</p>
+    </div>
+    <span class="count-pill">{{ visibleCountLabel }}</span>
+  </div>
+
+  <div *ngIf="showTableTools" class="table-tools">
+    <label class="tool-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChange()"
+        type="text"
+        placeholder="Search by name, email, company ID, or manager" />
+    </label>
+
+    <label class="tool-select">
+      <span>{{ 'table.role' | translate }}</span>
+      <select [(ngModel)]="selectedRole" (ngModelChange)="onFilterChange()">
+        <option value="ALL">{{ 'table.allRoles' | translate }}</option>
+        <option *ngFor="let role of roleOptions" [ngValue]="role">{{ role | titlecase }}</option>
+      </select>
+    </label>
+
+    <label class="tool-select">
+      <span>{{ 'table.status' | translate }}</span>
+      <select [(ngModel)]="selectedStatus" (ngModelChange)="onFilterChange()">
+        <option value="ALL">{{ 'table.allStatuses' | translate }}</option>
+        <option value="ACTIVE">{{ 'stats.active' | translate }}</option>
+        <option value="INACTIVE">{{ 'stats.inactive' | translate }}</option>
+      </select>
+    </label>
+
+    <button *ngIf="hasActiveFilters" type="button" class="clear-filters-button" (click)="clearFilters()">{{ 'table.reset' | translate }}</button>
+  </div>
+
+  <ng-container *ngIf="useAgGrid">
+    <div *ngIf="filteredUsers.length === 0 && !isLoading" class="empty-state">
+      <h4>{{ resolvedEmptyTitle }}</h4>
+      <p>{{ resolvedEmptyMessage }}</p>
+    </div>
+
+    <div [hidden]="!agGridMounted || filteredUsers.length === 0" class="ag-shell">
+      <ag-grid-angular
+        class="user-ag-grid"
+        [theme]="agTheme"
+        [columnDefs]="agColumnDefsWithActions"
+        [defaultColDef]="defaultColDef"
+        [rowData]="filteredUsers"
+        [rowHeight]="72"
+        [pagination]="true"
+        [paginationPageSize]="agPageSize"
+        [paginationPageSizeSelector]="[7, 15, 50]"
+        [domLayout]="'autoHeight'"
+        (gridReady)="onGridReady($event)"
+        (cellClicked)="onGridCellClicked($event)">
+      </ag-grid-angular>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="!useAgGrid">
+    <div *ngIf="filteredUsers.length === 0" class="empty-state">
+      <h4>{{ resolvedEmptyTitle }}</h4>
+      <p>{{ resolvedEmptyMessage }}</p>
+    </div>
+
+    <div *ngIf="filteredUsers.length > 0" class="table-shell">
+      <div class="table-inner">
+        <div class="table-row table-head" [class.without-actions]="!showActions">
+          <span class="sortable-header" (click)="toggleSort('fullName')">
+            {{ 'userTable.user' | translate }}
+            <i class="fas"
+              [class.fa-sort]="sortKey !== 'fullName'"
+              [class.fa-sort-up]="sortKey === 'fullName' && sortDirection === 'asc'"
+              [class.fa-sort-down]="sortKey === 'fullName' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('role')">
+            {{ 'table.role' | translate }}
+            <i class="fas"
+              [class.fa-sort]="sortKey !== 'role'"
+              [class.fa-sort-up]="sortKey === 'role' && sortDirection === 'asc'"
+              [class.fa-sort-down]="sortKey === 'role' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('active')">
+            {{ 'table.status' | translate }}
+            <i class="fas"
+              [class.fa-sort]="sortKey !== 'active'"
+              [class.fa-sort-up]="sortKey === 'active' && sortDirection === 'asc'"
+              [class.fa-sort-down]="sortKey === 'active' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('createdBy')">
+            {{ 'userTable.managerOwner' | translate }}
+            <i class="fas"
+              [class.fa-sort]="sortKey !== 'createdBy'"
+              [class.fa-sort-up]="sortKey === 'createdBy' && sortDirection === 'asc'"
+              [class.fa-sort-down]="sortKey === 'createdBy' && sortDirection === 'desc'"></i>
+          </span>
+          <span class="sortable-header" (click)="toggleSort('lastLogin')">
+            {{ 'userTable.lastLogin' | translate }}
+            <i class="fas"
+              [class.fa-sort]="sortKey !== 'lastLogin'"
+              [class.fa-sort-up]="sortKey === 'lastLogin' && sortDirection === 'asc'"
+              [class.fa-sort-down]="sortKey === 'lastLogin' && sortDirection === 'desc'"></i>
+          </span>
+          <span *ngIf="showActions">{{ 'table.actions' | translate }}</span>
+        </div>
+
+        <div
+          class="table-body"
+          [class.table-body-scrollable]="enableBodyScroll"
+          [style.max-height]="enableBodyScroll && bodyMaxHeight ? bodyMaxHeight : null">
+          <div *ngFor="let user of displayedUsers; trackBy: trackByUserId" class="table-row" [class.without-actions]="!showActions">
+            <div class="user-cell">
+              <strong>{{ user.fullName }}</strong>
+              <span>{{ user.username }}</span>
+              <small>{{ user.email }}</small>
+              <em>{{ user.companyId }}</em>
+            </div>
+            <span class="meta-text">{{ user.role | titlecase }}</span>
+            <span class="status-pill" [class.inactive]="!user.active">{{ user.active ? ('stats.active' | translate) : ('stats.inactive' | translate) }}</span>
+            <span class="meta-text">{{ user.createdBy || ('userTable.system' | translate) }}</span>
+            <span class="meta-text">{{ user.lastLogin ? (user.lastLogin | date: 'dd MMM yyyy, h:mm a') : ('userTable.never' | translate) }}</span>
+            <div *ngIf="showActions" class="action-cell">
+              <button *ngIf="user.canEdit" type="button" class="edit-button" (click)="editRequested.emit(user)" [disabled]="deletingUserId === user.id">Edit</button>
+              <button *ngIf="user.canDelete" type="button" class="delete-button" [class.is-loading]="deletingUserId === user.id" (click)="deleteRequested.emit(user)" [disabled]="deletingUserId === user.id">
+                <span>{{ deletingUserId === user.id ? 'Deleting...' : 'Delete' }}</span>
+              </button>
+              <span *ngIf="!user.canEdit && !user.canDelete" class="read-only">View only</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="readMoreLink" class="table-footer">
+      <a [href]="readMoreLink" class="read-more-button">{{ readMoreLabel || 'Read more' }}</a>
+    </div>
+
+    <div *ngIf="canToggleExpanded" class="table-footer">
+      <button type="button" class="read-more-button" (click)="expandedToggled.emit()">
+        {{ isExpanded ? collapseLabel : (readMoreLabel || 'Read more') }}
+      </button>
+    </div>
+
+    <div *ngIf="totalPages > 1" class="table-pagination">
+      <span class="pagination-info">
+        Page {{ currentPage }} of {{ totalPages }} &nbsp;·&nbsp; {{ filteredCount }} records
+      </span>
+      <div class="pagination-controls">
+        <button type="button" class="pagination-arrow" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" aria-label="Previous page">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="pagination-pages">
+          <button
+            *ngFor="let page of [].constructor(totalPages); let i = index"
+            type="button"
+            class="pagination-page"
+            [class.active]="currentPage === i + 1"
+            (click)="goToPage(i + 1)"
+            [attr.aria-label]="'Page ' + (i + 1)"
+            [attr.aria-current]="currentPage === i + 1 ? 'page' : null">
+            {{ i + 1 }}
+          </button>
+        </div>
+        <button type="button" class="pagination-arrow" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" aria-label="Next page">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</section>

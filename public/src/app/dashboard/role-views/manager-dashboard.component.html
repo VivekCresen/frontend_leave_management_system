@@ -1,0 +1,346 @@
+<section class="role-dashboard">
+
+  <ng-container *ngIf="pageId === 'overview'">
+    <app-dashboard-stat-cards [cards]="stats" [compact]="true"></app-dashboard-stat-cards>
+  </ng-container>
+
+  <ng-container [ngSwitch]="pageId">
+
+    <section *ngSwitchCase="'profile'" class="panel-grid">
+      <app-dashboard-profile 
+        [user]="user" 
+        [actor]="dashboard?.actor ?? null"
+        (editProfileRequested)="editProfileRequested.emit()">
+      </app-dashboard-profile>
+    </section>
+
+    <section *ngSwitchCase="'attendance'" class="panel-grid">
+      <app-dashboard-attendance-table
+        [logs]="myAttendanceLogs"
+        [title]="'tableTitles.myAttendance' | translate"
+        [description]="'tableTitles.myAttendanceDesc' | translate"
+      ></app-dashboard-attendance-table>
+    </section>
+
+    <section *ngSwitchCase="'team'" class="management-grid">
+      <div class="management-toolbar">
+        <div>
+          <h3>Employee management</h3>
+          <p class="body-copy">Create, update, or remove employee accounts within your team.</p>
+        </div>
+        <button type="button" class="primary-toolbar-button" (click)="createRequested.emit()">
+          <i class="fas fa-user-plus"></i>
+          <span>Add employee</span>
+        </button>
+      </div>
+
+      <app-dashboard-user-table
+        [users]="dashboard?.users ?? []"
+        [title]="'tableTitles.myEmployees' | translate"
+        [description]="'tableTitles.myEmployeesDesc' | translate"
+        [emptyTitle]="'tableTitles.noEmployeesYet' | translate"
+        [emptyMessage]="'tableTitles.noEmployeesYetMsg' | translate"
+        [showTableTools]="true"
+        [useAgGrid]="true"
+        [compactCard]="true"
+        [deletingUserId]="deletingUserId"
+        (editRequested)="editRequested.emit($event)"
+        (deleteRequested)="deleteRequested.emit($event)"></app-dashboard-user-table>
+
+      <div *ngIf="isUserFormOpen" class="form-modal-backdrop" (click)="cancelEditRequested.emit()">
+        <div class="form-modal-card" (click)="$event.stopPropagation()">
+          <app-dashboard-user-form
+            [assignableRoles]="dashboard?.assignableRoles ?? []"
+            [editingUser]="editingUser"
+            [fieldErrors]="fieldErrors"
+            [isSaving]="isSaving"
+            [users]="dashboard?.users ?? []"
+            (saveRequested)="saveRequested.emit($event)"
+            (cancelRequested)="cancelEditRequested.emit()"></app-dashboard-user-form>
+        </div>
+      </div>
+    </section>
+
+    <section *ngSwitchCase="'approvals'" class="management-grid">
+      <div class="management-toolbar">
+        <div>
+          <h3>Leave approvals</h3>
+          <p class="body-copy">Review and action team leave requests.</p>
+        </div>
+      </div>
+
+      <div class="pending-summary-banner" *ngIf="pendingLeaves.length > 0">
+        <div class="pending-summary-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div class="pending-summary-content">
+          <strong>{{ pendingLeaves.length }} pending request{{ pendingLeaves.length !== 1 ? 's' : '' }} awaiting your decision</strong>
+          <span>The table below is pre-filtered to show pending requests. Use the status filter to view all requests.</span>
+        </div>
+      </div>
+
+      <div class="pending-summary-banner pending-summary-empty" *ngIf="pendingLeaves.length === 0 && managerLeaves.length > 0">
+        <div class="pending-summary-icon pending-summary-icon--ok">
+          <i class="fas fa-circle-check"></i>
+        </div>
+        <div class="pending-summary-content">
+          <strong>All caught up</strong>
+          <span>No pending requests right now. Use the status filter to review approved or rejected requests.</span>
+        </div>
+      </div>
+
+      <app-dashboard-leave-table
+        [leaves]="managerLeaves"
+        [title]="'tableTitles.teamLeaveRequests' | translate"
+        [description]="'tableTitles.teamLeaveRequestsDesc' | translate"
+        [emptyTitle]="'tableTitles.noLeaveRequests' | translate"
+        [emptyMessage]="'tableTitles.noLeaveRequestsMsg' | translate"
+        [compactView]="true"
+        [showActions]="true"
+        [viewerRole]="'MANAGER'"
+        [initialStatus]="'PENDING'"
+        [showStatusFilter]="true"
+        [processingLeaveId]="processingLeaveId"
+        [isLoading]="isLeavesLoading"
+        (approveRequested)="leaveApproveRequested.emit($event)"
+        (rejectRequested)="leaveRejectRequested.emit($event)"
+        (partialStatusRequested)="leavePartialStatusRequested.emit($event)">
+      </app-dashboard-leave-table>
+    </section>
+
+    <section *ngSwitchCase="'calendar'" class="calendar-page">
+
+      <div class="management-toolbar">
+        <div>
+          <h3>Team Calendar</h3>
+          <p class="body-copy">View all team leave and your own leave in one place.</p>
+        </div>
+        <div class="toolbar-actions">
+          <span class="cal-legend-dot own"></span><span class="cal-legend-label">My leave</span>
+          <span class="cal-legend-dot team"></span><span class="cal-legend-label">Team leave</span>
+        </div>
+      </div>
+
+      <article class="surface cal-surface">
+
+        <div class="cal-nav">
+          <button type="button" class="cal-nav-btn" (click)="prevMonth()">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span class="cal-month-label">{{ calendarMonthLabel }}</span>
+          <button type="button" class="cal-nav-btn" (click)="nextMonth()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+          <button type="button" class="cal-today-btn" (click)="goToToday()">Today</button>
+        </div>
+
+        <div class="cal-grid cal-header-row">
+          <div *ngFor="let d of weekDays" class="cal-header-cell">{{ d }}</div>
+        </div>
+
+        <div *ngFor="let week of calendarWeeks" class="cal-grid cal-week-row">
+          <div
+            *ngFor="let day of week"
+            class="cal-day"
+            [class.other-month]="!day.isCurrentMonth"
+            [class.today]="day.isToday"
+            [class.has-leaves]="day.leaves.length > 0"
+            [class.selected]="selectedDay?.date?.getTime() === day.date.getTime()"
+            (click)="selectDay(day)">
+            <span class="cal-day-num">{{ day.date | date:'d' }}</span>
+            <span *ngIf="day.holidays.length > 0" class="cal-holiday-label" [title]="day.holidays[0].name">
+              🎉 {{ day.holidays[0].name }}
+            </span>
+            <div class="cal-dots">
+              <ng-container *ngFor="let leave of day.leaves.slice(0, 3)">
+                <span class="cal-dot" [class.own-dot]="leave.isOwn" [class.team-dot]="!leave.isOwn"></span>
+              </ng-container>
+              <span *ngIf="day.leaves.length > 3" class="cal-dot-more">+{{ day.leaves.length - 3 }}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article *ngIf="selectedDay" class="surface cal-detail-panel">
+        <div class="cal-detail-header">
+          <span class="eyebrow">{{ selectedDay.date | date:'EEEE, MMMM d, y' }}</span>
+          <span class="cal-detail-count">{{ selectedDay.leaves.length }} on leave</span>
+        </div>
+        <div class="cal-detail-list">
+          <div *ngFor="let leave of selectedDay.leaves" class="cal-detail-item">
+            <div class="calendar-leave-avatar" [class.own-avatar]="leave.isOwn">
+              {{ getInitials(leave.fullName) }}
+            </div>
+            <div class="calendar-leave-info">
+              <strong>{{ leave.fullName }}<span *ngIf="leave.isOwn" class="you-badge">You</span></strong>
+              <span>{{ leave.leaveType }}</span>
+            </div>
+            <div class="calendar-leave-dates">
+              <span>{{ leave.fromDate | date:'MMM d' }} – {{ leave.toDate | date:'MMM d' }}</span>
+              <small>{{ leave.durationDays }} day{{ leave.durationDays !== 1 ? 's' : '' }}</small>
+            </div>
+            <span class="status-badge"
+              [class.status-approved]="leave.status === 'APPROVED'"
+              [class.status-pending]="leave.status === 'PENDING'"
+              [class.status-rejected]="leave.status === 'REJECTED'">
+              {{ leave.status | titlecase }}
+            </span>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <section *ngSwitchCase="'history'" class="management-grid">
+      <div class="management-toolbar">
+        <div>
+          <h3>My leave history</h3>
+          <p class="body-copy">Your personal leave history and available balances.</p>
+        </div>
+        <div class="toolbar-actions">
+          <button type="button" class="primary-toolbar-button" (click)="openLeaveFormRequested.emit()">
+            <i class="fas fa-plus"></i>
+            <span>Request leave</span>
+          </button>
+        </div>
+      </div>
+
+      <app-dashboard-stat-cards *ngIf="leaveBalanceCards.length > 0" [cards]="leaveBalanceCards" [compact]="true"></app-dashboard-stat-cards>
+
+      <app-dashboard-history-table
+        [leaves]="myLeaves"
+        [leaveTypes]="leaveTypes"
+        title="My leave requests"
+        description="All leave requests you have submitted."
+        [showRequestActions]="true"
+        [deletingLeaveId]="deletingLeaveId"
+        (editRequested)="editLeaveRequested.emit($event)"
+        (deleteRequested)="deleteLeaveRequested.emit($event)">
+      </app-dashboard-history-table>
+    </section>
+
+    <section *ngSwitchCase="'reports'" class="panel-grid">
+      <article class="surface">
+        <p class="eyebrow">Team Summary</p>
+        <h3>Headcount overview</h3>
+        <div class="report-metric-grid">
+          <div class="report-metric">
+            <strong>{{ dashboard?.employeeCount ?? 0 }}</strong>
+            <span>Total employees</span>
+          </div>
+          <div class="report-metric">
+            <strong>{{ dashboard?.activeUsers ?? 0 }}</strong>
+            <span>Active</span>
+          </div>
+          <div class="report-metric">
+            <strong>{{ dashboard?.inactiveUsers ?? 0 }}</strong>
+            <span>Inactive</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="surface">
+        <p class="eyebrow">Leave Summary</p>
+        <h3>Request breakdown</h3>
+        <div class="report-metric-grid">
+          <div class="report-metric">
+            <strong>{{ managerLeaves.length }}</strong>
+            <span>Total requests</span>
+          </div>
+          <div class="report-metric pending-metric">
+            <strong>{{ pendingLeaves.length }}</strong>
+            <span>Pending</span>
+          </div>
+          <div class="report-metric approved-metric">
+            <strong>{{ approvedLeaves.length }}</strong>
+            <span>Approved</span>
+          </div>
+          <div class="report-metric rejected-metric">
+            <strong>{{ rejectedLeaves.length }}</strong>
+            <span>Rejected</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="surface surface-full">
+        <p class="eyebrow">Leave by Type</p>
+        <h3>Breakdown by leave category</h3>
+        <div *ngIf="leaveByType.length === 0" class="leave-empty-state">
+          <h4>No leave data yet</h4>
+          <p>Leave type breakdown will appear once requests are submitted.</p>
+        </div>
+        <div *ngIf="leaveByType.length > 0" class="leave-type-breakdown">
+          <div *ngFor="let item of leaveByType" class="leave-type-breakdown-row">
+            <span class="leave-type-breakdown-name">{{ item.type }}</span>
+            <div class="leave-type-breakdown-bar-wrap">
+              <div class="leave-type-breakdown-bar" [style.width.%]="item.pct"></div>
+            </div>
+            <span class="leave-type-breakdown-count">{{ item.count }}</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section *ngSwitchCase="'settings'" class="panel-grid">
+      <article class="surface">
+        <h3>{{ 'adminSettings.accountControls' | translate }}</h3>
+        <ul class="detail-list">
+          <li>{{ 'adminSettings.passwordPolicy' | translate }}</li>
+          <li>{{ 'adminSettings.accountStatus' | translate }}</li>
+          <li>{{ 'adminSettings.roleLimits' | translate }}</li>
+        </ul>
+      </article>
+
+      <article class="surface">
+        <h3>{{ 'adminSettings.localization' | translate }}</h3>
+        <p class="body-copy">{{ 'adminSettings.languageDesc' | translate }}</p>
+        <div style="margin-top: 1rem;">
+          <label class="leave-field">
+            <span>{{ 'adminSettings.languageControl' | translate }}</span>
+            <div class="custom-dropdown-container">
+              <div class="custom-dropdown-trigger" (click)="toggleLangDropdown($event)">
+                <span>{{ getSelectedLangLabel() }}</span>
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              <div class="custom-dropdown-panel" *ngIf="isLangDropdownOpen" (click)="$event.stopPropagation()">
+                <div class="dropdown-list">
+                  <div class="dropdown-item" *ngFor="let lang of availableLangs" (click)="selectLang(lang.code)">
+                    {{ lang.label }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </label>
+        </div>
+      </article>
+
+      <article class="surface">
+        <h3>Appearance</h3>
+        <p class="body-copy">Choose between light and dark mode for the dashboard interface.</p>
+        <div class="theme-mode-buttons">
+          <button
+            type="button"
+            class="theme-mode-btn"
+            [class.theme-mode-btn-active]="!themeService.isDark"
+            (click)="themeService.setTheme('light')"
+            aria-label="Switch to light mode">
+            <span class="theme-mode-icon">☀️</span>
+            <span class="theme-mode-label">Light</span>
+            <span *ngIf="!themeService.isDark" class="theme-mode-check"><i class="fas fa-check"></i></span>
+          </button>
+          <button
+            type="button"
+            class="theme-mode-btn"
+            [class.theme-mode-btn-active]="themeService.isDark"
+            (click)="themeService.setTheme('dark')"
+            aria-label="Switch to dark mode">
+            <span class="theme-mode-icon">🌙</span>
+            <span class="theme-mode-label">Dark</span>
+            <span *ngIf="themeService.isDark" class="theme-mode-check"><i class="fas fa-check"></i></span>
+          </button>
+        </div>
+      </article>
+    </section>
+
+  </ng-container>
+</section>

@@ -1,0 +1,31 @@
+<section class="table-card">
+  <div class="table-heading">
+    <div>
+      <p class="eyebrow">Leave History</p>
+      <h3>All leave requests</h3>
+      <p>Your complete leave request history.</p>
+    </div>
+    <span class="count-pill">{{ leaves.length }} record{{ leaves.length !== 1 ? 's' : '' }}</span>
+  </div>
+
+  <div *ngIf="leaves.length === 0" class="empty-state">
+    <h4>No leave history yet</h4>
+    <p>Submit your first leave request to start building your history.</p>
+  </div>
+
+  <div *ngIf="leaves.length > 0 && gridMounted" class="ag-shell">
+    <ag-grid-angular
+      class="history-ag-grid"
+      [theme]="agTheme"
+      [rowData]="leaves"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [pagination]="true"
+      [paginationPageSize]="7"
+      [paginationPageSizeSelector]="[7, 15, 30]"
+      [suppressCellFocus]="true"
+      [domLayout]="'autoHeight'"
+      (gridReady)="onGridReady($event)">
+    </ag-grid-angular>
+  </div>
+</section>

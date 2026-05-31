@@ -1,0 +1,13 @@
+<div class="toast-stack">
+  <div
+    *ngFor="let toast of toastService.toasts()"
+    class="toast"
+    [class.toast-success]="toast.type === 'success'"
+    [class.toast-error]="toast.type === 'error'"
+    [class.toast-info]="toast.type === 'info'"
+    [class.toast-warn]="toast.type === 'warn'"
+  >
+    <span>{{ toast.message }}</span>
+    <button type="button" class="toast-close" (click)="toastService.dismiss(toast.id)">x</button>
+  </div>
+</div>

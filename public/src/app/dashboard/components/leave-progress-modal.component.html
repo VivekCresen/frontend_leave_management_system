@@ -1,0 +1,70 @@
+<div class="progress-modal-backdrop" (click)="closeModal()">
+  <div class="progress-modal-card" (click)="$event.stopPropagation()">
+    <div class="progress-modal-header">
+      <div class="progress-modal-heading">
+        <h3 class="progress-modal-title">Leave Audit Trail</h3>
+      </div>
+
+      <button type="button" class="header-close-button" (click)="closeModal()" aria-label="Close audit trail">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="request-summary-card">
+      <div class="summary-header">
+        <div class="summary-user">
+          <strong>{{ leave.fullName }}</strong>
+          <small>{{ leave.emailId }}</small>
+        </div>
+        <div class="summary-status">
+          <span class="status-chip" [class.tone-success]="currentStatusTone === 'success'" [class.tone-danger]="currentStatusTone === 'danger'" [class.tone-warning]="currentStatusTone === 'warning'">
+            <i class="fas" [ngClass]="{'fa-circle-check': currentStatusTone === 'success', 'fa-circle-xmark': currentStatusTone === 'danger', 'fa-clock': currentStatusTone === 'warning', 'fa-circle-info': currentStatusTone === 'neutral'}"></i>
+            {{ currentStatusLabel }}
+          </span>
+        </div>
+      </div>
+      <div class="summary-body">
+        <span class="summary-label">Reason for leave</span>
+        <p>{{ leave.reason || 'No reason provided.' }}</p>
+      </div>
+      <div class="summary-footer">
+        <small>Applied on {{ leave.createdAt ? (leave.createdAt | date: 'dd MMM yyyy, hh:mm a') : 'Not available' }}</small>
+      </div>
+    </div>
+
+    <div *ngIf="workflowEntries.length; else emptyTrail" class="trail-list">
+      <article
+        *ngFor="let entry of workflowEntries; let last = last"
+        class="trail-entry"
+        [class.is-last]="last">
+        <div class="trail-marker" [class.tone-success]="entry.tone === 'success'" [class.tone-danger]="entry.tone === 'danger'" [class.tone-warning]="entry.tone === 'warning'">
+          <i class="fas" [ngClass]="entry.icon"></i>
+        </div>
+
+        <div class="trail-content">
+          <div class="trail-entry-top">
+            <div class="trail-title-row">
+              <strong>{{ entry.title }}</strong>
+            </div>
+            <span class="trail-time">{{ formatTimestamp(entry.timestamp) }}</span>
+          </div>
+
+          <div class="trail-info">
+            <p><strong>{{ entry.actorName }}</strong> {{ entry.summary }}</p>
+          </div>
+
+          <div *ngIf="entry.reason" class="trail-reason">
+            <span class="trail-info-label">Reason</span>
+            <p>{{ entry.reason }}</p>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <ng-template #emptyTrail>
+      <div class="empty-trail-state">
+        <span>No audit trail details available.</span>
+      </div>
+    </ng-template>
+  </div>
+</div>
